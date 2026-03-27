@@ -1,0 +1,69 @@
+# PvPRoomsPro Configuration
+# ================================
+
+general:
+  # Prefix used in all plugin messages
+  prefix: "&8[&cPvP&4Rooms&8] &r"
+  # World where players are teleported after a duel ends
+  lobby-world: "world"
+  # Spawn location for lobby (x, y, z, yaw, pitch)
+  lobby-spawn:
+    x: 0.5
+    y: 64.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+  # Language (currently only 'en' supported)
+  language: "en"
+
+duels:
+  # Countdown seconds before fight starts
+  countdown: 5
+  # Maximum duel duration in seconds (0 = unlimited)
+  max-duration: 300
+  # Whether to allow natural regeneration during duels
+  natural-regen: false
+  # Whether to drop items on death during duels
+  drop-items-on-death: false
+  # Whether to keep inventory on death during duels
+  keep-inventory: true
+
+queue:
+  # How often (in ticks) to check queue for matches (20 ticks = 1 second)
+  check-interval: 40
+  # Max seconds a player can wait in queue before being notified
+  wait-notify-seconds: 60
+
+elo:
+  # Starting ELO for new players
+  starting-elo: 1000
+  # Base ELO change per match
+  base-change: 25
+  # Whether to use K-factor scaling based on ELO difference
+  use-scaling: true
+
+arenas:
+  # Folder inside plugin data folder where arena template worlds are stored
+  templates-folder: "maps"
+  # Folder prefix used for active match worlds
+  instance-prefix: "pvp_match_"
+
+scoreboard:
+  # Whether to enable the scoreboard
+  enabled: true
+  # Title of the scoreboard
+  title: "&c&lPvPRooms"
+  # Update interval in ticks
+  update-interval: 20
+
+spectator:
+  # Whether to hide spectators from players in a duel
+  hide-from-players: true
+  # Whether spectators can chat with duel players
+  can-chat: false
+
+cooldowns:
+  # Cooldown in seconds between queue joins
+  queue: 3
+  # Cooldown in seconds between spectate uses
+  spectate: 2

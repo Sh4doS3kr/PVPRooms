@@ -1,0 +1,66 @@
+name: PvPRoomsPro
+version: '1.0.0'
+main: com.pvprooms.PvPRoomsPro
+api-version: '1.21'
+description: Professional PvP duels plugin with ELO, GUI kits, and auto arena instancing
+authors: [PvPRoomsPro]
+website: https://github.com/pvproomspro
+
+commands:
+  kit:
+    description: Kit management command
+    usage: /kit <create|delete|edit> <name>
+    permission: pvprooms.kit
+  arena:
+    description: Arena management command
+    usage: /arena <create|setspawn1|setspawn2|delete> <name>
+    permission: pvprooms.arena
+  queue:
+    description: Join the PvP queue
+    usage: /queue
+    permission: pvprooms.queue
+  spectate:
+    description: Spectate an active duel
+    usage: /spectate <player>
+    permission: pvprooms.spectate
+  pvpleave:
+    description: Leave the queue or current duel
+    usage: /pvpleave
+    permission: pvprooms.leave
+  stats:
+    description: View your ELO stats
+    usage: /stats [player]
+    permission: pvprooms.stats
+  top:
+    description: View top ELO leaderboard
+    usage: /top
+    permission: pvprooms.top
+
+permissions:
+  pvprooms.kit:
+    description: Access /kit commands (admin only)
+    default: op
+  pvprooms.arena:
+    description: Access /arena commands (admin only)
+    default: op
+  pvprooms.queue:
+    description: Join the PvP queue
+    default: true
+  pvprooms.spectate:
+    description: Spectate active duels
+    default: true
+  pvprooms.leave:
+    description: Leave queue or duel
+    default: true
+  pvprooms.stats:
+    description: View ELO stats
+    default: true
+  pvprooms.top:
+    description: View ELO leaderboard
+    default: true
+  pvprooms.admin:
+    description: Full admin access
+    default: op
+    children:
+      pvprooms.kit: true
+      pvprooms.arena: true
