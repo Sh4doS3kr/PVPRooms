@@ -40,13 +40,12 @@ public class ArenaInstanceManager {
     public World createInstance(ArenaTemplate template, String matchId) {
         String instanceName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchId;
 
-        // Source: plugins/PvPRoomsPro/maps/<templateName>
-        File mapsDir = new File(plugin.getDataFolder(),
-                plugin.getConfig().getString("arenas.templates-folder", "maps"));
-        File sourceWorld = new File(mapsDir, template.getName());
+        // Source: <serverRoot>/<templateName>  (the world created by /arena create)
+        File sourceWorld = new File(Bukkit.getWorldContainer(), template.getName());
 
         if (!sourceWorld.exists() || !sourceWorld.isDirectory()) {
-            plugin.getLogger().warning("Arena template folder not found: " + sourceWorld.getAbsolutePath());
+            plugin.getLogger().warning("Arena template world not found: " + sourceWorld.getAbsolutePath()
+                    + " — use /arena create <name> to generate it.");
             return null;
         }
 

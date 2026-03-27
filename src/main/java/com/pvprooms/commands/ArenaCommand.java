@@ -2,6 +2,11 @@ package com.pvprooms.commands;
 
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.ArenaTemplate;
+import org.bukkit.Bukkit;
+import org.bukkit.GameRule;
+import org.bukkit.World;
+import org.bukkit.WorldCreator;
+import org.bukkit.WorldType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -17,7 +22,7 @@ import java.util.stream.Collectors;
  * Requires pvprooms.arena permission (op by default).
  *
  * Subcommands:
- *   /arena create <name>     — Register a new arena template
+ *   /arena create <name>     — Create a flat world at server root and teleport admin to it
  *   /arena setspawn1 <name>  — Set spawn 1 to current location
  *   /arena setspawn2 <name>  — Set spawn 2 to current location
  *   /arena delete <name>     — Delete an arena template
@@ -52,13 +57,45 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
             case "create" -> {
                 if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUsage: /arena create <name>"); return true; }
                 String name = args[1];
-                if (plugin.getArenaManager().createArena(name)) {
-                    player.sendMessage(plugin.prefix() + "§aArena §e" + name + " §acreated.");
-                    player.sendMessage(plugin.prefix() + "§7Now place the world folder at §fplugins/PvPRoomsPro/maps/" + name + "/");
-                    player.sendMessage(plugin.prefix() + "§7Then use §f/arena setspawn1 " + name + " §7and §f/arena setspawn2 " + name);
-                } else {
+
+                if (plugin.getArenaManager().getArena(name) != null) {
                     player.sendMessage(plugin.prefix() + "§cAn arena named §e" + name + " §calready exists.");
+                    return true;
                 }
+
+                player.sendMessage(plugin.prefix() + "§eCreating world §f" + name + "§e, please wait...");
+
+                // Create the world at the server root as a flat world
+                World world = Bukkit.getWorld(name);
+                if (world == null) {
+                    WorldCreator creator = new WorldCreator(name);
+                    creator.type(WorldType.FLAT);
+                    creator.generateStructures(false);
+                    world = Bukkit.createWorld(creator);
+                }
+
+                if (world == null) {
+                    player.sendMessage(plugin.prefix() + "§cFailed to create world §e" + name + "§c. Check console.");
+                    return true;
+                }
+
+                // Apply comfortable gamerules for building
+                world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+                world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+                world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+                world.setGameRule(GameRule.KEEP_INVENTORY, true);
+                world.setTime(6000L);
+
+                // Register the arena template
+                plugin.getArenaManager().createArena(name);
+
+                // Teleport admin to the world
+                player.teleport(world.getSpawnLocation());
+
+                player.sendMessage(plugin.prefix() + "§aWorld §e" + name + " §acreated and registered as an arena.");
+                player.sendMessage(plugin.prefix() + "§7Build your map here, then run:");
+                player.sendMessage(plugin.prefix() + "§f  /arena setspawn1 " + name + " §7— stand at spawn 1");
+                player.sendMessage(plugin.prefix() + "§f  /arena setspawn2 " + name + " §7— stand at spawn 2");
             }
             case "setspawn1" -> {
                 if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUsage: /arena setspawn1 <name>"); return true; }
@@ -116,7 +153,7 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
     private void sendHelp(Player player) {
         player.sendMessage("§8§m                              ");
         player.sendMessage("§c§lArena Commands");
-        player.sendMessage("§f/arena create §e<name>    §7— Register arena template");
+        player.sendMessage("§f/arena create §e<name>    §7— Create world & teleport here");
         player.sendMessage("§f/arena setspawn1 §e<name> §7— Set spawn 1");
         player.sendMessage("§f/arena setspawn2 §e<name> §7— Set spawn 2");
         player.sendMessage("§f/arena delete §e<name>    §7— Delete arena");
