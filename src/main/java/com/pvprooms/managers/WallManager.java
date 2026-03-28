@@ -256,14 +256,15 @@ public class WallManager {
                 int removeY = yLevels.get(step);
                 List<WallBlock> removedRow = byY.get(removeY);
 
-                // 1. Remove bottom row
-                for (WallBlock wb : removedRow)
-                    world.getBlockAt(wb.x, wb.y, wb.z).setType(Material.AIR, false);
-
-                // 2. Place copy one above current top (makes wall "rise" as a unit)
                 int placeY = maxY + step + 1;
+
+                // 1. PLACE new top row first (wall is momentarily H+1 tall — no visual gap)
                 for (WallBlock wb : removedRow)
-                    world.getBlockAt(wb.x, placeY, wb.z).setType(wb.material, false);
+                    world.getBlockAt(wb.x, placeY, wb.z).setType(wb.material, true);
+
+                // 2. Remove bottom row after (wall drops back to H tall)
+                for (WallBlock wb : removedRow)
+                    world.getBlockAt(wb.x, wb.y, wb.z).setType(Material.AIR, true);
 
                 // 3. Sound: metallic chain scraping upward
                 float pitch = 0.75f + (0.5f / Math.max(H - 1, 1)) * step;
@@ -311,16 +312,18 @@ public class WallManager {
                     return;
                 }
 
-                // Restore original row at top-of-wall-minus-step (topmost first)
                 int restoreY = yLevels.get(step);
                 List<WallBlock> row = byYDesc.get(restoreY);
-                for (WallBlock wb : row)
-                    world.getBlockAt(wb.x, wb.y, wb.z).setType(wb.material, false);
 
-                // Remove the corresponding floating row above
-                int clearY = maxY + (H - step); // the topmost floating row first
+                int clearY = maxY + (H - step); // topmost floating row first
+
+                // 1. RESTORE original row first (wall momentarily H+1 tall — no gap)
                 for (WallBlock wb : row)
-                    world.getBlockAt(wb.x, clearY, wb.z).setType(Material.AIR, false);
+                    world.getBlockAt(wb.x, wb.y, wb.z).setType(wb.material, true);
+
+                // 2. Remove floating row above after
+                for (WallBlock wb : row)
+                    world.getBlockAt(wb.x, clearY, wb.z).setType(Material.AIR, true);
 
                 float pitch = 1.25f - (0.5f / Math.max(H - 1, 1)) * step;
                 Location soundLoc = new Location(world, row.get(0).x, restoreY, row.get(0).z);
@@ -329,6 +332,12 @@ public class WallManager {
                     world.playSound(soundLoc, Sound.BLOCK_PISTON_CONTRACT, 0.35f, pitch);
 
                 step++;
+
+                // Final step: force-update all restored blocks so they reconnect
+                if (step == H) {
+                    for (WallBlock wb : cfg.getBlocks())
+                        world.getBlockAt(wb.x, wb.y, wb.z).getState().update(true, false);
+                }
             }
         }.runTaskTimer(plugin, 4L, 3L);
     }

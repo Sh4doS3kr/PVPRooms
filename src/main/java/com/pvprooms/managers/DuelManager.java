@@ -316,8 +316,8 @@ public class DuelManager {
         String roundMsg = plugin.prefix()
                 + "§e⚔ Ronda " + round + ": §6§l" + winnerName
                 + " §egana! §8[" + scoreStr + "§8]";
-        if (p1 != null) { p1.sendMessage(roundMsg); sendTitle(p1, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]"); }
-        if (p2 != null) { p2.sendMessage(roundMsg); sendTitle(p2, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]"); }
+        if (p1 != null) { p1.sendMessage(roundMsg); sendTitle(p1, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]", 100); }
+        if (p2 != null) { p2.sendMessage(roundMsg); sendTitle(p2, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]", 100); }
 
         // Check for match winner (first to 2)
         UUID matchWinner = w1 >= 2 ? duel.getPlayer1() : (w2 >= 2 ? duel.getPlayer2() : null);
@@ -522,10 +522,14 @@ public class DuelManager {
     // ── Utility ────────────────────────────────────────────────────────────
 
     private void sendTitle(Player player, String title, String subtitle) {
+        sendTitle(player, title, subtitle, 40);
+    }
+
+    private void sendTitle(Player player, String title, String subtitle, int stayTicks) {
         player.sendTitle(
                 ChatColor.translateAlternateColorCodes('&', title),
                 ChatColor.translateAlternateColorCodes('&', subtitle),
-                10, 40, 10
+                10, stayTicks, 20
         );
     }
 
