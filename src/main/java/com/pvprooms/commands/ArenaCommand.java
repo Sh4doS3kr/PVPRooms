@@ -6,7 +6,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
-import org.bukkit.WorldType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -81,10 +80,10 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
                 }
 
                 if (world == null && !existsOnDisk) {
-                    // No existe → crear mundo flat para construir el mapa
-                    player.sendMessage(plugin.prefix() + "§7No se encontró carpeta, creando mundo flat nuevo...");
+                    // No existe → crear mundo vacío (void) para construir el mapa
+                    player.sendMessage(plugin.prefix() + "§7No se encontró carpeta, creando mundo vacío nuevo...");
                     WorldCreator creator = new WorldCreator(name);
-                    creator.type(WorldType.FLAT);
+                    creator.generator(plugin.getArenaInstanceManager().voidGenerator());
                     creator.generateStructures(false);
                     world = Bukkit.createWorld(creator);
                 }

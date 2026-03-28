@@ -172,6 +172,11 @@ public class ArenaInstanceManager {
         }
     }
 
+    /** Returns a void chunk generator usable anywhere in the plugin. */
+    public org.bukkit.generator.ChunkGenerator voidGenerator() {
+        return new VoidChunkGenerator();
+    }
+
     // ── Inner class: Void chunk generator ─────────────────────────────────
 
     /**
