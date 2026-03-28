@@ -65,6 +65,9 @@ public class ArenaManager {
                     (float) arenasConfig.getDouble(p + ".spawn2.yaw"),
                     (float) arenasConfig.getDouble(p + ".spawn2.pitch")
             );
+            t.setAllowExplosions(arenasConfig.getBoolean(p + ".config.allow-explosions", false));
+            t.setAllowBlockBreak(arenasConfig.getBoolean(p + ".config.allow-block-break",  false));
+            t.setAllowBlockPlace(arenasConfig.getBoolean(p + ".config.allow-block-place",  false));
 
             arenas.put(name.toLowerCase(), t);
         }
@@ -88,6 +91,9 @@ public class ArenaManager {
             arenasConfig.set(p + ".spawn2.z",     t.getSpawn2Z());
             arenasConfig.set(p + ".spawn2.yaw",   t.getSpawn2Yaw());
             arenasConfig.set(p + ".spawn2.pitch", t.getSpawn2Pitch());
+            arenasConfig.set(p + ".config.allow-explosions", t.isAllowExplosions());
+            arenasConfig.set(p + ".config.allow-block-break",  t.isAllowBlockBreak());
+            arenasConfig.set(p + ".config.allow-block-place",  t.isAllowBlockPlace());
         }
         try {
             arenasConfig.save(arenasFile);

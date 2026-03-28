@@ -1,6 +1,7 @@
 package com.pvprooms.commands;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.model.ArenaTemplate;
 import com.pvprooms.model.Duel;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -90,6 +91,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "kick" -> handleKick(sender, args);
             case "forceend" -> handleForceEnd(sender, args);
             case "setupwall" -> handleSetupWall(sender, args);
+            case "config"    -> handleConfig(sender, args);
             case "travel" -> handleTravel(sender, args);
             case "reload" -> handleReload(sender);
             case "info" -> handleInfo(sender);
@@ -267,6 +269,33 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                 + "§a bloques §f" + mat.name() + "§a en §e" + worldName + "§a.");
     }
 
+    // ── Config map ─────────────────────────────────────────────
+
+    private void handleConfig(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.prefix() + "§cEste subcomando solo puede usarlo un jugador."); return;
+        }
+        // args[1] == "map" (only sub-config for now)
+        if (args.length < 2 || !args[1].equalsIgnoreCase("map")) {
+            sender.sendMessage(plugin.prefix() + "§7Uso: §f/admin config map [arena]");
+            return;
+        }
+        // Determine arena: optional args[2], otherwise infer from current world
+        String arenaName;
+        if (args.length >= 3) {
+            arenaName = args[2];
+        } else {
+            arenaName = player.getWorld().getName();
+        }
+        ArenaTemplate template = plugin.getArenaManager().getArena(arenaName);
+        if (template == null) {
+            sender.sendMessage(plugin.prefix() + "§cArena §e" + arenaName + "§c no encontrada.");
+            sender.sendMessage(plugin.prefix() + "§7Usa §f/admin travel <arena>§7 para ir al mundo de la arena primero.");
+            return;
+        }
+        player.openInventory(plugin.getArenaConfigGUI().build(template));
+    }
+
     // ── Travel ────────────────────────────────────────────────
 
     private void handleTravel(CommandSender sender, String[] args) {
@@ -333,8 +362,9 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/admin elo resetall                §8» §7⚠ Resetear TODOS");
         sender.sendMessage("§e/admin kick §f<jugador>             §8» §7Sacar de cola/duelo");
         sender.sendMessage("§e/admin forceend §f<jugador>         §8» §7Terminar duelo (empate)");
-        sender.sendMessage("§e/admin setupwall                   §8» §7Recibir herramienta de muro");
-        sender.sendMessage("§e/admin setupwall §f<bloque>         §8» §7Guardar muro con selección");
+        sender.sendMessage("§e/admin setupwall §f<id>             §8» §7Herramienta de muro");
+        sender.sendMessage("§e/admin setupwall §f<id> <bloque>    §8» §7Guardar muro");
+        sender.sendMessage("§e/admin config map §f[arena]         §8» §7Config del mapa (explosiones, bloques)");
         sender.sendMessage("§e/admin travel §f<mundo>              §8» §7Teleportarse a un mundo");
         sender.sendMessage("§e/admin reload                      §8» §7Recargar config");
         sender.sendMessage("§e/admin info                        §8» §7Info del plugin");
@@ -362,7 +392,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (label.equalsIgnoreCase("adminpanel")) return List.of();
 
         if (args.length == 1) {
-            return Arrays.asList("elo", "kick", "forceend", "setupwall", "travel", "reload", "info").stream()
+            return Arrays.asList("elo", "kick", "forceend", "setupwall", "config", "travel", "reload", "info").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
         }

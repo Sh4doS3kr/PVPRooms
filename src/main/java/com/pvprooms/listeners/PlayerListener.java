@@ -8,8 +8,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import com.pvprooms.model.ArenaTemplate;
 import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -215,13 +218,24 @@ public class PlayerListener implements Listener {
             player.sendMessage(plugin.prefix() + "§cNo puedes romper bloques en el spawn.");
             return;
         }
-        // Bloquear a todos en mundos de instancia de arena (PvP)
+        // Mundos de instancia de arena (PvP)
         String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
-        if (event.getBlock().getWorld().getName().startsWith(instancePrefix)) {
-            event.setCancelled(true);
+        String blockWorld = event.getBlock().getWorld().getName();
+        if (blockWorld.startsWith(instancePrefix)) {
+            Duel duel = plugin.getDuelManager().getDuelByWorldName(blockWorld);
+            // Espectadores: nunca pueden romper bloques
+            if (duel != null && duel.isSpectator(player.getUniqueId())) {
+                event.setCancelled(true);
+                return;
+            }
+            // Comprobar permiso de la arena
+            ArenaTemplate template = duel != null ? duel.getArenaTemplate() : null;
+            if (template == null || !template.isAllowBlockBreak()) {
+                event.setCancelled(true);
+            }
             return;
         }
-        // Bloquear a espectadores en mundos de arena
+        // Bloquear a espectadores en cualquier arena
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
@@ -238,16 +252,53 @@ public class PlayerListener implements Listener {
             player.sendMessage(plugin.prefix() + "§cNo puedes colocar bloques en el spawn.");
             return;
         }
-        // Bloquear a todos en mundos de instancia de arena (PvP)
+        // Mundos de instancia de arena (PvP)
         String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
-        if (event.getBlock().getWorld().getName().startsWith(instancePrefix)) {
-            event.setCancelled(true);
+        String blockWorld = event.getBlock().getWorld().getName();
+        if (blockWorld.startsWith(instancePrefix)) {
+            Duel duel = plugin.getDuelManager().getDuelByWorldName(blockWorld);
+            if (duel != null && duel.isSpectator(player.getUniqueId())) {
+                event.setCancelled(true);
+                return;
+            }
+            ArenaTemplate template = duel != null ? duel.getArenaTemplate() : null;
+            if (template == null || !template.isAllowBlockPlace()) {
+                event.setCancelled(true);
+            }
             return;
         }
-        // Bloquear a espectadores en mundos de arena
+        // Bloquear a espectadores
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
+        }
+    }
+
+    // ── Explosion control in arenas ──────────────────────────────────────────
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        handleExplosion(event.getLocation().getWorld(), event.blockList());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        handleExplosion(event.getBlock().getWorld(), event.blockList());
+    }
+
+    private void handleExplosion(org.bukkit.World world, java.util.List<org.bukkit.block.Block> blockList) {
+        if (world == null) return;
+        String worldName = world.getName();
+        String lobbyWorld = plugin.getConfig().getString("general.lobby-world", "world");
+        // Always protect lobby
+        if (worldName.equals(lobbyWorld)) { blockList.clear(); return; }
+        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        if (!worldName.startsWith(instancePrefix)) return;
+        Duel duel = plugin.getDuelManager().getDuelByWorldName(worldName);
+        ArenaTemplate template = duel != null ? duel.getArenaTemplate() : null;
+        // If explosions not allowed, prevent block damage (entity damage still applies)
+        if (template == null || !template.isAllowExplosions()) {
+            blockList.clear();
         }
     }
 

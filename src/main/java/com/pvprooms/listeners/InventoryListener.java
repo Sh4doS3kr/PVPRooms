@@ -3,9 +3,12 @@ package com.pvprooms.listeners;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.AdminPanelHolder;
+import com.pvprooms.gui.ArenaConfigGUI;
+import com.pvprooms.gui.ArenaConfigHolder;
 import com.pvprooms.gui.KitEditorGUI;
 import com.pvprooms.gui.KitEditorHolder;
 import com.pvprooms.gui.KitGUI;
+import com.pvprooms.model.ArenaTemplate;
 import com.pvprooms.model.Duel;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -64,6 +67,32 @@ public class InventoryListener implements Listener {
                 player.sendMessage(plugin.prefix() + "§cYa estás en la cola.");
             } else {
                 player.sendMessage(plugin.prefix() + "§cCooldown activo. Espera un momento.");
+            }
+            return;
+        }
+
+        // ── Arena Config GUI ──────────────────────────────────────────
+        if (event.getInventory().getHolder() instanceof ArenaConfigHolder holder) {
+            event.setCancelled(true);
+            int slot = event.getRawSlot();
+            ArenaTemplate template = holder.getTemplate();
+            boolean changed = false;
+            switch (slot) {
+                case ArenaConfigGUI.SLOT_EXPLOSIONS  -> { template.setAllowExplosions(!template.isAllowExplosions());  changed = true; }
+                case ArenaConfigGUI.SLOT_BLOCK_BREAK -> { template.setAllowBlockBreak(!template.isAllowBlockBreak());  changed = true; }
+                case ArenaConfigGUI.SLOT_BLOCK_PLACE -> { template.setAllowBlockPlace(!template.isAllowBlockPlace());  changed = true; }
+                case ArenaConfigGUI.SLOT_CLOSE       -> { player.closeInventory(); return; }
+            }
+            if (changed) {
+                plugin.getArenaManager().saveArenas();
+                plugin.getArenaConfigGUI().refreshToggle(event.getInventory(), template, slot);
+                String state = switch (slot) {
+                    case ArenaConfigGUI.SLOT_EXPLOSIONS  -> (template.isAllowExplosions()  ? "§aACTIVADO" : "§cDESACTIVADO") + " §7Explosiones";
+                    case ArenaConfigGUI.SLOT_BLOCK_BREAK -> (template.isAllowBlockBreak()  ? "§aACTIVADO" : "§cDESACTIVADO") + " §7Romper bloques";
+                    case ArenaConfigGUI.SLOT_BLOCK_PLACE -> (template.isAllowBlockPlace()  ? "§aACTIVADO" : "§cDESACTIVADO") + " §7Colocar bloques";
+                    default -> "";
+                };
+                player.sendMessage(plugin.prefix() + state + "§7 en §e" + template.getName() + "§7.");
             }
             return;
         }

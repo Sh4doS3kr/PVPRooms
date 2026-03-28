@@ -416,6 +416,13 @@ public class DuelManager {
         return duelId != null ? activeDuels.get(duelId) : null;
     }
 
+    public Duel getDuelByWorldName(String worldName) {
+        for (Duel duel : activeDuels.values()) {
+            if (duel.getInstanceWorldName().equals(worldName)) return duel;
+        }
+        return null;
+    }
+
     public int getActiveDuelCount()            { return activeDuels.size(); }
     public Collection<Duel> getActiveDuels()   { return activeDuels.values(); }
 

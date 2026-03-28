@@ -17,6 +17,11 @@ public class ArenaTemplate {
     private double spawn2X, spawn2Y, spawn2Z;
     private float spawn2Yaw, spawn2Pitch;
 
+    // ── Arena-specific game rules ───────────────────────────────
+    private boolean allowExplosions = false;
+    private boolean allowBlockBreak  = false;
+    private boolean allowBlockPlace  = false;
+
     public ArenaTemplate(String name) {
         this.name = name;
     }
@@ -70,6 +75,15 @@ public class ArenaTemplate {
     public String getName()  { return name; }
     public String getWorldName() { return worldName; }
     public void setWorldName(String worldName) { this.worldName = worldName; }
+
+    public boolean isAllowExplosions() { return allowExplosions; }
+    public void setAllowExplosions(boolean v) { this.allowExplosions = v; }
+
+    public boolean isAllowBlockBreak() { return allowBlockBreak; }
+    public void setAllowBlockBreak(boolean v) { this.allowBlockBreak = v; }
+
+    public boolean isAllowBlockPlace() { return allowBlockPlace; }
+    public void setAllowBlockPlace(boolean v) { this.allowBlockPlace = v; }
 
     public double getSpawn1X()  { return spawn1X; }
     public double getSpawn1Y()  { return spawn1Y; }
