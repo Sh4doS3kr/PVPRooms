@@ -166,6 +166,9 @@ public class DuelManager {
                     plugin.getWallManager().animateOpen(
                             duel.getArenaTemplate().getName(), world);
 
+                    // Holograma de vida sobre cada jugador
+                    plugin.getHealthHologramManager().startHolograms(duel, world);
+
                     startDurationTimer(duel);
                     cancel();
                 }
@@ -217,6 +220,9 @@ public class DuelManager {
             plugin.getWallManager().animateClose(
                     duel.getArenaTemplate().getName(), instanceWorld);
         }
+
+        // Eliminar holograma de vida
+        plugin.getHealthHologramManager().stopHolograms(duel.getId());
 
         Player p1 = Bukkit.getPlayer(duel.getPlayer1());
         Player p2 = Bukkit.getPlayer(duel.getPlayer2());

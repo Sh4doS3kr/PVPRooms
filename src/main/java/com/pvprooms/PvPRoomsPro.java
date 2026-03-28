@@ -4,6 +4,7 @@ import com.pvprooms.commands.*;
 import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.ArenaConfigGUI;
+import com.pvprooms.managers.HealthHologramManager;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.managers.WallManager;
 import com.pvprooms.listeners.CombatListener;
@@ -47,6 +48,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private AdminPanelGUI adminPanelGUI;
     private ArenaConfigGUI arenaConfigGUI;
     private WallManager wallManager;
+    private HealthHologramManager healthHologramManager;
 
     // ── Plugin lifecycle ───────────────────────────────────────────────────
 
@@ -67,8 +69,9 @@ public class PvPRoomsPro extends JavaPlugin {
         queueManager         = new QueueManager(this);
         kitGUI               = new KitGUI(this);
         adminPanelGUI        = new AdminPanelGUI(this);
-        arenaConfigGUI       = new ArenaConfigGUI();
-        wallManager          = new WallManager(this);
+        arenaConfigGUI          = new ArenaConfigGUI();
+        wallManager             = new WallManager(this);
+        healthHologramManager   = new HealthHologramManager(this);
 
         // Start matchmaking runnable
         queueManager.startMatchmaking();
@@ -217,4 +220,5 @@ public class PvPRoomsPro extends JavaPlugin {
     public AdminPanelGUI         getAdminPanelGUI()        { return adminPanelGUI; }
     public ArenaConfigGUI        getArenaConfigGUI()        { return arenaConfigGUI; }
     public WallManager           getWallManager()          { return wallManager; }
+    public HealthHologramManager getHealthHologramManager() { return healthHologramManager; }
 }
