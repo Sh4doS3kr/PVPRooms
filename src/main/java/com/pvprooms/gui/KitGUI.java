@@ -26,8 +26,11 @@ import java.util.List;
  */
 public class KitGUI {
 
-    public static final String GUI_TITLE_TAG      = "§0KIT_SELECT§r";
-    public static final String GUI_TITLE_TAG_TIER  = "§0KIT_TIER§r";
+    /** @deprecated Usar KitSelectHolder para detectar el GUI. */
+    @Deprecated
+    public static final String GUI_TITLE_TAG      = "KIT_SELECT";
+    @Deprecated
+    public static final String GUI_TITLE_TAG_TIER  = "KIT_TIER";
 
     private final PvPRoomsPro plugin;
 
@@ -50,10 +53,9 @@ public class KitGUI {
             return;
         }
         int size = calculateSize(kits.size());
-        String tag   = tierMode ? GUI_TITLE_TAG_TIER : GUI_TITLE_TAG;
-        String label = tierMode ? "&8Selecciona Kit &b[TIER] &8— " : "&8Selecciona Kit &c[ELO] &8— ";
-        String title = ChatColor.translateAlternateColorCodes('&', label + tag);
-        Inventory inv = Bukkit.createInventory(null, size, title);
+        String label = tierMode ? "&8Selecciona Kit &b[TIER]" : "&8Selecciona Kit &c[ELO]";
+        String title = ChatColor.translateAlternateColorCodes('&', label);
+        Inventory inv = Bukkit.createInventory(new KitSelectHolder(tierMode), size, title);
         int slot = 0;
         for (Kit kit : kits) {
             if (slot >= size) break;

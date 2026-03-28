@@ -35,6 +35,12 @@ public class ScoreboardManager {
     /** Players currently showing the lobby scoreboard */
     private final Map<UUID, Boolean> lobbyPlayers = new HashMap<>();
 
+    /** Players in queue: uuid → kitName */
+    private final Map<UUID, String> queuePlayers = new HashMap<>();
+
+    /** Timestamp (ms) when a player entered the queue scoreboard */
+    private final Map<UUID, Long> queueJoinTimes = new HashMap<>();
+
     /** Periodic update task for lobby and queue scoreboards */
     private BukkitTask updateTask;
 
@@ -54,6 +60,8 @@ public class ScoreboardManager {
                 UUID uuid = p.getUniqueId();
                 if (lobbyPlayers.containsKey(uuid)) {
                     showLobbyScoreboard(p);
+                } else if (queuePlayers.containsKey(uuid)) {
+                    refreshQueueScoreboard(p);
                 }
             }
         }, interval, interval);
@@ -74,6 +82,23 @@ public class ScoreboardManager {
      */
     public void showQueueScoreboard(Player player, String kitName) {
         if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
+        UUID uuid = player.getUniqueId();
+        queuePlayers.put(uuid, kitName);
+        queueJoinTimes.putIfAbsent(uuid, System.currentTimeMillis());
+        lobbyPlayers.remove(uuid);
+        buildQueueScoreboard(player, kitName, 0);
+    }
+
+    private void refreshQueueScoreboard(Player player) {
+        UUID uuid = player.getUniqueId();
+        String kitName = queuePlayers.get(uuid);
+        if (kitName == null) return;
+        long elapsed = (System.currentTimeMillis() - queueJoinTimes.getOrDefault(uuid, System.currentTimeMillis())) / 1000;
+        buildQueueScoreboard(player, kitName, elapsed);
+    }
+
+    private void buildQueueScoreboard(Player player, String kitName, long elapsedSeconds) {
+        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
 
         Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
         Objective obj = board.registerNewObjective(
@@ -92,14 +117,17 @@ public class ScoreboardManager {
         setLine(obj, "  ", line--);
         setLine(obj, leg("&e&l» &fEn cola: &a" + plugin.getQueueManager().getTotalQueued()), line--);
         setLine(obj, "   ", line--);
-        setLine(obj, leg("&7⏳ Buscando rival..."), line--);
+        String waitStr = elapsedSeconds < 60
+                ? "§e" + elapsedSeconds + "§fs"
+                : "§e" + (elapsedSeconds / 60) + "§fm §e" + (elapsedSeconds % 60) + "§fs";
+        setLine(obj, leg("&7⏳ Esperando: " + waitStr), line--);
+        setLine(obj, leg("&7¡Buscando rival..."), line--);
         setLine(obj, leg("&7Usa &f/pvpleave &7para salir"), line--);
         setLine(obj, "     ", line--);
         setLine(obj, pingLine(player), line--);
 
         player.setScoreboard(board);
         activeBoards.put(player.getUniqueId(), board);
-        lobbyPlayers.remove(player.getUniqueId()); // no sobreescribir con el de lobby
     }
 
     // ── Duel scoreboard ────────────────────────────────────────────────────
@@ -239,6 +267,9 @@ public class ScoreboardManager {
      */
     public void restoreLobbyScoreboard(Player player) {
         if (player == null) return;
+        UUID uuid = player.getUniqueId();
+        queuePlayers.remove(uuid);
+        queueJoinTimes.remove(uuid);
         showLobbyScoreboard(player);
     }
 

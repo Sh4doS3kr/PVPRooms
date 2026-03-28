@@ -20,7 +20,7 @@ duels:
   # Countdown seconds before fight starts
   countdown: 5
   # Maximum duel duration in seconds (0 = unlimited)
-  max-duration: 300
+  max-duration: 0
   # Whether to allow natural regeneration during duels
   natural-regen: false
   # Whether to drop items on death during duels
