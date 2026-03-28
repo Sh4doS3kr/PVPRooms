@@ -2,6 +2,7 @@ package com.pvprooms;
 
 import com.pvprooms.commands.*;
 import com.pvprooms.commands.SetSpawnCommand;
+import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.listeners.CombatListener;
 import com.pvprooms.listeners.InventoryListener;
@@ -41,6 +42,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private DuelManager duelManager;
     private QueueManager queueManager;
     private KitGUI kitGUI;
+    private AdminPanelGUI adminPanelGUI;
 
     // ── Plugin lifecycle ───────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ public class PvPRoomsPro extends JavaPlugin {
         duelManager          = new DuelManager(this);
         queueManager         = new QueueManager(this);
         kitGUI               = new KitGUI(this);
+        adminPanelGUI        = new AdminPanelGUI(this);
 
         // Start matchmaking runnable
         queueManager.startMatchmaking();
@@ -133,6 +136,11 @@ public class PvPRoomsPro extends JavaPlugin {
         getCommand("setspawn").setExecutor(new SetSpawnCommand(this, false));
         getCommand("setspawnworld").setExecutor(new SetSpawnCommand(this, true));
         getCommand("spawn").setExecutor(new SpawnCommand(this));
+
+        AdminCommand adminCmd = new AdminCommand(this);
+        getCommand("admin").setExecutor(adminCmd);
+        getCommand("admin").setTabCompleter(adminCmd);
+        getCommand("adminpanel").setExecutor(adminCmd);
     }
 
     private void registerListeners() {
@@ -196,4 +204,5 @@ public class PvPRoomsPro extends JavaPlugin {
     public DuelManager           getDuelManager()          { return duelManager; }
     public QueueManager          getQueueManager()         { return queueManager; }
     public KitGUI                getKitGUI()               { return kitGUI; }
+    public AdminPanelGUI         getAdminPanelGUI()        { return adminPanelGUI; }
 }

@@ -136,6 +136,51 @@ public class EloManager {
                 .collect(Collectors.toList());
     }
 
+    // ── Admin helpers ───────────────────────────────────────────────────────
+
+    /** Resets one player's ELO to the configured default. */
+    public void resetElo(UUID uuid) {
+        int def = plugin.getConfig().getInt("elo.starting-elo", 1000);
+        String name = nameMap.getOrDefault(uuid.toString(), uuid.toString());
+        setElo(uuid, name, def);
+        saveElo();
+    }
+
+    /** Resets ALL players' ELO to the configured default. */
+    public void resetAllElo() {
+        int def = plugin.getConfig().getInt("elo.starting-elo", 1000);
+        for (String uuidStr : new ArrayList<>(eloMap.keySet())) {
+            eloMap.put(uuidStr, def);
+        }
+        saveElo();
+    }
+
+    /**
+     * Looks up a UUID from the cached player name (case-insensitive).
+     * Returns null if not found.
+     */
+    public UUID getUUIDByName(String name) {
+        for (Map.Entry<String, String> e : nameMap.entrySet()) {
+            if (e.getValue().equalsIgnoreCase(name)) {
+                try { return UUID.fromString(e.getKey()); }
+                catch (IllegalArgumentException ignored) {}
+            }
+        }
+        return null;
+    }
+
+    public int getDefaultElo() {
+        return plugin.getConfig().getInt("elo.starting-elo", 1000);
+    }
+
+    public int getPlayerCount() { return eloMap.size(); }
+
+    /** Returns a copy of the name map for display purposes. */
+    public Map<String, String> getNameMap() { return Collections.unmodifiableMap(nameMap); }
+
+    /** Returns a copy of the elo map. */
+    public Map<String, Integer> getEloMap() { return Collections.unmodifiableMap(eloMap); }
+
     /** Returns the rank (1-based) of a player, or -1 if not ranked yet. */
     public int getRank(UUID uuid) {
         List<String> sorted = eloMap.entrySet().stream()

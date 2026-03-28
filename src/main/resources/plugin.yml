@@ -47,6 +47,14 @@ commands:
     description: Teletransportarse al spawn del lobby
     usage: /spawn
     permission: pvprooms.spawn
+  admin:
+    description: Comandos de administración del plugin
+    usage: /admin <elo|kick|forceend|reload|info>
+    permission: pvprooms.admin
+  adminpanel:
+    description: Abre el panel gráfico de administración
+    usage: /adminpanel
+    permission: pvprooms.admin
 
 permissions:
   pvprooms.kit:

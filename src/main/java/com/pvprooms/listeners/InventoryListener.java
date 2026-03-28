@@ -1,6 +1,8 @@
 package com.pvprooms.listeners;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.gui.AdminPanelGUI;
+import com.pvprooms.gui.AdminPanelHolder;
 import com.pvprooms.gui.KitEditorGUI;
 import com.pvprooms.gui.KitEditorHolder;
 import com.pvprooms.gui.KitGUI;
@@ -63,6 +65,14 @@ public class InventoryListener implements Listener {
             } else {
                 player.sendMessage(plugin.prefix() + "§cCooldown activo. Espera un momento.");
             }
+            return;
+        }
+
+        // ── Admin Panel GUI ────────────────────────────────────────────────
+        if (event.getInventory().getHolder() instanceof AdminPanelHolder) {
+            event.setCancelled(true);
+            int raw = event.getRawSlot();
+            handleAdminPanelClick(player, raw);
             return;
         }
 
@@ -138,6 +148,41 @@ public class InventoryListener implements Listener {
     /** Returns null if the slot holds a placeholder, otherwise the cloned item. */
     private ItemStack toArmor(ItemStack item) {
         return isReal(item) ? item.clone() : null;
+    }
+
+    // ── Admin panel click logic ────────────────────────────────────────────
+
+    private void handleAdminPanelClick(Player player, int slot) {
+        switch (slot) {
+            case AdminPanelGUI.SLOT_ELO_RESET ->
+                player.sendMessage(plugin.prefix() + "§7Uso: §e/admin elo reset <jugador>");
+            case AdminPanelGUI.SLOT_ELO_SET ->
+                player.sendMessage(plugin.prefix() + "§7Uso: §e/admin elo set <jugador> <valor>");
+            case AdminPanelGUI.SLOT_ELO_GET ->
+                player.sendMessage(plugin.prefix() + "§7Uso: §e/admin elo get <jugador>");
+            case AdminPanelGUI.SLOT_ELO_RESETALL -> {
+                player.closeInventory();
+                plugin.getEloManager().resetAllElo();
+                player.sendMessage(plugin.prefix() + "§c⚠ ELO de TODOS los jugadores restablecido a §e"
+                        + plugin.getEloManager().getDefaultElo() + "§c.");
+                plugin.getLogger().warning(player.getName() + " ha restablecido el ELO de todos los jugadores.");
+            }
+            case AdminPanelGUI.SLOT_KICK ->
+                player.sendMessage(plugin.prefix() + "§7Uso: §e/admin kick <jugador>");
+            case AdminPanelGUI.SLOT_FORCEEND ->
+                player.sendMessage(plugin.prefix() + "§7Uso: §e/admin forceend <jugador>");
+            case AdminPanelGUI.SLOT_RELOAD -> {
+                plugin.reloadConfig();
+                player.sendMessage(plugin.prefix() + "§aconfig.yml recargado correctamente.");
+            }
+            case AdminPanelGUI.SLOT_INFO -> {
+                player.closeInventory();
+                player.performCommand("admin info");
+            }
+            case AdminPanelGUI.SLOT_CLOSE ->
+                player.closeInventory();
+            default -> { /* separator or info slot — do nothing */ }
+        }
     }
 
     // ── Inventory drop prevention during duels ─────────────────────────────
