@@ -94,6 +94,8 @@ public class ScoreboardManager {
         setLine(obj, "   ", line--);
         setLine(obj, leg("&7⏳ Buscando rival..."), line--);
         setLine(obj, leg("&7Usa &f/pvpleave &7para salir"), line--);
+        setLine(obj, "     ", line--);
+        setLine(obj, pingLine(player), line--);
 
         player.setScoreboard(board);
         activeBoards.put(player.getUniqueId(), board);
@@ -147,6 +149,7 @@ public class ScoreboardManager {
         }
 
         setLine(obj, "    ", line--);
+        setLine(obj, pingLine(player), line--);
 
         player.setScoreboard(board);
         activeBoards.put(player.getUniqueId(), board);
@@ -193,6 +196,7 @@ public class ScoreboardManager {
         setLine(obj, "     ", line--);
         setLine(obj, leg("&a/queue &7para combatir"), line--);
         setLine(obj, "      ", line--);
+        setLine(obj, pingLine(player), line--);
 
         player.setScoreboard(board);
         activeBoards.put(player.getUniqueId(), board);
@@ -218,6 +222,23 @@ public class ScoreboardManager {
     public void restoreLobbyScoreboard(Player player) {
         if (player == null) return;
         showLobbyScoreboard(player);
+    }
+
+    // ── Ping / region helper ───────────────────────────────────────────────
+
+    /**
+     * Builds a formatted ping+region string, e.g. "§7(eu) §a42ms".
+     * Colour: green <50 · yellow <100 · gold <150 · red ≥150.
+     */
+    private String pingLine(Player player) {
+        String region = plugin.getConfig().getString("server.region", "eu").toLowerCase();
+        int ping = player.getPing();
+        String colour;
+        if      (ping <  50)  colour = "§a";
+        else if (ping < 100)  colour = "§e";
+        else if (ping < 150)  colour = "§6";
+        else                  colour = "§c";
+        return "§7(" + region + ") " + colour + ping + "ms";
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

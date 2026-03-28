@@ -48,6 +48,10 @@ arenas:
   # Folder prefix used for active match worlds
   instance-prefix: "pvp_match_"
 
+server:
+  # Region code shown in the scoreboard next to ping (e.g. eu, na, as, sa, oc)
+  region: "eu"
+
 scoreboard:
   # Whether to enable the scoreboard
   enabled: true
