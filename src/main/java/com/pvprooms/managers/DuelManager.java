@@ -53,8 +53,18 @@ public class DuelManager {
 
         if (p1 == null || p2 == null) return;
 
-        // Pick a random fully-configured arena template
-        ArenaTemplate template = plugin.getArenaManager().getRandomArena();
+        // Usar arena vinculada al kit, o una aleatoria si no hay vinculación
+        String connectedArena = plugin.getKitManager().getConnectedArena(kitName);
+        ArenaTemplate template = null;
+        if (connectedArena != null) {
+            template = plugin.getArenaManager().getArena(connectedArena);
+            if (template == null || !template.isFullyConfigured()) {
+                p1.sendMessage(plugin.prefix() + "§e⚠ Arena vinculada al kit no disponible. Usando arena aleatoria...");
+                p2.sendMessage(plugin.prefix() + "§e⚠ Arena vinculada al kit no disponible. Usando arena aleatoria...");
+                template = null;
+            }
+        }
+        if (template == null) template = plugin.getArenaManager().getRandomArena();
         if (template == null) {
             p1.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles. Pide a un admin que configure una.");
             p2.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles. Pide a un admin que configure una.");

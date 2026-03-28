@@ -70,6 +70,11 @@ public class KitManager {
                 } catch (IllegalArgumentException ignored) {}
             }
 
+            String connectedArena = kitsConfig.getString(path + ".connected-arena");
+            if (connectedArena != null && !connectedArena.isBlank()) {
+                kit.setConnectedArena(connectedArena);
+            }
+
             kits.put(kitName.toLowerCase(), kit);
         }
         plugin.getLogger().info("Loaded " + kits.size() + " kit(s).");
@@ -84,6 +89,8 @@ public class KitManager {
             kitsConfig.set(path + ".armor",    Arrays.asList(kit.getArmorContents()));
             kitsConfig.set(path + ".offhand",  kit.getOffhand());
             kitsConfig.set(path + ".icon",     kit.getIconMaterial().name());
+            kitsConfig.set(path + ".connected-arena",
+                    kit.getConnectedArena() != null ? kit.getConnectedArena() : "");
         }
         try {
             kitsConfig.save(kitsFile);
@@ -134,6 +141,50 @@ public class KitManager {
      */
     public boolean deleteKit(String name) {
         if (kits.remove(name.toLowerCase()) == null) return false;
+        saveKits();
+        return true;
+    }
+
+    /**
+     * Connects a kit to a specific arena.
+     * Pass null to arenaName to disconnect (use random arena).
+     * @return false if the kit does not exist.
+     */
+    public boolean connectKitToArena(String kitName, String arenaName) {
+        Kit kit = kits.get(kitName.toLowerCase());
+        if (kit == null) return false;
+        kit.setConnectedArena(arenaName == null || arenaName.isBlank() ? null : arenaName);
+        saveKits();
+        return true;
+    }
+
+    public String getConnectedArena(String kitName) {
+        Kit kit = kits.get(kitName.toLowerCase());
+        return kit != null ? kit.getConnectedArena() : null;
+    }
+
+    /**
+     * Updates kit contents from the kit editor GUI.
+     */
+    public boolean setKitFromEditor(String kitName, ItemStack[] contents,
+                                     ItemStack[] armor, ItemStack offhand) {
+        Kit kit = kits.get(kitName.toLowerCase());
+        if (kit == null) return false;
+        kit.setContents(contents);
+        kit.setArmorContents(armor);
+        kit.setOffhand(offhand);
+        saveKits();
+        return true;
+    }
+
+    /**
+     * Changes the display icon of a kit.
+     * @return false if the kit does not exist.
+     */
+    public boolean setKitIcon(String kitName, Material material) {
+        Kit kit = kits.get(kitName.toLowerCase());
+        if (kit == null) return false;
+        kit.setIconMaterial(material);
         saveKits();
         return true;
     }

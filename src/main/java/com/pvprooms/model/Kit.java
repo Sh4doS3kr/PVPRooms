@@ -17,6 +17,7 @@ public class Kit {
     private ItemStack[] armorContents; // 4-slot armor array
     private ItemStack offhand;
     private Material iconMaterial;     // icon shown in Kit GUI
+    private String connectedArena;     // null = arena aleatoria; otherwise forced arena name
 
     public Kit(String name, ItemStack[] contents, ItemStack[] armorContents, ItemStack offhand) {
         this.name = name;
@@ -56,8 +57,10 @@ public class Kit {
     public void setOffhand(ItemStack offhand) { this.offhand = offhand; }
 
     public Material getIconMaterial() { return iconMaterial; }
-
     public void setIconMaterial(Material iconMaterial) { this.iconMaterial = iconMaterial; }
+
+    public String getConnectedArena() { return connectedArena; }
+    public void setConnectedArena(String connectedArena) { this.connectedArena = connectedArena; }
 
     /**
      * Returns all non-null items across armor + inventory (used for display).

@@ -1,15 +1,19 @@
 package com.pvprooms.listeners;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.gui.KitEditorGUI;
+import com.pvprooms.gui.KitEditorHolder;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.model.Duel;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -62,16 +66,78 @@ public class InventoryListener implements Listener {
             return;
         }
 
-        // Prevent inventory manipulation inside duel worlds
+        // ── Kit Editor GUI ─────────────────────────────────────────────────
+        if (event.getInventory().getHolder() instanceof KitEditorHolder holder) {
+            int raw = event.getRawSlot();
+
+            // Separator panes — always block
+            if (raw == KitEditorGUI.PANE_SLOT_1 || raw == KitEditorGUI.PANE_SLOT_2) {
+                event.setCancelled(true);
+                return;
+            }
+            // SAVE
+            if (raw == KitEditorGUI.SAVE_SLOT) {
+                event.setCancelled(true);
+                saveKitFromEditor(event.getInventory(), holder, player);
+                player.closeInventory();
+                return;
+            }
+            // CANCEL
+            if (raw == KitEditorGUI.CANCEL_SLOT) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.prefix() + "§7Edición cancelada.");
+                player.closeInventory();
+                return;
+            }
+            // Allow all other clicks (inventory + armor slots)
+            return;
+        }
+
+        // ── Prevent inventory manipulation inside duel worlds ──────────────
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null) {
-            // Allow item clicks inside the player's own inventory but cancel upper inventory
-            // (e.g. chest access) – prevent exploitation
             if (event.getClickedInventory() != null
                     && event.getClickedInventory() != player.getInventory()) {
                 event.setCancelled(true);
             }
         }
+    }
+
+    // ── Kit editor: save logic ─────────────────────────────────────────────
+
+    private void saveKitFromEditor(Inventory inv, KitEditorHolder holder, Player player) {
+        // Slots 0-35 → kit inventory
+        ItemStack[] contents = new ItemStack[36];
+        for (int i = 0; i < 36; i++) {
+            ItemStack it = inv.getItem(i);
+            contents[i] = isReal(it) ? it.clone() : null;
+        }
+
+        // Slots 36-39 → armor (Bukkit order: [0]=boots [1]=legs [2]=chest [3]=helmet)
+        ItemStack[] armor = new ItemStack[4];
+        armor[3] = toArmor(inv.getItem(KitEditorGUI.HELMET_SLOT));     // slot 36
+        armor[2] = toArmor(inv.getItem(KitEditorGUI.CHESTPLATE_SLOT)); // slot 37
+        armor[1] = toArmor(inv.getItem(KitEditorGUI.LEGGINGS_SLOT));   // slot 38
+        armor[0] = toArmor(inv.getItem(KitEditorGUI.BOOTS_SLOT));      // slot 39
+
+        ItemStack offhand = toArmor(inv.getItem(KitEditorGUI.OFFHAND_SLOT)); // slot 40
+
+        plugin.getKitManager().setKitFromEditor(holder.getKitName(), contents, armor, offhand);
+        player.sendMessage(plugin.prefix() + "§a¡Kit §e" + holder.getKitName() + "§a guardado correctamente!");
+    }
+
+    /** True if the item is a real item (not null, not AIR, not a placeholder pane). */
+    private boolean isReal(ItemStack item) {
+        return item != null && item.getType() != Material.AIR
+                && item.getType() != KitEditorGUI.PLACEHOLDER_MAT
+                && item.getType() != Material.GRAY_STAINED_GLASS_PANE
+                && item.getType() != Material.LIME_WOOL
+                && item.getType() != Material.RED_WOOL;
+    }
+
+    /** Returns null if the slot holds a placeholder, otherwise the cloned item. */
+    private ItemStack toArmor(ItemStack item) {
+        return isReal(item) ? item.clone() : null;
     }
 
     // ── Inventory drop prevention during duels ─────────────────────────────
