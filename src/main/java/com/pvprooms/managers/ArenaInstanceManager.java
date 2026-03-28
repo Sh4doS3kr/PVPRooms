@@ -40,20 +40,26 @@ public class ArenaInstanceManager {
     public World createInstance(ArenaTemplate template, String matchId) {
         String instanceName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchId;
 
-        // ── Fuente: mundo raíz con el nombre de la plantilla ──────────────
-        File sourceDir = new File(Bukkit.getWorldContainer(), template.getName());
+        // ── Fuente: mundo raíz con el nombre de la plantilla ──────────────────
+        // Usar getWorldName() (nombre real del folder); si no está seteado, caer en getName()
+        String worldFolderName = (template.getWorldName() != null && !template.getWorldName().isBlank())
+                ? template.getWorldName() : template.getName();
+        File sourceDir = new File(Bukkit.getWorldContainer(), worldFolderName);
+        // Normalizar la ruta para resolver './' que aparece en algunos servidores (Pterodactyl)
+        try { sourceDir = sourceDir.getCanonicalFile(); }
+        catch (IOException e) { sourceDir = sourceDir.getAbsoluteFile(); }
 
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {
             plugin.getLogger().warning("[PvPRooms] Mundo plantilla no encontrado: "
                     + sourceDir.getAbsolutePath()
-                    + " — usa /arena create <nombre> o copia tu mundo a la raíz del servidor.");
+                    + " — copia la carpeta '‎" + worldFolderName + "' a la raíz del servidor.");
             return null;
         }
 
         // ── Guardar el mundo fuente si está cargado ────────────────────────
         // Esto garantiza que los chunks en memoria se escriban al disco
         // antes de copiar, incluso con múltiples partidas en curso.
-        World sourceWorld = Bukkit.getWorld(template.getName());
+        World sourceWorld = Bukkit.getWorld(worldFolderName);
         if (sourceWorld != null) {
             sourceWorld.save();
         }
