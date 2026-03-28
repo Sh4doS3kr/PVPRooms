@@ -231,7 +231,7 @@ public class ScoreboardManager {
      * Colour: green <50 · yellow <100 · gold <150 · red ≥150.
      */
     private String pingLine(Player player) {
-        String region = plugin.getConfig().getString("server.region", "eu").toLowerCase();
+        String region = plugin.getServerRegion();
         int ping = player.getPing();
         String colour;
         if      (ping <  50)  colour = "§a";

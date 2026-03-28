@@ -12,6 +12,7 @@ import com.pvprooms.listeners.CombatListener;
 import com.pvprooms.listeners.InventoryListener;
 import com.pvprooms.listeners.PlayerListener;
 import com.pvprooms.listeners.SpearListener;
+import com.pvprooms.util.RegionDetector;
 import com.pvprooms.weapons.SpearItem;
 import com.pvprooms.managers.*;
 import org.bukkit.Bukkit;
@@ -53,6 +54,8 @@ public class PvPRoomsPro extends JavaPlugin {
     private QueueModeGUI queueModeGUI;
     private WallManager wallManager;
     private HealthHologramManager healthHologramManager;
+    /** Detected or configured server region code (e.g. "eu", "na"). */
+    private volatile String serverRegion = "eu";
 
     // ── Plugin lifecycle ───────────────────────────────────────────────────
 
@@ -78,6 +81,11 @@ public class PvPRoomsPro extends JavaPlugin {
         wallManager             = new WallManager(this);
         healthHologramManager   = new HealthHologramManager(this);
         SpearItem.init(this);
+
+        // Detect server region asynchronously
+        String fallback = getConfig().getString("server.region", "eu");
+        serverRegion = fallback; // use fallback immediately; updated when HTTP call completes
+        RegionDetector.detectAsync(this, fallback, region -> serverRegion = region);
 
         // Start matchmaking runnable
         queueManager.startMatchmaking();
@@ -229,4 +237,5 @@ public class PvPRoomsPro extends JavaPlugin {
     public QueueModeGUI          getQueueModeGUI()          { return queueModeGUI; }
     public WallManager           getWallManager()          { return wallManager; }
     public HealthHologramManager getHealthHologramManager() { return healthHologramManager; }
+    public String                getServerRegion()           { return serverRegion; }
 }
