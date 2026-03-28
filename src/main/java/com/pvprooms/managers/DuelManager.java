@@ -104,6 +104,10 @@ public class DuelManager {
         plugin.getKitManager().applyKit(p1, kitName);
         plugin.getKitManager().applyKit(p2, kitName);
 
+        // Quitar scoreboard de cola antes de empezar
+        plugin.getScoreboardManager().clearScoreboard(p1);
+        plugin.getScoreboardManager().clearScoreboard(p2);
+
         // Notificar emparejamiento
         p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]");
         p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]");
@@ -135,20 +139,29 @@ public class DuelManager {
                     p1.setVelocity(p1.getVelocity().zero());
                     p2.setVelocity(p2.getVelocity().zero());
 
-                    sendTitle(p1, "§e" + remaining, "§7¡Prepárate!");
-                    sendTitle(p2, "§e" + remaining, "§7¡Prepárate!");
+                    sendTitle(p1, "§e§l" + remaining, "§7¡Prepárate!");
+                    sendTitle(p2, "§e§l" + remaining, "§7¡Prepárate!");
                     p1.sendMessage(plugin.prefix() + "§eLa partida empieza en §6" + remaining + "§e...");
                     p2.sendMessage(plugin.prefix() + "§eLa partida empieza en §6" + remaining + "§e...");
+
+                    // Tick sonido: pitch crece conforme baja la cuenta (0.8 → 1.8)
+                    float pitch = 0.8f + (1.0f / seconds) * (seconds - remaining);
+                    p1.playSound(p1.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, pitch);
+                    p2.playSound(p2.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, pitch);
+
                     remaining--;
                 } else {
                     duel.setState(Duel.State.FIGHTING);
                     duel.setStartTimeMillis(System.currentTimeMillis());
                     sendTitle(p1, "§c§l¡PELEA!", "");
                     sendTitle(p2, "§c§l¡PELEA!", "");
-                    p1.sendMessage(plugin.prefix() + "§c¡Comienza el duelo!");
-                    p2.sendMessage(plugin.prefix() + "§c¡Comienza el duelo!");
-                    plugin.getScoreboardManager().updateDuelScoreboard(p1, duel);
-                    plugin.getScoreboardManager().updateDuelScoreboard(p2, duel);
+                    p1.sendMessage(plugin.prefix() + "§c§l¡Comienza el duelo!");
+                    p2.sendMessage(plugin.prefix() + "§c§l¡Comienza el duelo!");
+
+                    // Sonido de inicio de combate
+                    p1.playSound(p1.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.2f);
+                    p2.playSound(p2.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.2f);
+
                     startDurationTimer(duel);
                     cancel();
                 }
@@ -156,10 +169,6 @@ public class DuelManager {
         }.runTaskTimer(plugin, 0L, 20L).getTaskId();
 
         duel.setCountdownTask(taskId);
-        plugin.getScoreboardManager().updateDuelScoreboard(
-                Bukkit.getPlayer(duel.getPlayer1()), duel);
-        plugin.getScoreboardManager().updateDuelScoreboard(
-                Bukkit.getPlayer(duel.getPlayer2()), duel);
     }
 
     /** Starts a max-duration timer that ends the duel in a draw if time runs out. */
