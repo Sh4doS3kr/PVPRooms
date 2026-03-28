@@ -244,17 +244,22 @@ public class DuelManager {
         UUID loserUUID = winnerUUID == null ? null
                 : winnerUUID.equals(duel.getPlayer1()) ? duel.getPlayer2() : duel.getPlayer1();
 
-        // ELO update (only if not a draw)
+        // Rating update — BO3 (TIER mode) uses TierPoints; normal duels use ELO
         if (winnerUUID != null && loserUUID != null) {
-            Player winner = Bukkit.getPlayer(winnerUUID);
-            Player loser  = Bukkit.getPlayer(loserUUID);
-            String winnerName = winner != null ? winner.getName() : winnerUUID.toString();
-            String loserName  = loser  != null ? loser.getName()  : loserUUID.toString();
-
-            int[] changes = plugin.getEloManager().processResult(
-                    winnerUUID, winnerName, loserUUID, loserName);
-
-            announceResult(p1, p2, winnerUUID, changes[0], changes[1]);
+            if (duel.isBo3()) {
+                // TIER mode: update tier points, skip ELO
+                plugin.getTierManager().recordResult(winnerUUID, loserUUID, duel.getKitName());
+                announceResultTier(p1, p2, winnerUUID, loserUUID, duel.getKitName());
+            } else {
+                // ELO mode: update ELO, skip tier points
+                Player winner = Bukkit.getPlayer(winnerUUID);
+                Player loser  = Bukkit.getPlayer(loserUUID);
+                String winnerName = winner != null ? winner.getName() : winnerUUID.toString();
+                String loserName  = loser  != null ? loser.getName()  : loserUUID.toString();
+                int[] changes = plugin.getEloManager().processResult(
+                        winnerUUID, winnerName, loserUUID, loserName);
+                announceResult(p1, p2, winnerUUID, changes[0], changes[1]);
+            }
         }
 
         // Remove spectators
@@ -496,6 +501,40 @@ public class DuelManager {
         }
 
         // Spectator announcements handled when the duel ends and spectators are removed
+    }
+
+    /** Announces a TIER-mode match result using tier points instead of ELO. */
+    private void announceResultTier(Player p1, Player p2, UUID winnerUUID, UUID loserUUID, String kitName) {
+        Player winner = Bukkit.getPlayer(winnerUUID);
+        Player loser  = Bukkit.getPlayer(loserUUID);
+        String winnerName = winner != null ? winner.getName() : "?";
+        String loserName  = loser  != null ? loser.getName()  : "?";
+
+        com.pvprooms.model.Tier wTier = plugin.getTierManager().getTier(winnerUUID, kitName);
+        com.pvprooms.model.Tier lTier = plugin.getTierManager().getTier(loserUUID,  kitName);
+        com.pvprooms.model.TierTitle wTitle = plugin.getTierManager().getTitle(winnerUUID);
+        com.pvprooms.model.TierTitle lTitle = plugin.getTierManager().getTitle(loserUUID);
+
+        if (winner != null) {
+            int pts = plugin.getTierManager().getPoints(winnerUUID, kitName);
+            winner.sendMessage(plugin.prefix()
+                    + "§a§l¡VICTORIA! §avs §e" + loserName
+                    + "  §8[§bTIER §e" + kitName + "§8]  "
+                    + wTier.colour + wTier.displayName
+                    + "  §8» §7" + pts + " pts");
+            winner.sendMessage(plugin.prefix() + "§7Insignia: " + wTitle.formatted());
+            sendTitle(winner, "§a§l¡VICTORIA!", wTier.colour + wTier.displayName, 80);
+        }
+        if (loser != null) {
+            int pts = plugin.getTierManager().getPoints(loserUUID, kitName);
+            loser.sendMessage(plugin.prefix()
+                    + "§c§lDERROTA §cvs §e" + winnerName
+                    + "  §8[§bTIER §e" + kitName + "§8]  "
+                    + lTier.colour + lTier.displayName
+                    + "  §8» §7" + pts + " pts");
+            loser.sendMessage(plugin.prefix() + "§7Insignia: " + lTitle.formatted());
+            sendTitle(loser, "§c§lDERROTA", lTier.colour + lTier.displayName, 80);
+        }
     }
 
     // ── Query helpers ──────────────────────────────────────────────────────

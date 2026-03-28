@@ -21,29 +21,33 @@ import org.bukkit.Material;
  */
 public enum Tier {
 
-    UNRANKED(   0, "Unranked", "§7",    Material.GRAY_CONCRETE),
-    LT5     ( 800, "LT5",      "§8",    Material.STONE),
-    HT5     (1000, "HT5",      "§f",    Material.IRON_INGOT),
-    LT4     (1200, "LT4",      "§a",    Material.GOLD_INGOT),
-    HT4     (1500, "HT4",      "§2",    Material.GOLDEN_SWORD),
-    LT3     (1800, "LT3",      "§b",    Material.DIAMOND),
-    HT3     (2100, "HT3",      "§3",    Material.DIAMOND_SWORD),
-    LT2     (2400, "LT2",      "§9",    Material.EMERALD),
-    HT2     (2700, "HT2",      "§5",    Material.NETHER_STAR),
-    LT1     (3000, "LT1",      "§6",    Material.TOTEM_OF_UNDYING),
-    HT1     (3400, "HT1",      "§c§l",  Material.BEACON);
+    //                 minElo  minPts  display    colour   icon
+    UNRANKED(   0,    -1, "Sin Rango", "§7",    Material.GRAY_CONCRETE),
+    LT5     ( 800,     0, "LT5",      "§8",    Material.STONE),
+    HT5     (1000,   100, "HT5",      "§f",    Material.IRON_INGOT),
+    LT4     (1200,   300, "LT4",      "§a",    Material.GOLD_INGOT),
+    HT4     (1500,   600, "HT4",      "§2",    Material.GOLDEN_SWORD),
+    LT3     (1800,  1000, "LT3",      "§b",    Material.DIAMOND),
+    HT3     (2100,  1400, "HT3",      "§3",    Material.DIAMOND_SWORD),
+    LT2     (2400,  1900, "LT2",      "§9",    Material.EMERALD),
+    HT2     (2700,  2500, "HT2",      "§5",    Material.NETHER_STAR),
+    LT1     (3000,  3100, "LT1",      "§6",    Material.TOTEM_OF_UNDYING),
+    HT1     (3400,  3800, "HT1",      "§c§l",  Material.BEACON);
 
-    /** Minimum ELO required to reach this tier. */
+    /** Minimum ELO required to reach this tier (ELO queue). */
     public final int      minElo;
-    /** Short display name (e.g. "HT1", "LT3", "Unranked"). */
+    /** Minimum tier-points required (TIER queue). -1 = UNRANKED sentinel. */
+    public final int      minPoints;
+    /** Short display name. */
     public final String   displayName;
     /** Bukkit colour code prefix. */
     public final String   colour;
     /** Material used as icon in GUIs. */
     public final Material icon;
 
-    Tier(int minElo, String displayName, String colour, Material icon) {
+    Tier(int minElo, int minPoints, String displayName, String colour, Material icon) {
         this.minElo       = minElo;
+        this.minPoints    = minPoints;
         this.displayName  = displayName;
         this.colour       = colour;
         this.icon         = icon;
@@ -52,6 +56,41 @@ public enum Tier {
     /** Returns the coloured display string, e.g. "§c§lHT1". */
     public String formatted() {
         return colour + "§l" + displayName;
+    }
+
+    /**
+     * Score this tier contributes to the overall ranking (sum across all kits).
+     * Used by TierManager to compute a player's total score.
+     */
+    public int tierScore() {
+        return switch (this) {
+            case UNRANKED -> 0;
+            case LT5     -> 15;
+            case HT5     -> 25;
+            case LT4     -> 40;
+            case HT4     -> 60;
+            case LT3     -> 80;
+            case HT3     -> 100;
+            case LT2     -> 125;
+            case HT2     -> 150;
+            case LT1     -> 185;
+            case HT1     -> 220;
+        };
+    }
+
+    /**
+     * Resolves a tier from tier-points (TIER queue system, independent of ELO).
+     * Returns UNRANKED only if pts {@literal <} 0 (never played that kit).
+     */
+    public static Tier fromPoints(int pts) {
+        if (pts < 0) return UNRANKED;
+        Tier result = LT5;
+        for (Tier t : values()) {
+            if (t == UNRANKED) continue;
+            if (pts >= t.minPoints) result = t;
+            else break;
+        }
+        return result;
     }
 
     /** Returns true if this tier is at most 1 step apart from the other (for queue expansion). */

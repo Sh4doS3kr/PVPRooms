@@ -52,6 +52,10 @@ server:
   # Region code shown in the scoreboard next to ping (e.g. eu, na, as, sa, oc)
   region: "eu"
 
+web-api:
+  enabled: true
+  port: 27090      # Puerto HTTP para la web de clasificación
+
 scoreboard:
   # Whether to enable the scoreboard
   enabled: true

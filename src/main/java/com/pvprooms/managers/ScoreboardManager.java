@@ -143,15 +143,27 @@ public class ScoreboardManager {
         setLine(obj, "   ", line--);
         setLine(obj, leg("&e&l» &fRival: &c" + opponentName), line--);
 
-        int myElo  = plugin.getEloManager().getElo(player.getUniqueId());
-        Tier myTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
-        setLine(obj, leg("&e&l» &fTier:     " + myTier.colour + myTier.displayName), line--);
-        setLine(obj, leg("&e&l» &fTu ELO:   &6" + myElo), line--);
-
-        if (opponent != null) {
-            int opElo   = plugin.getEloManager().getElo(opponentUUID);
-            Tier opTier = Tier.forPlayer(plugin.getEloManager(), opponentUUID);
-            setLine(obj, leg("&e&l» &fELO rival: &c" + opElo + " &7(" + opTier.colour + opTier.displayName + "&7)"), line--);
+        if (duel.isBo3()) {
+            Tier myKitTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
+            int  myPts     = plugin.getTierManager().getPoints(player.getUniqueId(), duel.getKitName());
+            com.pvprooms.model.TierTitle myTitle = plugin.getTierManager().getTitle(player.getUniqueId());
+            setLine(obj, leg("&e&l» &fTier &8(" + duel.getKitName() + "&8): " + myKitTier.colour + myKitTier.displayName), line--);
+            setLine(obj, leg("&e&l» &fPuntos: &6" + Math.max(0, myPts)), line--);
+            setLine(obj, leg("&e&l» &fInsignia: " + myTitle.colour + myTitle.symbol + " " + myTitle.name), line--);
+            if (opponent != null) {
+                Tier opKitTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
+                setLine(obj, leg("&e&l» &fTier rival: &c" + opKitTier.colour + opKitTier.displayName), line--);
+            }
+        } else {
+            int myElo   = plugin.getEloManager().getElo(player.getUniqueId());
+            Tier myTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
+            setLine(obj, leg("&e&l» &fTier:     " + myTier.colour + myTier.displayName), line--);
+            setLine(obj, leg("&e&l» &fTu ELO:   &6" + myElo), line--);
+            if (opponent != null) {
+                int opElo   = plugin.getEloManager().getElo(opponentUUID);
+                Tier opTier = Tier.forPlayer(plugin.getEloManager(), opponentUUID);
+                setLine(obj, leg("&e&l» &fELO rival: &c" + opElo + " &7(" + opTier.colour + opTier.displayName + "&7)"), line--);
+            }
         }
 
         setLine(obj, "    ", line--);

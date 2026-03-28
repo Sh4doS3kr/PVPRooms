@@ -11,7 +11,9 @@ import com.pvprooms.managers.WallManager;
 import com.pvprooms.listeners.CombatListener;
 import com.pvprooms.listeners.InventoryListener;
 import com.pvprooms.listeners.PlayerListener;
+import com.pvprooms.api.TierApiServer;
 import com.pvprooms.listeners.SpearListener;
+import com.pvprooms.managers.TierManager;
 import com.pvprooms.util.RegionDetector;
 import com.pvprooms.weapons.SpearItem;
 import com.pvprooms.managers.*;
@@ -54,6 +56,8 @@ public class PvPRoomsPro extends JavaPlugin {
     private QueueModeGUI queueModeGUI;
     private WallManager wallManager;
     private HealthHologramManager healthHologramManager;
+    private TierManager tierManager;
+    private TierApiServer tierApiServer;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -80,12 +84,21 @@ public class PvPRoomsPro extends JavaPlugin {
         queueModeGUI            = new QueueModeGUI();
         wallManager             = new WallManager(this);
         healthHologramManager   = new HealthHologramManager(this);
+        tierManager             = new TierManager(this);
         SpearItem.init(this);
 
         // Detect server region asynchronously
         String fallback = getConfig().getString("server.region", "eu");
-        serverRegion = fallback; // use fallback immediately; updated when HTTP call completes
-        RegionDetector.detectAsync(this, fallback, region -> serverRegion = region);
+        serverRegion = fallback;
+        RegionDetector.detectAsync(this, fallback, region -> {
+            serverRegion = region;
+            // Start API server after region is known
+            int apiPort = getConfig().getInt("web-api.port", 27090);
+            if (getConfig().getBoolean("web-api.enabled", true)) {
+                tierApiServer = new TierApiServer(this, apiPort);
+                tierApiServer.start();
+            }
+        });
 
         // Start matchmaking runnable
         queueManager.startMatchmaking();
@@ -128,6 +141,12 @@ public class PvPRoomsPro extends JavaPlugin {
             new java.util.ArrayList<>(duelManager.getActiveDuels())
                     .forEach(duel -> duelManager.endDuel(duel, null, "server shutdown"));
         }
+
+        // Stop web API server
+        if (tierApiServer != null) tierApiServer.stop();
+
+        // Save tier data
+        if (tierManager != null) tierManager.save();
 
         // Cancel all scheduled tasks owned by this plugin
         Bukkit.getScheduler().cancelTasks(this);
@@ -237,5 +256,6 @@ public class PvPRoomsPro extends JavaPlugin {
     public QueueModeGUI          getQueueModeGUI()          { return queueModeGUI; }
     public WallManager           getWallManager()          { return wallManager; }
     public HealthHologramManager getHealthHologramManager() { return healthHologramManager; }
+    public TierManager           getTierManager()           { return tierManager; }
     public String                getServerRegion()           { return serverRegion; }
 }
