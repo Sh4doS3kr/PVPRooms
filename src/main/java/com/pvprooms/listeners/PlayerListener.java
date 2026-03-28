@@ -157,20 +157,23 @@ public class PlayerListener implements Listener {
         org.bukkit.block.Block clicked = event.getClickedBlock();
         if (clicked == null) return;
 
+        String wallId = plugin.getWallManager().getToolWallId(player.getInventory().getItemInMainHand());
+        if (wallId == null) return;
+
         org.bukkit.event.block.Action action = event.getAction();
         if (action == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
             event.setCancelled(true);
             plugin.getWallManager().setPos1(player.getUniqueId(), clicked.getLocation());
-            player.sendMessage(plugin.prefix() + "§ePunto §6A §eguardado: §f"
+            player.sendMessage(plugin.prefix() + "§7[§e" + wallId + "§7] §ePunto §6A§e: §f"
                     + clicked.getX() + ", " + clicked.getY() + ", " + clicked.getZ());
         } else if (action == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
             event.setCancelled(true);
             plugin.getWallManager().setPos2(player.getUniqueId(), clicked.getLocation());
-            player.sendMessage(plugin.prefix() + "§ePunto §6B §eguardado: §f"
+            player.sendMessage(plugin.prefix() + "§7[§e" + wallId + "§7] §ePunto §6B§e: §f"
                     + clicked.getX() + ", " + clicked.getY() + ", " + clicked.getZ());
             if (plugin.getWallManager().hasFullSelection(player.getUniqueId())) {
                 player.sendMessage(plugin.prefix()
-                        + "§a¡Selecci\u00f3n completa! Ahora: §f/admin setupwall <tipo_bloque>");
+                        + "§a¡Selección completa! Ahora: §f/admin setupwall " + wallId + " <tipo_bloque>");
             }
         }
     }

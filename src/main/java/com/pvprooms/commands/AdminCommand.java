@@ -202,38 +202,69 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.prefix() + "§cEste subcomando solo puede usarlo un jugador."); return;
         }
-        // /admin setupwall (no args) → give tool
+        String worldName = player.getWorld().getName();
+
+        // /admin setupwall (no args) → show usage
         if (args.length == 1) {
-            plugin.getWallManager().giveSetupTool(player);
+            sender.sendMessage(plugin.prefix() + "§7Uso: §f/admin setupwall <wallId> §7para recibir la herramienta.");
+            sender.sendMessage(plugin.prefix() + "§7   : §f/admin setupwall <wallId> <bloque> §7para guardar.");
+            sender.sendMessage(plugin.prefix() + "§7   : §f/admin setupwall list §7para listar muros.");
+            sender.sendMessage(plugin.prefix() + "§7   : §f/admin setupwall remove <wallId> §7para eliminar.");
             return;
         }
-        // /admin setupwall <blockType>
-        Material mat = Material.matchMaterial(args[1].toUpperCase());
-        if (mat == null) {
-            sender.sendMessage(plugin.prefix() + "§cBloque desconocido: §e" + args[1]);
+
+        // /admin setupwall list
+        if (args[1].equalsIgnoreCase("list")) {
+            if (plugin.getArenaManager().getArena(worldName) == null) {
+                sender.sendMessage(plugin.prefix() + "§cEste mundo no es una arena registrada."); return;
+            }
+            java.util.Set<String> ids = plugin.getWallManager().getWallIds(worldName);
+            if (ids.isEmpty()) {
+                sender.sendMessage(plugin.prefix() + "§eNingún muro configurado para §f" + worldName + "§e."); return;
+            }
+            sender.sendMessage(plugin.prefix() + "§aMusros de §e" + worldName + "§a: §f" + String.join("§7, §f", ids));
             return;
+        }
+
+        // /admin setupwall remove <wallId>
+        if (args[1].equalsIgnoreCase("remove")) {
+            if (args.length < 3) { sender.sendMessage(plugin.prefix() + "§cUso: /admin setupwall remove <wallId>"); return; }
+            boolean removed = plugin.getWallManager().removeWall(worldName, args[2]);
+            sender.sendMessage(removed
+                    ? plugin.prefix() + "§aMuro §e" + args[2] + "§a eliminado de §e" + worldName + "§a."
+                    : plugin.prefix() + "§cNo existe el muro §e" + args[2] + "§c en §e" + worldName + "§c.");
+            return;
+        }
+
+        String wallId = args[1];
+
+        // /admin setupwall <wallId>  → give tool
+        if (args.length == 2) {
+            plugin.getWallManager().giveSetupTool(player, wallId);
+            return;
+        }
+
+        // /admin setupwall <wallId> <blockType>  → finalize
+        Material mat = Material.matchMaterial(args[2].toUpperCase());
+        if (mat == null) {
+            sender.sendMessage(plugin.prefix() + "§cBloque desconocido: §e" + args[2]); return;
         }
         if (!plugin.getWallManager().hasFullSelection(player.getUniqueId())) {
             sender.sendMessage(plugin.prefix() + "§cAún no has seleccionado los dos puntos.");
-            sender.sendMessage(plugin.prefix() + "§f/admin setupwall §7para recibir la herramienta.");
+            sender.sendMessage(plugin.prefix() + "§f/admin setupwall " + wallId + "§7 para recibir la herramienta.");
             return;
         }
-        // Infer arena name from current world
-        String worldName = player.getWorld().getName();
         if (plugin.getArenaManager().getArena(worldName) == null) {
-            sender.sendMessage(plugin.prefix() + "§cEste mundo (§e" + worldName
-                    + "§c) no es una arena registrada.");
-            sender.sendMessage(plugin.prefix() + "§7Usa §f/admin travel <arena>§7 para ir al mundo de la arena.");
+            sender.sendMessage(plugin.prefix() + "§cEste mundo (§e" + worldName + "§c) no es una arena registrada.");
             return;
         }
-        int count = plugin.getWallManager().setupWall(worldName, player.getUniqueId(), mat);
+        int count = plugin.getWallManager().setupWall(worldName, wallId, player.getUniqueId(), mat);
         if (count <= 0) {
-            sender.sendMessage(plugin.prefix() + "§cNo se encontraron bloques de tipo §e" + mat.name()
-                    + "§c en la selección.");
+            sender.sendMessage(plugin.prefix() + "§cNo se encontraron bloques de tipo §e" + mat.name() + "§c en la selección.");
             return;
         }
-        sender.sendMessage(plugin.prefix() + "§a¡Muro configurado! §e" + count
-                + " §abloques de §f" + mat.name() + "§a guardados para la arena §e" + worldName + "§a.");
+        sender.sendMessage(plugin.prefix() + "§a¡Muro §e" + wallId + "§a guardado! §f" + count
+                + "§a bloques §f" + mat.name() + "§a en §e" + worldName + "§a.");
     }
 
     // ── Travel ────────────────────────────────────────────────
