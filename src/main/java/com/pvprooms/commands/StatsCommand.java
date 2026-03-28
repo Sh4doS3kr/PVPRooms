@@ -1,6 +1,7 @@
 package com.pvprooms.commands;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.model.Tier;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -53,7 +54,9 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§8§m══════════════════════════════");
         sender.sendMessage("§6§l  ⚔ Estadísticas de §f" + target.getName());
         sender.sendMessage("§8§m══════════════════════════════");
-        sender.sendMessage("§eELO: §f" + elo);
+        Tier tier = Tier.fromElo(elo);
+        sender.sendMessage("§eELO:     §f" + elo);
+        sender.sendMessage("§eTier:    " + tier.formatted());
         sender.sendMessage("§eRanking: §f" + (rank == -1 ? "§7Sin rango" : "#" + rank));
 
         String status;

@@ -2,6 +2,7 @@ package com.pvprooms.gui;
 
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Kit;
+import com.pvprooms.model.Tier;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -25,8 +26,8 @@ import java.util.List;
  */
 public class KitGUI {
 
-    /** Identifier embedded in the GUI title so listeners can detect it. */
-    public static final String GUI_TITLE_TAG = "§0KIT_SELECT§r";
+    public static final String GUI_TITLE_TAG      = "§0KIT_SELECT§r";
+    public static final String GUI_TITLE_TAG_TIER  = "§0KIT_TIER§r";
 
     private final PvPRoomsPro plugin;
 
@@ -36,63 +37,68 @@ public class KitGUI {
 
     // ── Open GUI ───────────────────────────────────────────────────────────
 
-    /**
-     * Opens the kit selection inventory for the given player.
-     * Each available kit is represented by its icon material.
-     */
-    public void open(Player player) {
-        Collection<Kit> kits = plugin.getKitManager().getAllKits();
+    /** Opens in ELO mode. */
+    public void open(Player player) { openInternal(player, false); }
 
+    /** Opens in TIER mode (shows tier info, routes to tier queue). */
+    public void openTierMode(Player player) { openInternal(player, true); }
+
+    private void openInternal(Player player, boolean tierMode) {
+        Collection<Kit> kits = plugin.getKitManager().getAllKits();
         if (kits.isEmpty()) {
-            player.sendMessage(plugin.prefix() + "§cNo kits are available yet. Ask an admin to create some.");
+            player.sendMessage(plugin.prefix() + "§cNo hay kits disponibles todavía.");
             return;
         }
-
         int size = calculateSize(kits.size());
-        String title = ChatColor.translateAlternateColorCodes('&',
-                "&8Select a &cKit &8— " + GUI_TITLE_TAG);
-
+        String tag   = tierMode ? GUI_TITLE_TAG_TIER : GUI_TITLE_TAG;
+        String label = tierMode ? "&8Selecciona Kit &b[TIER] &8— " : "&8Selecciona Kit &c[ELO] &8— ";
+        String title = ChatColor.translateAlternateColorCodes('&', label + tag);
         Inventory inv = Bukkit.createInventory(null, size, title);
-
         int slot = 0;
         for (Kit kit : kits) {
             if (slot >= size) break;
-            inv.setItem(slot, buildKitItem(kit, player));
+            inv.setItem(slot, tierMode ? buildKitItemTier(kit, player) : buildKitItem(kit, player));
             slot++;
         }
-
-        // Fill remaining slots with glass panes
         ItemStack filler = buildFiller();
-        for (int i = slot; i < size; i++) {
-            inv.setItem(i, filler);
-        }
-
+        for (int i = slot; i < size; i++) inv.setItem(i, filler);
         player.openInventory(inv);
     }
 
     // ── Item builders ──────────────────────────────────────────────────────
 
-    /**
-     * Builds the display item for a kit.
-     * The item name contains the kit name and lore shows queue size.
-     */
     private ItemStack buildKitItem(Kit kit, Player viewer) {
-        ItemStack item = new ItemStack(kit.getIconMaterial());
-        ItemMeta meta = item.getItemMeta();
-
         int queueSize = plugin.getQueueManager().getQueueSize(kit.getName());
-        int myElo = plugin.getEloManager().getElo(viewer.getUniqueId());
+        int myElo     = plugin.getEloManager().getElo(viewer.getUniqueId());
+        Tier myTier   = Tier.fromElo(myElo);
+        return buildItem(kit.getIconMaterial(),
+                "§e§l" + capitalize(kit.getName()),
+                List.of("§7Click para entrar en cola ELO",
+                        "",
+                        "§fEn cola: §a" + queueSize,
+                        "§fTu ELO:  §e" + myElo,
+                        "§fTu Tier: " + myTier.formatted()));
+    }
 
-        meta.setDisplayName(ChatColor.translateAlternateColorCodes('&',
-                "&e&l" + capitalize(kit.getName())));
+    private ItemStack buildKitItemTier(Kit kit, Player viewer) {
+        int queueSize = plugin.getQueueManager().getTierQueueSize(kit.getName());
+        int myElo     = plugin.getEloManager().getElo(viewer.getUniqueId());
+        Tier myTier   = Tier.fromElo(myElo);
+        return buildItem(kit.getIconMaterial(),
+                "§b§l" + capitalize(kit.getName()),
+                List.of("§7Click para entrar en cola TIER",
+                        "§7Solo rivales de " + myTier.formatted() + " §7(±1)",
+                        "",
+                        "§fEn cola TIER: §a" + queueSize,
+                        "§fTu ELO:       §e" + myElo,
+                        "§fTu Tier:      " + myTier.formatted()));
+    }
 
-        List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.translateAlternateColorCodes('&', "&7Click to join queue"));
-        lore.add("");
-        lore.add(ChatColor.translateAlternateColorCodes('&', "&fIn queue: &a" + queueSize));
-        lore.add(ChatColor.translateAlternateColorCodes('&', "&fYour ELO: &e" + myElo));
+    private ItemStack buildItem(Material mat, String name, List<String> lore) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta  = item.getItemMeta();
+        meta.setDisplayName(name);
         meta.setLore(lore);
-
         item.setItemMeta(meta);
         return item;
     }

@@ -41,8 +41,9 @@ public class QueueCommand implements CommandExecutor {
             return true;
         }
 
-        // Open GUI
-        plugin.getKitGUI().open(player);
+        // Open mode selection GUI (ELO vs TIER)
+        int elo = plugin.getEloManager().getElo(player.getUniqueId());
+        player.openInventory(plugin.getQueueModeGUI().build(elo));
         return true;
     }
 }

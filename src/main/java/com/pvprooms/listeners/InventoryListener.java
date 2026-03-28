@@ -8,6 +8,8 @@ import com.pvprooms.gui.ArenaConfigHolder;
 import com.pvprooms.gui.KitEditorGUI;
 import com.pvprooms.gui.KitEditorHolder;
 import com.pvprooms.gui.KitGUI;
+import com.pvprooms.gui.QueueModeGUI;
+import com.pvprooms.gui.QueueModeHolder;
 import com.pvprooms.model.ArenaTemplate;
 import com.pvprooms.model.Duel;
 import org.bukkit.ChatColor;
@@ -44,22 +46,56 @@ public class InventoryListener implements Listener {
 
         String title = ChatColor.stripColor(event.getView().getTitle());
 
-        // Detect Kit Selection GUI
+        // ── Queue Mode selection GUI (ELO vs TIER) ────────────────────────
+        if (event.getInventory().getHolder() instanceof QueueModeHolder) {
+            event.setCancelled(true);
+            int slot = event.getRawSlot();
+            if (slot == QueueModeGUI.SLOT_ELO) {
+                player.closeInventory();
+                plugin.getKitGUI().open(player);
+            } else if (slot == QueueModeGUI.SLOT_TIER) {
+                player.closeInventory();
+                plugin.getKitGUI().openTierMode(player);
+            }
+            return;
+        }
+
+        // ── Kit Selection GUI — ELO mode ───────────────────────────────────
         if (title.contains("KIT_SELECT")) {
             event.setCancelled(true);
-
             ItemStack clicked = event.getCurrentItem();
             if (clicked == null) return;
-
             String kitName = plugin.getKitGUI().extractKitName(clicked);
             if (kitName == null || !plugin.getKitManager().kitExists(kitName)) return;
-
-            // Close GUI first, then add to queue
             player.closeInventory();
-
             boolean joined = plugin.getQueueManager().addToQueue(player, kitName);
             if (joined) {
-                player.sendMessage(plugin.prefix() + "§a¡Entraste a la cola de §e" + kitName + "§a! Buscando rival...");
+                player.sendMessage(plugin.prefix() + "§a¡Entraste en la cola ELO de §e" + kitName + "§a! Buscando rival...");
+                plugin.getScoreboardManager().showQueueScoreboard(player, kitName);
+            } else if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
+                player.sendMessage(plugin.prefix() + "§cYa estás en un duelo.");
+            } else if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
+                player.sendMessage(plugin.prefix() + "§cYa estás en la cola.");
+            } else {
+                player.sendMessage(plugin.prefix() + "§cCooldown activo. Espera un momento.");
+            }
+            return;
+        }
+
+        // ── Kit Selection GUI — TIER mode ──────────────────────────────────
+        if (title.contains("KIT_TIER")) {
+            event.setCancelled(true);
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null) return;
+            String kitName = plugin.getKitGUI().extractKitName(clicked);
+            if (kitName == null || !plugin.getKitManager().kitExists(kitName)) return;
+            player.closeInventory();
+            boolean joined = plugin.getQueueManager().addToTierQueue(player, kitName);
+            if (joined) {
+                com.pvprooms.model.Tier myTier = com.pvprooms.model.Tier.fromElo(
+                        plugin.getEloManager().getElo(player.getUniqueId()));
+                player.sendMessage(plugin.prefix() + "§a¡Entraste en la cola TIER "
+                        + myTier.formatted() + "§a de §e" + kitName + "§a! Buscando rival...");
                 plugin.getScoreboardManager().showQueueScoreboard(player, kitName);
             } else if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
                 player.sendMessage(plugin.prefix() + "§cYa estás en un duelo.");

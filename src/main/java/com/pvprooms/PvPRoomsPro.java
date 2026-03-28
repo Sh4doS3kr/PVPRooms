@@ -4,6 +4,7 @@ import com.pvprooms.commands.*;
 import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.ArenaConfigGUI;
+import com.pvprooms.gui.QueueModeGUI;
 import com.pvprooms.managers.HealthHologramManager;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.managers.WallManager;
@@ -47,6 +48,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private KitGUI kitGUI;
     private AdminPanelGUI adminPanelGUI;
     private ArenaConfigGUI arenaConfigGUI;
+    private QueueModeGUI queueModeGUI;
     private WallManager wallManager;
     private HealthHologramManager healthHologramManager;
 
@@ -70,6 +72,7 @@ public class PvPRoomsPro extends JavaPlugin {
         kitGUI               = new KitGUI(this);
         adminPanelGUI        = new AdminPanelGUI(this);
         arenaConfigGUI          = new ArenaConfigGUI();
+        queueModeGUI            = new QueueModeGUI();
         wallManager             = new WallManager(this);
         healthHologramManager   = new HealthHologramManager(this);
 
@@ -219,6 +222,7 @@ public class PvPRoomsPro extends JavaPlugin {
     public KitGUI                getKitGUI()               { return kitGUI; }
     public AdminPanelGUI         getAdminPanelGUI()        { return adminPanelGUI; }
     public ArenaConfigGUI        getArenaConfigGUI()        { return arenaConfigGUI; }
+    public QueueModeGUI          getQueueModeGUI()          { return queueModeGUI; }
     public WallManager           getWallManager()          { return wallManager; }
     public HealthHologramManager getHealthHologramManager() { return healthHologramManager; }
 }
