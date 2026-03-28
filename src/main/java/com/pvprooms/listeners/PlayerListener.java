@@ -12,9 +12,16 @@ import com.pvprooms.model.ArenaTemplate;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
+import org.bukkit.entity.Monster;
+import org.bukkit.entity.Slime;
+import org.bukkit.entity.Ghast;
+import org.bukkit.entity.Phantom;
+import org.bukkit.entity.Shulker;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.*;
@@ -272,6 +279,34 @@ public class PlayerListener implements Listener {
         if (duel != null && duel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
         }
+    }
+
+    // ── Mob spawn prevention (global) ───────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onCreatureSpawn(CreatureSpawnEvent event) {
+        if (isMob(event.getEntity())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        applyNoMobGamerules(event.getWorld());
+    }
+
+    private boolean isMob(org.bukkit.entity.Entity entity) {
+        return entity instanceof Monster
+                || entity instanceof Slime
+                || entity instanceof Ghast
+                || entity instanceof Phantom
+                || entity instanceof Shulker;
+    }
+
+    public static void applyNoMobGamerules(org.bukkit.World world) {
+        world.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, false);
+        world.setGameRule(org.bukkit.GameRule.DO_PATROL_SPAWNING, false);
+        world.setGameRule(org.bukkit.GameRule.DO_TRADER_SPAWNING, false);
     }
 
     // ── Explosion control in arenas ──────────────────────────────────────────

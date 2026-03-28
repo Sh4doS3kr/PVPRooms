@@ -79,6 +79,10 @@ public class PvPRoomsPro extends JavaPlugin {
         // Apply lobby world settings (always day, no weather) one tick after load
         Bukkit.getScheduler().runTaskLater(this, this::applyLobbyWorldSettings, 1L);
 
+        // Disable mob spawning in all already-loaded worlds
+        Bukkit.getScheduler().runTaskLater(this, () ->
+                Bukkit.getWorlds().forEach(com.pvprooms.listeners.PlayerListener::applyNoMobGamerules), 1L);
+
         // Register commands
         registerCommands();
 
