@@ -72,8 +72,9 @@ public class ArenaInstanceManager {
             return null;
         }
 
-        // Borrar session.lock para que Bukkit pueda cargar el mundo
+        // Borrar session.lock y uid.dat para que Bukkit asigne un UID nuevo
         new File(destDir, "session.lock").delete();
+        new File(destDir, "uid.dat").delete();
 
         // ── Cargar la instancia con generador vacío ────────────────────────
         // El generador vacío evita que Bukkit genere chunks nuevos
