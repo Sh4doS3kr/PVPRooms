@@ -14,8 +14,10 @@ public class ArenaTemplate {
     private String worldName;
     private double spawn1X, spawn1Y, spawn1Z;
     private float spawn1Yaw, spawn1Pitch;
+    private boolean spawn1Set = false;
     private double spawn2X, spawn2Y, spawn2Z;
     private float spawn2Yaw, spawn2Pitch;
+    private boolean spawn2Set = false;
 
     // ── Arena-specific game rules ───────────────────────────────
     private boolean allowExplosions = false;
@@ -39,6 +41,7 @@ public class ArenaTemplate {
         this.spawn1Z = loc.getZ();
         this.spawn1Yaw = loc.getYaw();
         this.spawn1Pitch = loc.getPitch();
+        this.spawn1Set = true;
     }
 
     /** Stores spawn 2 position from a live Location object. */
@@ -48,6 +51,7 @@ public class ArenaTemplate {
         this.spawn2Z = loc.getZ();
         this.spawn2Yaw = loc.getYaw();
         this.spawn2Pitch = loc.getPitch();
+        this.spawn2Set = true;
     }
 
     /**
@@ -65,9 +69,9 @@ public class ArenaTemplate {
         return new Location(world, spawn2X, spawn2Y, spawn2Z, spawn2Yaw, spawn2Pitch);
     }
 
-    /** Returns true if both spawns have been set (Y != 0 is a basic sanity check). */
+    /** Returns true if both spawns have been explicitly set. */
     public boolean isFullyConfigured() {
-        return worldName != null && spawn1Y != 0 && spawn2Y != 0;
+        return worldName != null && spawn1Set && spawn2Set;
     }
 
     // ── Getters / setters ──────────────────────────────────────────────────
@@ -94,6 +98,7 @@ public class ArenaTemplate {
     public void setSpawn1Raw(double x, double y, double z, float yaw, float pitch) {
         this.spawn1X = x; this.spawn1Y = y; this.spawn1Z = z;
         this.spawn1Yaw = yaw; this.spawn1Pitch = pitch;
+        this.spawn1Set = (x != 0 || y != 0 || z != 0);
     }
 
     public double getSpawn2X()  { return spawn2X; }
@@ -105,5 +110,6 @@ public class ArenaTemplate {
     public void setSpawn2Raw(double x, double y, double z, float yaw, float pitch) {
         this.spawn2X = x; this.spawn2Y = y; this.spawn2Z = z;
         this.spawn2Yaw = yaw; this.spawn2Pitch = pitch;
+        this.spawn2Set = (x != 0 || y != 0 || z != 0);
     }
 }

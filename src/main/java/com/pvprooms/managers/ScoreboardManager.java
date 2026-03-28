@@ -257,8 +257,11 @@ public class ScoreboardManager {
      */
     public void clearScoreboard(Player player) {
         if (player == null) return;
-        activeBoards.remove(player.getUniqueId());
-        lobbyPlayers.remove(player.getUniqueId());
+        UUID uuid = player.getUniqueId();
+        activeBoards.remove(uuid);
+        lobbyPlayers.remove(uuid);
+        queuePlayers.remove(uuid);
+        queueJoinTimes.remove(uuid);
         player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
     }
 

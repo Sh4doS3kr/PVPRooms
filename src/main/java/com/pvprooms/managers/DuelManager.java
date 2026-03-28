@@ -60,8 +60,9 @@ public class DuelManager {
 
         // Usar arena vinculada al kit, o una aleatoria si no hay vinculación
         String connectedArena = plugin.getKitManager().getConnectedArena(kitName);
+        if (connectedArena != null) connectedArena = connectedArena.trim();
         ArenaTemplate template = null;
-        if (connectedArena != null) {
+        if (connectedArena != null && !connectedArena.isEmpty()) {
             template = plugin.getArenaManager().getArena(connectedArena);
             if (template == null || !template.isFullyConfigured()) {
                 p1.sendMessage(plugin.prefix() + "§e⚠ Arena vinculada al kit no disponible. Usando arena aleatoria...");
