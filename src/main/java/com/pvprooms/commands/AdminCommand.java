@@ -3,6 +3,7 @@ package com.pvprooms.commands;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -53,6 +54,15 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // When /adminpanel is used WITH args (e.g. /adminpanel setupwall) treat as /admin
+    private boolean handleAdminpanelWithArgs(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("pvprooms.admin")) {
+            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
+            return true;
+        }
+        return dispatchSubcommand(sender, args);
+    }
+
     // ── /admin ────────────────────────────────────────────────────────────
 
     @Override
@@ -64,12 +74,22 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args.length == 0) { sendHelp(sender); return true; }
+        if (args.length == 0) {
+            if (label.equalsIgnoreCase("adminpanel")) return openPanel(sender);
+            sendHelp(sender);
+            return true;
+        }
+        if (label.equalsIgnoreCase("adminpanel")) return handleAdminpanelWithArgs(sender, args);
 
+        return dispatchSubcommand(sender, args);
+    }
+
+    private boolean dispatchSubcommand(CommandSender sender, String[] args) {
         switch (args[0].toLowerCase()) {
             case "elo" -> handleElo(sender, args);
             case "kick" -> handleKick(sender, args);
             case "forceend" -> handleForceEnd(sender, args);
+            case "setupwall" -> handleSetupWall(sender, args);
             case "travel" -> handleTravel(sender, args);
             case "reload" -> handleReload(sender);
             case "info" -> handleInfo(sender);
@@ -176,6 +196,46 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(plugin.prefix() + "§aDuelo terminado en §e§lempate §apor orden de admin.");
     }
 
+    // ── SetupWall ────────────────────────────────────────────────
+
+    private void handleSetupWall(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.prefix() + "§cEste subcomando solo puede usarlo un jugador."); return;
+        }
+        // /admin setupwall (no args) → give tool
+        if (args.length == 1) {
+            plugin.getWallManager().giveSetupTool(player);
+            return;
+        }
+        // /admin setupwall <blockType>
+        Material mat = Material.matchMaterial(args[1].toUpperCase());
+        if (mat == null) {
+            sender.sendMessage(plugin.prefix() + "§cBloque desconocido: §e" + args[1]);
+            return;
+        }
+        if (!plugin.getWallManager().hasFullSelection(player.getUniqueId())) {
+            sender.sendMessage(plugin.prefix() + "§cAún no has seleccionado los dos puntos.");
+            sender.sendMessage(plugin.prefix() + "§f/admin setupwall §7para recibir la herramienta.");
+            return;
+        }
+        // Infer arena name from current world
+        String worldName = player.getWorld().getName();
+        if (plugin.getArenaManager().getArena(worldName) == null) {
+            sender.sendMessage(plugin.prefix() + "§cEste mundo (§e" + worldName
+                    + "§c) no es una arena registrada.");
+            sender.sendMessage(plugin.prefix() + "§7Usa §f/admin travel <arena>§7 para ir al mundo de la arena.");
+            return;
+        }
+        int count = plugin.getWallManager().setupWall(worldName, player.getUniqueId(), mat);
+        if (count <= 0) {
+            sender.sendMessage(plugin.prefix() + "§cNo se encontraron bloques de tipo §e" + mat.name()
+                    + "§c en la selección.");
+            return;
+        }
+        sender.sendMessage(plugin.prefix() + "§a¡Muro configurado! §e" + count
+                + " §abloques de §f" + mat.name() + "§a guardados para la arena §e" + worldName + "§a.");
+    }
+
     // ── Travel ────────────────────────────────────────────────
 
     private void handleTravel(CommandSender sender, String[] args) {
@@ -242,6 +302,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/admin elo resetall                §8» §7⚠ Resetear TODOS");
         sender.sendMessage("§e/admin kick §f<jugador>             §8» §7Sacar de cola/duelo");
         sender.sendMessage("§e/admin forceend §f<jugador>         §8» §7Terminar duelo (empate)");
+        sender.sendMessage("§e/admin setupwall                   §8» §7Recibir herramienta de muro");
+        sender.sendMessage("§e/admin setupwall §f<bloque>         §8» §7Guardar muro con selección");
         sender.sendMessage("§e/admin travel §f<mundo>              §8» §7Teleportarse a un mundo");
         sender.sendMessage("§e/admin reload                      §8» §7Recargar config");
         sender.sendMessage("§e/admin info                        §8» §7Info del plugin");
@@ -269,7 +331,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (label.equalsIgnoreCase("adminpanel")) return List.of();
 
         if (args.length == 1) {
-            return Arrays.asList("elo", "kick", "forceend", "travel", "reload", "info").stream()
+            return Arrays.asList("elo", "kick", "forceend", "setupwall", "travel", "reload", "info").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
         }

@@ -162,6 +162,10 @@ public class DuelManager {
                     p1.playSound(p1.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.2f);
                     p2.playSound(p2.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.2f);
 
+                    // Abrir el muro de la arena (si hay configurado)
+                    plugin.getWallManager().animateOpen(
+                            duel.getArenaTemplate().getName(), world);
+
                     startDurationTimer(duel);
                     cancel();
                 }
@@ -206,6 +210,13 @@ public class DuelManager {
         if (duel.getCountdownTask()  != -1) Bukkit.getScheduler().cancelTask(duel.getCountdownTask());
         if (duel.getDurationTask()   != -1) Bukkit.getScheduler().cancelTask(duel.getDurationTask());
         if (duel.getScoreboardTask() != -1) Bukkit.getScheduler().cancelTask(duel.getScoreboardTask());
+
+        // Cerrar el muro antes de destruir el mundo
+        World instanceWorld = Bukkit.getWorld(duel.getInstanceWorldName());
+        if (instanceWorld != null) {
+            plugin.getWallManager().animateClose(
+                    duel.getArenaTemplate().getName(), instanceWorld);
+        }
 
         Player p1 = Bukkit.getPlayer(duel.getPlayer1());
         Player p2 = Bukkit.getPlayer(duel.getPlayer2());

@@ -4,6 +4,7 @@ import com.pvprooms.commands.*;
 import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.KitGUI;
+import com.pvprooms.managers.WallManager;
 import com.pvprooms.listeners.CombatListener;
 import com.pvprooms.listeners.InventoryListener;
 import com.pvprooms.listeners.PlayerListener;
@@ -43,6 +44,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private QueueManager queueManager;
     private KitGUI kitGUI;
     private AdminPanelGUI adminPanelGUI;
+    private WallManager wallManager;
 
     // ── Plugin lifecycle ───────────────────────────────────────────────────
 
@@ -63,6 +65,7 @@ public class PvPRoomsPro extends JavaPlugin {
         queueManager         = new QueueManager(this);
         kitGUI               = new KitGUI(this);
         adminPanelGUI        = new AdminPanelGUI(this);
+        wallManager          = new WallManager(this);
 
         // Start matchmaking runnable
         queueManager.startMatchmaking();
@@ -205,4 +208,5 @@ public class PvPRoomsPro extends JavaPlugin {
     public QueueManager          getQueueManager()         { return queueManager; }
     public KitGUI                getKitGUI()               { return kitGUI; }
     public AdminPanelGUI         getAdminPanelGUI()        { return adminPanelGUI; }
+    public WallManager           getWallManager()          { return wallManager; }
 }

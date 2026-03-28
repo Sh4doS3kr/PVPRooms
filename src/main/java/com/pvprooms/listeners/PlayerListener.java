@@ -2,11 +2,14 @@ package com.pvprooms.listeners;
 
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
+import com.pvprooms.managers.WallManager;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -139,6 +142,53 @@ public class PlayerListener implements Listener {
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.getState() == Duel.State.COUNTDOWN) {
             // Lock food at 20 during countdown
+            event.setCancelled(true);
+        }
+    }
+
+    // ── Wall setup tool selection ──────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onWallToolInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        if (!player.hasPermission("pvprooms.admin")) return;
+        if (!plugin.getWallManager().isSetupTool(player.getInventory().getItemInMainHand())) return;
+
+        org.bukkit.block.Block clicked = event.getClickedBlock();
+        if (clicked == null) return;
+
+        org.bukkit.event.block.Action action = event.getAction();
+        if (action == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
+            event.setCancelled(true);
+            plugin.getWallManager().setPos1(player.getUniqueId(), clicked.getLocation());
+            player.sendMessage(plugin.prefix() + "§ePunto §6A §eguardado: §f"
+                    + clicked.getX() + ", " + clicked.getY() + ", " + clicked.getZ());
+        } else if (action == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
+            event.setCancelled(true);
+            plugin.getWallManager().setPos2(player.getUniqueId(), clicked.getLocation());
+            player.sendMessage(plugin.prefix() + "§ePunto §6B §eguardado: §f"
+                    + clicked.getX() + ", " + clicked.getY() + ", " + clicked.getZ());
+            if (plugin.getWallManager().hasFullSelection(player.getUniqueId())) {
+                player.sendMessage(plugin.prefix()
+                        + "§a¡Selecci\u00f3n completa! Ahora: §f/admin setupwall <tipo_bloque>");
+            }
+        }
+    }
+
+    // ── Fire protection in lobby ───────────────────────────────────────────
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockIgnite(BlockIgniteEvent event) {
+        String lobbyWorld = plugin.getConfig().getString("general.lobby-world", "world");
+        if (event.getBlock().getWorld().getName().equals(lobbyWorld)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockBurn(BlockBurnEvent event) {
+        String lobbyWorld = plugin.getConfig().getString("general.lobby-world", "world");
+        if (event.getBlock().getWorld().getName().equals(lobbyWorld)) {
             event.setCancelled(true);
         }
     }
