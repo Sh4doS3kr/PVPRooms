@@ -95,8 +95,10 @@ public class QueueManager {
         long cooldownMs = plugin.getConfig().getLong("cooldowns.queue", 3) * 1000L;
         if (System.currentTimeMillis() - cooldowns.getOrDefault(uuid, 0L) < cooldownMs) return false;
 
-        int elo = plugin.getEloManager().getElo(uuid);
-        Tier tier = Tier.fromElo(elo);
+        // Use per-kit tier from TierManager (independent of ELO)
+        Tier tier = plugin.getTierManager().getTier(uuid, kitName);
+        // Unranked players start matching at LT5 level
+        if (tier == Tier.UNRANKED) tier = Tier.LT5;
         String key = tierKey(tier, kitName);
 
         tierQueues.computeIfAbsent(key, k -> new LinkedList<>()).add(uuid);

@@ -76,6 +76,7 @@ public class KitGUI {
         return buildItem(kit.getIconMaterial(),
                 "§e§l" + capitalize(kit.getName()),
                 List.of("§7Click para entrar en cola ELO",
+                        "§7Click derecho para ajustar kit",
                         "",
                         "§fEn cola: §a" + queueSize,
                         "§fTu ELO:  §e" + myElo,
@@ -83,17 +84,22 @@ public class KitGUI {
     }
 
     private ItemStack buildKitItemTier(Kit kit, Player viewer) {
-        int queueSize = plugin.getQueueManager().getTierQueueSize(kit.getName());
-        int myElo     = plugin.getEloManager().getElo(viewer.getUniqueId());
-        Tier myTier   = Tier.forPlayer(plugin.getEloManager(), viewer.getUniqueId());
+        int queueSize  = plugin.getQueueManager().getTierQueueSize(kit.getName());
+        int myElo      = plugin.getEloManager().getElo(viewer.getUniqueId());
+        Tier kitTier   = plugin.getTierManager().getTier(viewer.getUniqueId(), kit.getName());
+        int  kitPts    = Math.max(0, plugin.getTierManager().getPoints(viewer.getUniqueId(), kit.getName()));
+        com.pvprooms.model.TierTitle myTitle = plugin.getTierManager().getTitle(viewer.getUniqueId());
         return buildItem(kit.getIconMaterial(),
                 "§b§l" + capitalize(kit.getName()),
                 List.of("§7Click para entrar en cola TIER",
-                        "§7Solo rivales de " + myTier.formatted() + " §7(±1)",
+                        "§7Click derecho para ajustar kit",
+                        "§7Solo rivales de " + kitTier.formatted() + "§7 (±1)",
                         "",
                         "§fEn cola TIER: §a" + queueSize,
-                        "§fTu ELO:       §e" + myElo,
-                        "§fTu Tier:      " + myTier.formatted()));
+                        "§fTu ELO:        §e" + myElo,
+                        "§fTier " + capitalize(kit.getName()) + ": " + kitTier.formatted(),
+                        "§fPuntos:        §6" + kitPts,
+                        "§fInsignia:      " + myTitle.formatted()));
     }
 
     private ItemStack buildItem(Material mat, String name, List<String> lore) {

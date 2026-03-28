@@ -79,8 +79,7 @@ public class InventoryListener implements Listener {
             if (holder.isTierMode()) {
                 boolean joined = plugin.getQueueManager().addToTierQueue(player, kitName);
                 if (joined) {
-                    com.pvprooms.model.Tier myTier = com.pvprooms.model.Tier.fromElo(
-                            plugin.getEloManager().getElo(player.getUniqueId()));
+                    com.pvprooms.model.Tier myTier = plugin.getTierManager().getTier(player.getUniqueId(), kitName);
                     player.sendMessage(plugin.prefix() + "§a¡Entraste en la cola TIER "
                             + myTier.formatted() + "§a de §e" + kitName + "§a! Buscando rival...");
                     plugin.getScoreboardManager().showQueueScoreboard(player, kitName);
@@ -168,19 +167,22 @@ public class InventoryListener implements Listener {
             return;
         }
 
-        // ── Kit Reorder GUI ───────────────────────────────────────────────
+        // ── Kit Reorder GUI ────────────────────────────────────────
         if (event.getInventory().getHolder() instanceof KitReorderHolder) {
-            // Block shift-click and clicks on the player's own inventory (prevent extracting items)
-            if (event.getAction() == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            int raw       = event.getRawSlot();
+            int chestSize = event.getInventory().getSize();
+            var action    = event.getAction();
+            // Cancel any action that would move items outside the chest area
+            if (raw < 0 || raw >= chestSize
+                    || action == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY
+                    || action == org.bukkit.event.inventory.InventoryAction.HOTBAR_SWAP
+                    || action == org.bukkit.event.inventory.InventoryAction.HOTBAR_MOVE_AND_READD
+                    || action == org.bukkit.event.inventory.InventoryAction.DROP_ALL_CURSOR
+                    || action == org.bukkit.event.inventory.InventoryAction.DROP_ONE_CURSOR
+                    || action == org.bukkit.event.inventory.InventoryAction.DROP_ALL_SLOT
+                    || action == org.bukkit.event.inventory.InventoryAction.DROP_ONE_SLOT) {
                 event.setCancelled(true);
-                return;
             }
-            if (event.getClickedInventory() != null
-                    && event.getClickedInventory().equals(player.getInventory())) {
-                event.setCancelled(true);
-                return;
-            }
-            // Allow drag/swap freely within the reorder chest
             return;
         }
 
