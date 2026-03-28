@@ -147,6 +147,14 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
+        // Bloquear en el mundo lobby salvo OPs
+        String lobbyWorld = plugin.getConfig().getString("general.lobby-world", "world");
+        if (event.getBlock().getWorld().getName().equals(lobbyWorld) && !player.isOp()) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.prefix() + "§cNo puedes romper bloques en el spawn.");
+            return;
+        }
+        // Bloquear a espectadores en mundos de arena
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
@@ -156,6 +164,14 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
+        // Bloquear en el mundo lobby salvo OPs
+        String lobbyWorld = plugin.getConfig().getString("general.lobby-world", "world");
+        if (event.getBlock().getWorld().getName().equals(lobbyWorld) && !player.isOp()) {
+            event.setCancelled(true);
+            player.sendMessage(plugin.prefix() + "§cNo puedes colocar bloques en el spawn.");
+            return;
+        }
+        // Bloquear a espectadores en mundos de arena
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
@@ -182,4 +198,5 @@ public class PlayerListener implements Listener {
             }
         }
     }
+
 }
