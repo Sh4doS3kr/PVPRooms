@@ -67,6 +67,9 @@ public class PvPRoomsPro extends JavaPlugin {
         // Start lobby scoreboard task
         scoreboardManager.startLobbyTask();
 
+        // Apply lobby world settings (always day, no weather) one tick after load
+        Bukkit.getScheduler().runTaskLater(this, this::applyLobbyWorldSettings, 1L);
+
         // Register commands
         registerCommands();
 
@@ -137,6 +140,21 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new InventoryListener(this), this);
         pm.registerEvents(new PlayerListener(this), this);
         pm.registerEvents(new CombatListener(this), this);
+    }
+
+    // ── Lobby world setup ──────────────────────────────────────────────────
+
+    private void applyLobbyWorldSettings() {
+        org.bukkit.World w = getLobbySpawn().getWorld();
+        if (w == null) return;
+        w.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, false);
+        w.setGameRule(org.bukkit.GameRule.DO_WEATHER_CYCLE, false);
+        w.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, false);
+        w.setTime(6000L);
+        w.setStorm(false);
+        w.setThundering(false);
+        w.setWeatherDuration(Integer.MAX_VALUE);
+        getLogger().info("Lobby world '" + w.getName() + "': siempre día, sin lluvia.");
     }
 
     // ── Utility ────────────────────────────────────────────────────────────

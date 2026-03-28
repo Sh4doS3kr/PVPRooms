@@ -2,6 +2,7 @@ package com.pvprooms.managers;
 
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
+import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
@@ -214,6 +215,7 @@ public class ScoreboardManager {
     private void setLine(Objective obj, String entry, int score) {
         Score s = obj.getScore(entry);
         s.setScore(score);
+        s.numberFormat(NumberFormat.blank());
     }
 
     /** Converts a legacy &-color string to an Adventure Component. */
