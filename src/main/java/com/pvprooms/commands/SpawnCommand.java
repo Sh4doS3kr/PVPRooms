@@ -27,6 +27,17 @@ public class SpawnCommand implements CommandExecutor {
             return true;
         }
 
+        // Bloquear en mundos de arena (instancias activas o mundo plantilla durante duelo)
+        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        if (player.getWorld().getName().startsWith(instancePrefix)) {
+            player.sendMessage(plugin.prefix() + "§cNo puedes usar /spawn durante un duelo.");
+            return true;
+        }
+        if (plugin.getDuelManager().getDuelByPlayer(player.getUniqueId()) != null) {
+            player.sendMessage(plugin.prefix() + "§cNo puedes usar /spawn durante un duelo.");
+            return true;
+        }
+
         Location lobby = plugin.getLobbySpawn();
         player.teleport(lobby);
         player.sendMessage(plugin.prefix() + "§aTeletransportado al spawn.");

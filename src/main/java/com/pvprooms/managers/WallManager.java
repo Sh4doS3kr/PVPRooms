@@ -3,6 +3,7 @@ package com.pvprooms.managers;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.WallBlock;
 import com.pvprooms.model.WallConfig;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -211,66 +212,129 @@ public class WallManager {
         return removed;
     }
 
-    // ── Animation: open (FIGHT!) ──────────────────────────────────────────
+    // ── Animation: open (FIGHT!) — portcullis rising ────────────────────────────
 
     /** Opens ALL configured walls for the arena simultaneously. */
     public void animateOpen(String arenaName, World world) {
         Map<String, WallConfig> arenaWalls = walls.get(arenaName.toLowerCase());
         if (arenaWalls == null || arenaWalls.isEmpty()) return;
-        for (WallConfig cfg : arenaWalls.values()) {
-            animateSingleOpen(cfg, world);
-        }
+        for (WallConfig cfg : arenaWalls.values()) animateSingleOpen(cfg, world);
     }
 
+    /**
+     * Portcullis rising: each step removes the bottom row and places a copy
+     * one block above the current top, so the wall physically travels upward.
+     *
+     * Timeline (wall originally at Y=minY..maxY, height=H):
+     *   step 0 : remove Y=minY,   place Y=maxY+1  → wall at [minY+1..maxY+1]
+     *   step 1 : remove Y=minY+1, place Y=maxY+2  → wall at [minY+2..maxY+2]
+     *   ...
+     *   step H-1: original blocks all gone, wall now at [maxY+1..maxY+H] (above play space)
+     */
     private void animateSingleOpen(WallConfig cfg, World world) {
-        List<Map.Entry<Integer, List<WallBlock>>> rows =
-                new ArrayList<>(cfg.byYAscending().entrySet());
+        TreeMap<Integer, List<WallBlock>> byY = cfg.byYAscending();
+        List<Integer> yLevels = new ArrayList<>(byY.keySet());
+        int H = yLevels.size();
+        if (H == 0) return;
+        int maxY = cfg.getMaxY();
 
         new BukkitRunnable() {
-            int idx = 0;
-            @Override public void run() {
-                if (!world.isChunkLoaded(0, 0)) { cancel(); return; }
-                if (idx >= rows.size()) { cancel(); return; }
-                List<WallBlock> row = rows.get(idx).getValue();
-                for (WallBlock wb : row)
+            int step = 0;
+
+            @Override
+            public void run() {
+                if (!isWorldAlive(world)) { cancel(); return; }
+                if (step >= H) {
+                    // All original blocks gone — play final clunk
+                    WallBlock ref = cfg.getBlocks().get(0);
+                    world.playSound(new Location(world, ref.x, maxY + H, ref.z),
+                            Sound.BLOCK_IRON_TRAPDOOR_OPEN, 1.0f, 1.4f);
+                    cancel();
+                    return;
+                }
+
+                int removeY = yLevels.get(step);
+                List<WallBlock> removedRow = byY.get(removeY);
+
+                // 1. Remove bottom row
+                for (WallBlock wb : removedRow)
                     world.getBlockAt(wb.x, wb.y, wb.z).setType(Material.AIR, false);
-                float pitch = 0.8f + (0.6f / Math.max(rows.size() - 1, 1)) * idx;
-                world.playSound(new Location(world, row.get(0).x, row.get(0).y, row.get(0).z),
-                        Sound.BLOCK_FENCE_GATE_OPEN, 0.6f, pitch);
-                idx++;
+
+                // 2. Place copy one above current top (makes wall "rise" as a unit)
+                int placeY = maxY + step + 1;
+                for (WallBlock wb : removedRow)
+                    world.getBlockAt(wb.x, placeY, wb.z).setType(wb.material, false);
+
+                // 3. Sound: metallic chain scraping upward
+                float pitch = 0.75f + (0.5f / Math.max(H - 1, 1)) * step;
+                Location soundLoc = new Location(world, removedRow.get(0).x, removeY, removedRow.get(0).z);
+                world.playSound(soundLoc, Sound.BLOCK_CHAIN_STEP,  0.9f, pitch);
+                if (step % 3 == 0)
+                    world.playSound(soundLoc, Sound.BLOCK_PISTON_EXTEND, 0.35f, pitch);
+
+                step++;
             }
-        }.runTaskTimer(plugin, 0L, 2L);
+        }.runTaskTimer(plugin, 0L, 3L); // 3 ticks per row = 150ms each
     }
 
-    // ── Animation: close (duel end) ───────────────────────────────────────
+    // ── Animation: close (duel end) — portcullis descending ─────────────────────
 
     /** Closes ALL configured walls for the arena simultaneously. */
     public void animateClose(String arenaName, World world) {
         Map<String, WallConfig> arenaWalls = walls.get(arenaName.toLowerCase());
         if (arenaWalls == null || arenaWalls.isEmpty()) return;
-        for (WallConfig cfg : arenaWalls.values()) {
-            animateSingleClose(cfg, world);
-        }
+        for (WallConfig cfg : arenaWalls.values()) animateSingleClose(cfg, world);
     }
 
+    /**
+     * Portcullis descending: restores original blocks from top to bottom
+     * while removing the floating rows above. Looks like the wall comes back down.
+     */
     private void animateSingleClose(WallConfig cfg, World world) {
-        List<Map.Entry<Integer, List<WallBlock>>> rows =
-                new ArrayList<>(cfg.byYDescending().entrySet());
+        TreeMap<Integer, List<WallBlock>> byYDesc = cfg.byYDescending();
+        List<Integer> yLevels = new ArrayList<>(byYDesc.keySet()); // top→bottom
+        int H = yLevels.size();
+        if (H == 0) return;
+        int maxY = cfg.getMaxY();
 
         new BukkitRunnable() {
-            int idx = 0;
-            @Override public void run() {
-                if (!world.isChunkLoaded(0, 0)) { cancel(); return; }
-                if (idx >= rows.size()) { cancel(); return; }
-                List<WallBlock> row = rows.get(idx).getValue();
+            int step = 0;
+
+            @Override
+            public void run() {
+                if (!isWorldAlive(world)) { cancel(); return; }
+                if (step >= H) {
+                    WallBlock ref = cfg.getBlocks().get(0);
+                    world.playSound(new Location(world, ref.x, ref.y, ref.z),
+                            Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 1.0f, 0.8f);
+                    cancel();
+                    return;
+                }
+
+                // Restore original row at top-of-wall-minus-step (topmost first)
+                int restoreY = yLevels.get(step);
+                List<WallBlock> row = byYDesc.get(restoreY);
                 for (WallBlock wb : row)
                     world.getBlockAt(wb.x, wb.y, wb.z).setType(wb.material, false);
-                float pitch = 0.8f + (0.6f / Math.max(rows.size() - 1, 1)) * idx;
-                world.playSound(new Location(world, row.get(0).x, row.get(0).y, row.get(0).z),
-                        Sound.BLOCK_FENCE_GATE_CLOSE, 0.6f, pitch);
-                idx++;
+
+                // Remove the corresponding floating row above
+                int clearY = maxY + (H - step); // the topmost floating row first
+                for (WallBlock wb : row)
+                    world.getBlockAt(wb.x, clearY, wb.z).setType(Material.AIR, false);
+
+                float pitch = 1.25f - (0.5f / Math.max(H - 1, 1)) * step;
+                Location soundLoc = new Location(world, row.get(0).x, restoreY, row.get(0).z);
+                world.playSound(soundLoc, Sound.BLOCK_CHAIN_STEP,  0.9f, pitch);
+                if (step % 3 == 0)
+                    world.playSound(soundLoc, Sound.BLOCK_PISTON_CONTRACT, 0.35f, pitch);
+
+                step++;
             }
-        }.runTaskTimer(plugin, 3L, 2L);
+        }.runTaskTimer(plugin, 4L, 3L);
+    }
+
+    private boolean isWorldAlive(World world) {
+        return world != null && Bukkit.getWorld(world.getName()) != null;
     }
 
     // ── Queries ───────────────────────────────────────────────────────────
