@@ -3,6 +3,7 @@ package com.pvprooms.commands;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.ArenaTemplate;
 import com.pvprooms.model.Duel;
+import com.pvprooms.weapons.SpearItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -95,6 +96,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "travel" -> handleTravel(sender, args);
             case "reload" -> handleReload(sender);
             case "info" -> handleInfo(sender);
+            case "spear"     -> handleSpear(sender, args);
             default -> sendHelp(sender);
         }
         return true;
@@ -324,6 +326,39 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         player.teleport(world.getSpawnLocation());
         sender.sendMessage(plugin.prefix() + "§aTeleportado al mundo §e" + world.getName()
                 + " §a. Modo creativo activado.");
+    }
+
+    // ── Spear ─────────────────────────────────────────────────────────────
+
+    private void handleSpear(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.prefix() + "§cSolo un jugador puede usar este comando.");
+            return;
+        }
+        if (!player.hasPermission("pvprooms.admin")) {
+            player.sendMessage(plugin.prefix() + "§cSin permiso.");
+            return;
+        }
+
+        double damage = 7.0;
+        double speed  = -2.8;
+
+        if (args.length >= 4) {
+            try {
+                damage = Double.parseDouble(args[2]);
+                speed  = Double.parseDouble(args[3]);
+            } catch (NumberFormatException e) {
+                player.sendMessage(plugin.prefix() + "§cUso: /admin spear give [daño] [velocidad]");
+                return;
+            }
+        }
+
+        org.bukkit.inventory.ItemStack spear = SpearItem.create(plugin, damage, speed);
+        player.getInventory().addItem(spear);
+        player.sendMessage(plugin.prefix()
+                + "§a¡Lanza entregada! §7(daño §f" + damage + "§7, vel §f" + speed + "§7)");
+        player.sendMessage(plugin.prefix()
+                + "§7Colócala en un kit con §f/kit edit§7. El attribute swap funcionará en Paper.");
     }
 
     // ── Reload ────────────────────────────────────────────────────────────

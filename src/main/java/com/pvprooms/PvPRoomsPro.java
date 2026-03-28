@@ -11,6 +11,8 @@ import com.pvprooms.managers.WallManager;
 import com.pvprooms.listeners.CombatListener;
 import com.pvprooms.listeners.InventoryListener;
 import com.pvprooms.listeners.PlayerListener;
+import com.pvprooms.listeners.SpearListener;
+import com.pvprooms.weapons.SpearItem;
 import com.pvprooms.managers.*;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -75,6 +77,7 @@ public class PvPRoomsPro extends JavaPlugin {
         queueModeGUI            = new QueueModeGUI();
         wallManager             = new WallManager(this);
         healthHologramManager   = new HealthHologramManager(this);
+        SpearItem.init(this);
 
         // Start matchmaking runnable
         queueManager.startMatchmaking();
@@ -164,6 +167,7 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new InventoryListener(this), this);
         pm.registerEvents(new PlayerListener(this), this);
         pm.registerEvents(new CombatListener(this), this);
+        pm.registerEvents(new SpearListener(this), this);
     }
 
     // ── Lobby world setup ──────────────────────────────────────────────────
