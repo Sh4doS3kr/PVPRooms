@@ -1,6 +1,7 @@
 package com.pvprooms;
 
 import com.pvprooms.commands.*;
+import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.listeners.CombatListener;
 import com.pvprooms.listeners.InventoryListener;
@@ -63,6 +64,9 @@ public class PvPRoomsPro extends JavaPlugin {
         // Start matchmaking runnable
         queueManager.startMatchmaking();
 
+        // Start lobby scoreboard task
+        scoreboardManager.startLobbyTask();
+
         // Register commands
         registerCommands();
 
@@ -79,6 +83,11 @@ public class PvPRoomsPro extends JavaPlugin {
         // Stop matchmaking
         if (queueManager != null) {
             queueManager.stopMatchmaking();
+        }
+
+        // Stop lobby scoreboard task
+        if (scoreboardManager != null) {
+            scoreboardManager.stopLobbyTask();
         }
 
         // End all active duels gracefully (copy to list first to avoid ConcurrentModificationException)
@@ -117,6 +126,9 @@ public class PvPRoomsPro extends JavaPlugin {
         getCommand("stats").setTabCompleter(statsCmd);
 
         getCommand("top").setExecutor(new TopCommand(this));
+
+        getCommand("setspawn").setExecutor(new SetSpawnCommand(this, false));
+        getCommand("setspawnworld").setExecutor(new SetSpawnCommand(this, true));
     }
 
     private void registerListeners() {

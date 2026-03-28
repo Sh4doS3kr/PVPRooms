@@ -22,24 +22,22 @@ public class QueueCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("pvprooms.queue")) {
-            sender.sendMessage(plugin.prefix() + "§cYou do not have permission to use this command.");
+            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
             return true;
         }
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.prefix() + "§cThis command must be run by a player.");
+            sender.sendMessage(plugin.prefix() + "§cEste comando solo puede usarlo un jugador.");
             return true;
         }
 
-        // Already in a duel
         if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
-            player.sendMessage(plugin.prefix() + "§cYou are already in a duel. Use §f/pvpleave §cto forfeit.");
+            player.sendMessage(plugin.prefix() + "§cYa estás en un duelo. Usa §f/pvpleave §cpara rendirte.");
             return true;
         }
 
-        // Already in queue
         if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
             String kit = plugin.getQueueManager().getQueuedKit(player.getUniqueId());
-            player.sendMessage(plugin.prefix() + "§cYou are already in the §e" + kit + " §cqueue. Use §f/pvpleave §cto leave.");
+            player.sendMessage(plugin.prefix() + "§cYa estás en la cola de §e" + kit + "§c. Usa §f/pvpleave §cpara salir.");
             return true;
         }
 

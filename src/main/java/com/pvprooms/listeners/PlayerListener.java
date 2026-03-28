@@ -33,6 +33,14 @@ public class PlayerListener implements Listener {
         this.plugin = plugin;
     }
 
+    // ── Join ───────────────────────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        plugin.getServer().getScheduler().runTaskLater(plugin, () ->
+                plugin.getScoreboardManager().showLobbyScoreboard(event.getPlayer()), 5L);
+    }
+
     // ── Disconnect ─────────────────────────────────────────────────────────
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -169,7 +177,7 @@ public class PlayerListener implements Listener {
                 if (event.getTo() != null
                         && !event.getTo().getWorld().getName().equals(duel.getInstanceWorldName())) {
                     event.setCancelled(true);
-                    player.sendMessage(plugin.prefix() + "§cYou cannot teleport during the countdown.");
+                    player.sendMessage(plugin.prefix() + "§cNo puedes teletransportarte durante la cuenta atrás.");
                 }
             }
         }

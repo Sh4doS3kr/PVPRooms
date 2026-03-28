@@ -56,19 +56,20 @@ public class DuelManager {
         // Pick a random fully-configured arena template
         ArenaTemplate template = plugin.getArenaManager().getRandomArena();
         if (template == null) {
-            p1.sendMessage(plugin.prefix() + "§cNo arenas are available. Ask an admin to configure one.");
-            p2.sendMessage(plugin.prefix() + "§cNo arenas are available. Ask an admin to configure one.");
+            p1.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles. Pide a un admin que configure una.");
+            p2.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles. Pide a un admin que configure una.");
             return;
         }
 
-        String matchId = Long.toHexString(System.currentTimeMillis());
+        // ID único de partida (UUID corto para el nombre del mundo)
+        String matchId = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         String instanceWorldName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchId;
 
-        // Clone arena template
+        // Clonar mundo plantilla — cada pareja obtiene su propia copia
         World instanceWorld = plugin.getArenaInstanceManager().createInstance(template, matchId);
         if (instanceWorld == null) {
-            p1.sendMessage(plugin.prefix() + "§cFailed to create arena instance. Contact an admin.");
-            p2.sendMessage(plugin.prefix() + "§cFailed to create arena instance. Contact an admin.");
+            p1.sendMessage(plugin.prefix() + "§cError al crear la instancia de arena. Contacta a un admin.");
+            p2.sendMessage(plugin.prefix() + "§cError al crear la instancia de arena. Contacta a un admin.");
             return;
         }
 
@@ -93,9 +94,9 @@ public class DuelManager {
         plugin.getKitManager().applyKit(p1, kitName);
         plugin.getKitManager().applyKit(p2, kitName);
 
-        // Notify
-        p1.sendMessage(plugin.prefix() + "§aMatch found! vs §e" + p2.getName() + " §7[Kit: §f" + kitName + "§7]");
-        p2.sendMessage(plugin.prefix() + "§aMatch found! vs §e" + p1.getName() + " §7[Kit: §f" + kitName + "§7]");
+        // Notificar emparejamiento
+        p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]");
+        p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]");
 
         // Start countdown
         startCountdown(duel, instanceWorld);
@@ -116,28 +117,26 @@ public class DuelManager {
 
                 if (p1 == null || p2 == null) {
                     cancel();
-                    endDuel(duel, p1 != null ? duel.getPlayer1() : duel.getPlayer2(), "opponent disconnected");
+                    endDuel(duel, p1 != null ? duel.getPlayer1() : duel.getPlayer2(), "desconexión");
                     return;
                 }
 
                 if (remaining > 0) {
-                    // Freeze players during countdown
                     p1.setVelocity(p1.getVelocity().zero());
                     p2.setVelocity(p2.getVelocity().zero());
 
-                    sendTitle(p1, "§e" + remaining, "§7Get ready!");
-                    sendTitle(p2, "§e" + remaining, "§7Get ready!");
-                    p1.sendMessage(plugin.prefix() + "§eMatch starting in §6" + remaining + "§e...");
-                    p2.sendMessage(plugin.prefix() + "§eMatch starting in §6" + remaining + "§e...");
+                    sendTitle(p1, "§e" + remaining, "§7¡Prepárate!");
+                    sendTitle(p2, "§e" + remaining, "§7¡Prepárate!");
+                    p1.sendMessage(plugin.prefix() + "§eLa partida empieza en §6" + remaining + "§e...");
+                    p2.sendMessage(plugin.prefix() + "§eLa partida empieza en §6" + remaining + "§e...");
                     remaining--;
                 } else {
-                    // Fight!
                     duel.setState(Duel.State.FIGHTING);
                     duel.setStartTimeMillis(System.currentTimeMillis());
-                    sendTitle(p1, "§c§lFIGHT!", "");
-                    sendTitle(p2, "§c§lFIGHT!", "");
-                    p1.sendMessage(plugin.prefix() + "§cFight!");
-                    p2.sendMessage(plugin.prefix() + "§cFight!");
+                    sendTitle(p1, "§c§l¡PELEA!", "");
+                    sendTitle(p2, "§c§l¡PELEA!", "");
+                    p1.sendMessage(plugin.prefix() + "§c¡Comienza el duelo!");
+                    p2.sendMessage(plugin.prefix() + "§c¡Comienza el duelo!");
                     plugin.getScoreboardManager().updateDuelScoreboard(p1, duel);
                     plugin.getScoreboardManager().updateDuelScoreboard(p2, duel);
                     startDurationTimer(duel);
@@ -164,9 +163,9 @@ public class DuelManager {
                 if (duel.getState() != Duel.State.FIGHTING) { cancel(); return; }
                 Player p1 = Bukkit.getPlayer(duel.getPlayer1());
                 Player p2 = Bukkit.getPlayer(duel.getPlayer2());
-                if (p1 != null) p1.sendMessage(plugin.prefix() + "§eTime limit reached. Match drawn.");
-                if (p2 != null) p2.sendMessage(plugin.prefix() + "§eTime limit reached. Match drawn.");
-                endDuel(duel, null, "time limit");
+                if (p1 != null) p1.sendMessage(plugin.prefix() + "§eTímite de tiempo alcanzado. §a¡Empate!");
+                if (p2 != null) p2.sendMessage(plugin.prefix() + "§eTímite de tiempo alcanzado. §a¡Empate!");
+                endDuel(duel, null, "tiempo agotado");
             }
         }.runTaskLater(plugin, maxDuration * 20L).getTaskId();
 
@@ -211,7 +210,8 @@ public class DuelManager {
         for (UUID specUUID : duel.getSpectators()) {
             Player spec = Bukkit.getPlayer(specUUID);
             if (spec != null) {
-                spec.sendMessage(plugin.prefix() + "§7The duel has ended. Returning you to lobby.");
+                spec.sendMessage(plugin.prefix() + "§7El duelo ha terminado. Volviendo al lobby...");
+                plugin.getScoreboardManager().restoreLobbyScoreboard(spec);
                 restoreSpectator(spec);
                 spec.teleport(plugin.getLobbySpawn());
             }
@@ -227,9 +227,9 @@ public class DuelManager {
         playerDuelMap.remove(duel.getPlayer1());
         playerDuelMap.remove(duel.getPlayer2());
 
-        // Remove scoreboards
-        if (p1 != null) plugin.getScoreboardManager().clearScoreboard(p1);
-        if (p2 != null) plugin.getScoreboardManager().clearScoreboard(p2);
+        // Restaurar scoreboard de lobby
+        if (p1 != null) plugin.getScoreboardManager().restoreLobbyScoreboard(p1);
+        if (p2 != null) plugin.getScoreboardManager().restoreLobbyScoreboard(p2);
 
         // Destroy arena instance (delayed 1 tick to let teleports process)
         String worldName = duel.getInstanceWorldName();
@@ -361,15 +361,15 @@ public class DuelManager {
 
         if (winner != null) {
             int newElo = plugin.getEloManager().getElo(winnerUUID);
-            winner.sendMessage(plugin.prefix() + "§aYou won against §e" + loserName
-                    + "§a! §7(+" + winGain + " ELO → §e" + newElo + "§7)");
-            sendTitle(winner, "§a§lYOU WIN!", "§7+" + winGain + " ELO");
+            winner.sendMessage(plugin.prefix() + "§a§l¡GANASTE! §avs §e" + loserName
+                    + "  §7(+" + winGain + " ELO → §e" + newElo + "§7)");
+            sendTitle(winner, "§a§l¡VICTORIA!", "§7+" + winGain + " ELO");
         }
         if (loser != null) {
             int newElo = plugin.getEloManager().getElo(loser.getUniqueId());
-            loser.sendMessage(plugin.prefix() + "§cYou lost against §e" + winnerName
-                    + "§c. §7(-" + lossChange + " ELO → §e" + newElo + "§7)");
-            sendTitle(loser, "§c§lYOU LOST", "§7-" + lossChange + " ELO");
+            loser.sendMessage(plugin.prefix() + "§c§lPERDISTE §cvs §e" + winnerName
+                    + "  §7(-" + lossChange + " ELO → §e" + newElo + "§7)");
+            sendTitle(loser, "§c§lDERROTA", "§7-" + lossChange + " ELO");
         }
 
         // Spectator announcements handled when the duel ends and spectators are removed
@@ -386,17 +386,8 @@ public class DuelManager {
         return duelId != null ? activeDuels.get(duelId) : null;
     }
 
-    public Duel getDuelById(UUID duelId) {
-        return activeDuels.get(duelId);
-    }
-
-    public Collection<Duel> getActiveDuels() {
-        return Collections.unmodifiableCollection(activeDuels.values());
-    }
-
-    public int getActiveDuelCount() {
-        return activeDuels.size();
-    }
+    public int getActiveDuelCount()            { return activeDuels.size(); }
+    public Collection<Duel> getActiveDuels()   { return activeDuels.values(); }
 
     // ── Utility ────────────────────────────────────────────────────────────
 

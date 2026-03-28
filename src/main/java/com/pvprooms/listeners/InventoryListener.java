@@ -50,14 +50,14 @@ public class InventoryListener implements Listener {
 
             boolean joined = plugin.getQueueManager().addToQueue(player, kitName);
             if (joined) {
-                player.sendMessage(plugin.prefix() + "§aYou joined the §e" + kitName + " §aqueue! Searching for an opponent...");
+                player.sendMessage(plugin.prefix() + "§a¡Entraste a la cola de §e" + kitName + "§a! Buscando rival...");
                 plugin.getScoreboardManager().showQueueScoreboard(player, kitName);
             } else if (plugin.getDuelManager().isInDuel(player.getUniqueId())) {
-                player.sendMessage(plugin.prefix() + "§cYou are already in a duel.");
+                player.sendMessage(plugin.prefix() + "§cYa estás en un duelo.");
             } else if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
-                player.sendMessage(plugin.prefix() + "§cYou are already in the queue.");
+                player.sendMessage(plugin.prefix() + "§cYa estás en la cola.");
             } else {
-                player.sendMessage(plugin.prefix() + "§cCooldown active. Please wait a moment.");
+                player.sendMessage(plugin.prefix() + "§cCooldown activo. Espera un momento.");
             }
             return;
         }

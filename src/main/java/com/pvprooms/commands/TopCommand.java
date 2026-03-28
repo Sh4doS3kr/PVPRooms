@@ -22,31 +22,31 @@ public class TopCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("pvprooms.top")) {
-            sender.sendMessage(plugin.prefix() + "§cYou do not have permission to use this command.");
+            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
             return true;
         }
 
         List<String> top = plugin.getEloManager().getTopPlayers(10);
 
-        sender.sendMessage("§8§m                              ");
-        sender.sendMessage("§c§l  PvPRooms — Top ELO Leaderboard");
-        sender.sendMessage("§8§m                              ");
+        sender.sendMessage("§8§m══════════════════════════════");
+        sender.sendMessage("§6§l  ⚔ PvPRooms — Top ELO");
+        sender.sendMessage("§8§m══════════════════════════════");
 
         if (top.isEmpty()) {
-            sender.sendMessage("§7No players have played yet.");
+            sender.sendMessage("§7Aún no hay jugadores con partidas.");
         } else {
             for (int i = 0; i < top.size(); i++) {
-                String color = switch (i) {
-                    case 0  -> "§6§l";
-                    case 1  -> "§f§l";
-                    case 2  -> "§c§l";
-                    default -> "§7";
+                String medal = switch (i) {
+                    case 0  -> "§6🥇 ";
+                    case 1  -> "§f🥈 ";
+                    case 2  -> "§c🥉 ";
+                    default -> "§7#" + (i + 1) + " ";
                 };
-                sender.sendMessage(color + "#" + (i + 1) + " §r" + top.get(i));
+                sender.sendMessage(medal + "§r" + top.get(i));
             }
         }
 
-        sender.sendMessage("§8§m                              ");
+        sender.sendMessage("§8§m══════════════════════════════");
         return true;
     }
 }

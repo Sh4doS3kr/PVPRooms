@@ -32,9 +32,17 @@ commands:
     usage: /stats [player]
     permission: pvprooms.stats
   top:
-    description: View top ELO leaderboard
+    description: Ver el ranking ELO
     usage: /top
     permission: pvprooms.top
+  setspawn:
+    description: Establece el spawn del lobby en tu posición actual
+    usage: /setspawn
+    permission: pvprooms.admin
+  setspawnworld:
+    description: Establece el mundo del lobby al mundo actual
+    usage: /setspawnworld
+    permission: pvprooms.admin
 
 permissions:
   pvprooms.kit:

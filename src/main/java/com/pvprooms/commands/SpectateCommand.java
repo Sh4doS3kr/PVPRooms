@@ -34,63 +34,58 @@ public class SpectateCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("pvprooms.spectate")) {
-            sender.sendMessage(plugin.prefix() + "§cYou do not have permission to use this command.");
+            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
             return true;
         }
         if (!(sender instanceof Player spectator)) {
-            sender.sendMessage(plugin.prefix() + "§cThis command must be run by a player.");
+            sender.sendMessage(plugin.prefix() + "§cEste comando solo puede usarlo un jugador.");
             return true;
         }
 
         if (args.length == 0) {
-            spectator.sendMessage(plugin.prefix() + "§cUsage: /spectate <player>");
+            spectator.sendMessage(plugin.prefix() + "§cUso: /spectate <jugador>");
             return true;
         }
 
-        // Cooldown check
         long cooldownMs = plugin.getConfig().getLong("cooldowns.spectate", 2) * 1000L;
         long lastUse = cooldowns.getOrDefault(spectator.getUniqueId(), 0L);
         if (System.currentTimeMillis() - lastUse < cooldownMs) {
-            spectator.sendMessage(plugin.prefix() + "§cPlease wait before spectating again.");
+            spectator.sendMessage(plugin.prefix() + "§cEspera un momento antes de espectear de nuevo.");
             return true;
         }
 
-        // Cannot spectate if in queue or duel
         if (plugin.getQueueManager().isInQueue(spectator.getUniqueId())) {
-            spectator.sendMessage(plugin.prefix() + "§cYou cannot spectate while in a queue.");
+            spectator.sendMessage(plugin.prefix() + "§cNo puedes espectear mientras estás en la cola.");
             return true;
         }
         if (plugin.getDuelManager().isInDuel(spectator.getUniqueId())) {
-            spectator.sendMessage(plugin.prefix() + "§cYou cannot spectate while in a duel.");
+            spectator.sendMessage(plugin.prefix() + "§cNo puedes espectear mientras estás en un duelo.");
             return true;
         }
 
-        // Find target player
         Player target = Bukkit.getPlayer(args[0]);
         if (target == null) {
-            spectator.sendMessage(plugin.prefix() + "§cPlayer §e" + args[0] + " §cis not online.");
+            spectator.sendMessage(plugin.prefix() + "§cEl jugador §e" + args[0] + " §cno está conectado.");
             return true;
         }
         if (target.equals(spectator)) {
-            spectator.sendMessage(plugin.prefix() + "§cYou cannot spectate yourself.");
+            spectator.sendMessage(plugin.prefix() + "§cNo puedes espectearte a ti mismo.");
             return true;
         }
 
-        // Check target is in a duel
         Duel duel = plugin.getDuelManager().getDuelByPlayer(target.getUniqueId());
         if (duel == null || duel.getState() != Duel.State.FIGHTING) {
-            spectator.sendMessage(plugin.prefix() + "§e" + target.getName() + " §cis not currently in an active duel.");
+            spectator.sendMessage(plugin.prefix() + "§e" + target.getName() + " §cno está en un duelo activo.");
             return true;
         }
 
-        // Add spectator
         boolean success = plugin.getDuelManager().addSpectator(spectator, target);
         if (success) {
             cooldowns.put(spectator.getUniqueId(), System.currentTimeMillis());
-            spectator.sendMessage(plugin.prefix() + "§aYou are now spectating §e" + target.getName() + "'s §aduel. Use §f/pvpleave §ato stop spectating.");
-            target.sendMessage(plugin.prefix() + "§7" + spectator.getName() + " §7is now spectating your match.");
+            spectator.sendMessage(plugin.prefix() + "§aAhora estás especteando a §e" + target.getName() + "§a. Usa §f/pvpleave §apara salir.");
+            target.sendMessage(plugin.prefix() + "§7" + spectator.getName() + " §7está especteando tu duelo.");
         } else {
-            spectator.sendMessage(plugin.prefix() + "§cCould not spectate §e" + target.getName() + "§c's match.");
+            spectator.sendMessage(plugin.prefix() + "§cNo se pudo espectear el duelo de §e" + target.getName() + "§c.");
         }
         return true;
     }

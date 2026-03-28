@@ -6,8 +6,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.*;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -27,8 +30,39 @@ public class ScoreboardManager {
     /** Tracks which players currently have a custom scoreboard assigned */
     private final Map<UUID, Scoreboard> activeBoards = new HashMap<>();
 
+    /** Players currently showing the lobby scoreboard */
+    private final Map<UUID, Boolean> lobbyPlayers = new HashMap<>();
+
+    /** Periodic update task for lobby and queue scoreboards */
+    private BukkitTask updateTask;
+
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
     public ScoreboardManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────
+
+    /** Inicia la tarea periódica que refresca los scoreboards del lobby. */
+    public void startLobbyTask() {
+        int interval = plugin.getConfig().getInt("scoreboard.update-interval", 20);
+        updateTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                UUID uuid = p.getUniqueId();
+                if (lobbyPlayers.containsKey(uuid)) {
+                    showLobbyScoreboard(p);
+                }
+            }
+        }, interval, interval);
+    }
+
+    /** Detiene la tarea periódica. */
+    public void stopLobbyTask() {
+        if (updateTask != null) {
+            updateTask.cancel();
+            updateTask = null;
+        }
     }
 
     // ── Queue scoreboard ───────────────────────────────────────────────────
@@ -49,13 +83,13 @@ public class ScoreboardManager {
 
         int line = 10;
         setLine(obj, " ", line--);
-        setLine(obj, leg("&fKit: &e" + kitName), line--);
-        setLine(obj, leg("&fELO: &e" + plugin.getEloManager().getElo(player.getUniqueId())), line--);
+        setLine(obj, leg("&e&l» &fKit: &e" + kitName), line--);
+        setLine(obj, leg("&e&l» &fTu ELO: &6" + plugin.getEloManager().getElo(player.getUniqueId())), line--);
         setLine(obj, "  ", line--);
-        setLine(obj, leg("&fQueue: &a" + plugin.getQueueManager().getTotalQueued()), line--);
+        setLine(obj, leg("&e&l» &fEn cola: &a" + plugin.getQueueManager().getTotalQueued()), line--);
         setLine(obj, "   ", line--);
-        setLine(obj, leg("&7Searching..."), line--);
-        setLine(obj, "    ", line--);
+        setLine(obj, leg("&7⏳ Buscando rival..."), line--);
+        setLine(obj, leg("&7Usa &f/pvpleave &7para salir"), line--);
 
         player.setScoreboard(board);
         activeBoards.put(player.getUniqueId(), board);
@@ -84,24 +118,24 @@ public class ScoreboardManager {
         setLine(obj, " ", line--);
 
         if (duel.getState() == Duel.State.COUNTDOWN) {
-            setLine(obj, leg("&eWaiting..."), line--);
+            setLine(obj, leg("&e⏳ Preparando..."), line--);
         } else {
             long elapsed = duel.getElapsedSeconds();
             String time = String.format("%d:%02d", elapsed / 60, elapsed % 60);
-            setLine(obj, leg("&fTime: &e" + time), line--);
+            setLine(obj, leg("&e&l» &fTiempo: &a" + time), line--);
         }
 
         setLine(obj, "  ", line--);
-        setLine(obj, leg("&fKit: &e" + duel.getKitName()), line--);
+        setLine(obj, leg("&e&l» &fKit: &e" + duel.getKitName()), line--);
         setLine(obj, "   ", line--);
-        setLine(obj, leg("&fOpponent: &c" + opponentName), line--);
+        setLine(obj, leg("&e&l» &fRival: &c" + opponentName), line--);
 
         int myElo = plugin.getEloManager().getElo(player.getUniqueId());
-        setLine(obj, leg("&fYour ELO: &e" + myElo), line--);
+        setLine(obj, leg("&e&l» &fTu ELO: &6" + myElo), line--);
 
         if (opponent != null) {
             int opElo = plugin.getEloManager().getElo(opponentUUID);
-            setLine(obj, leg("&fOpp ELO: &e" + opElo), line--);
+            setLine(obj, leg("&e&l» &fELO rival: &c" + opElo), line--);
         }
 
         setLine(obj, "    ", line--);
@@ -110,15 +144,69 @@ public class ScoreboardManager {
         activeBoards.put(player.getUniqueId(), board);
     }
 
+    // ── Lobby scoreboard ───────────────────────────────────────────────────
+
+    /**
+     * Muestra el scoreboard del lobby a un jugador que no está en duelo ni en cola.
+     */
+    public void showLobbyScoreboard(Player player) {
+        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
+        if (player == null) return;
+
+        int elo          = plugin.getEloManager().getElo(player.getUniqueId());
+        int rank         = plugin.getEloManager().getRank(player.getUniqueId());
+        int online       = Bukkit.getOnlinePlayers().size();
+        int activeMatches= plugin.getDuelManager().getActiveDuelCount();
+        int inQueue      = plugin.getQueueManager().getTotalQueued();
+        String hora      = LocalTime.now().format(TIME_FMT);
+
+        String rankStr = rank == -1 ? "§7Sin rango" : "§e#" + rank;
+
+        Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
+        Objective obj = board.registerNewObjective("pvplobby", Criteria.DUMMY, comp("&6&lPvPRooms"));
+        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+
+        int line = 15;
+        setLine(obj, " ", line--);
+        setLine(obj, leg("&e&l» &fJugadores online"), line--);
+        setLine(obj, leg("  &7" + online + " conectados"), line--);
+        setLine(obj, "  ", line--);
+        setLine(obj, leg("&e&l» &fDuelos activos"), line--);
+        setLine(obj, leg("  &7" + activeMatches + " en curso · " + inQueue + " en cola"), line--);
+        setLine(obj, "   ", line--);
+        setLine(obj, leg("&e&l» &fTu ELO"), line--);
+        setLine(obj, leg("  &6" + elo + " ELO  " + rankStr), line--);
+        setLine(obj, "    ", line--);
+        setLine(obj, leg("&e&l» &fHora"), line--);
+        setLine(obj, leg("  &7" + hora), line--);
+        setLine(obj, "     ", line--);
+        setLine(obj, leg("&a/queue &7para combatir"), line--);
+        setLine(obj, "      ", line--);
+
+        player.setScoreboard(board);
+        activeBoards.put(player.getUniqueId(), board);
+        lobbyPlayers.put(player.getUniqueId(), true);
+    }
+
     // ── Clear ──────────────────────────────────────────────────────────────
 
     /**
-     * Removes the custom scoreboard from a player, restoring the server default.
+     * Quita el scoreboard personalizado del jugador y restaura el por defecto.
+     * Llama a este método al entrar en duelo/cola o al salir del servidor.
      */
     public void clearScoreboard(Player player) {
         if (player == null) return;
         activeBoards.remove(player.getUniqueId());
+        lobbyPlayers.remove(player.getUniqueId());
         player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+    }
+
+    /**
+     * Restaura el scoreboard de lobby (llamar al terminar duelo/cola).
+     */
+    public void restoreLobbyScoreboard(Player player) {
+        if (player == null) return;
+        showLobbyScoreboard(player);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

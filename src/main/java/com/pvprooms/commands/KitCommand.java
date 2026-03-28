@@ -33,11 +33,11 @@ public class KitCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("pvprooms.kit")) {
-            sender.sendMessage(plugin.prefix() + "§cYou do not have permission to use this command.");
+            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
             return true;
         }
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.prefix() + "§cThis command must be run by a player.");
+            sender.sendMessage(plugin.prefix() + "§cEste comando solo puede usarlo un jugador.");
             return true;
         }
         if (args.length == 0) {
@@ -48,38 +48,38 @@ public class KitCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "create" -> {
-                if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUsage: /kit create <name>"); return true; }
+                if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUso: /kit create <nombre>"); return true; }
                 String name = args[1];
                 if (plugin.getKitManager().createKit(name, player)) {
-                    player.sendMessage(plugin.prefix() + "§aKit §e" + name + " §acreated from your current inventory.");
+                    player.sendMessage(plugin.prefix() + "§aKit §e" + name + " §acreado con tu inventario actual.");
                 } else {
-                    player.sendMessage(plugin.prefix() + "§cA kit named §e" + name + " §calready exists. Use §f/kit edit§c to overwrite it.");
+                    player.sendMessage(plugin.prefix() + "§cYa existe un kit llamado §e" + name + "§c. Usa §f/kit edit §cpara sobreescribirlo.");
                 }
             }
             case "edit" -> {
-                if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUsage: /kit edit <name>"); return true; }
+                if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUso: /kit edit <nombre>"); return true; }
                 String name = args[1];
                 if (plugin.getKitManager().editKit(name, player)) {
-                    player.sendMessage(plugin.prefix() + "§aKit §e" + name + " §aupdated from your current inventory.");
+                    player.sendMessage(plugin.prefix() + "§aKit §e" + name + " §aactualizado con tu inventario actual.");
                 } else {
-                    player.sendMessage(plugin.prefix() + "§cKit §e" + name + " §cdoes not exist. Use §f/kit create§c first.");
+                    player.sendMessage(plugin.prefix() + "§cEl kit §e" + name + " §cno existe. Usa §f/kit create §cprimero.");
                 }
             }
             case "delete" -> {
-                if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUsage: /kit delete <name>"); return true; }
+                if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUso: /kit delete <nombre>"); return true; }
                 String name = args[1];
                 if (plugin.getKitManager().deleteKit(name)) {
-                    player.sendMessage(plugin.prefix() + "§aKit §e" + name + " §adeleted.");
+                    player.sendMessage(plugin.prefix() + "§aKit §e" + name + " §aeliminado correctamente.");
                 } else {
-                    player.sendMessage(plugin.prefix() + "§cKit §e" + name + " §cdoes not exist.");
+                    player.sendMessage(plugin.prefix() + "§cEl kit §e" + name + " §cno existe.");
                 }
             }
             case "list" -> {
                 List<String> names = plugin.getKitManager().getKitNames();
                 if (names.isEmpty()) {
-                    player.sendMessage(plugin.prefix() + "§cNo kits have been created yet.");
+                    player.sendMessage(plugin.prefix() + "§cAún no hay kits creados.");
                 } else {
-                    player.sendMessage(plugin.prefix() + "§aAvailable kits: §e" + String.join("§7, §e", names));
+                    player.sendMessage(plugin.prefix() + "§aKits disponibles: §e" + String.join("§7, §e", names));
                 }
             }
             default -> sendHelp(player);
@@ -88,13 +88,14 @@ public class KitCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendHelp(Player player) {
-        player.sendMessage("§8§m                              ");
-        player.sendMessage("§c§lKit Commands");
-        player.sendMessage("§f/kit create §e<name> §7— Create kit from inventory");
-        player.sendMessage("§f/kit edit §e<name>   §7— Overwrite kit from inventory");
-        player.sendMessage("§f/kit delete §e<name> §7— Delete a kit");
-        player.sendMessage("§f/kit list             §7— List all kits");
-        player.sendMessage("§8§m                              ");
+        player.sendMessage("§8§m══════════════════════════════");
+        player.sendMessage("§6§l  ⚔ Comandos de Kit");
+        player.sendMessage("§8§m══════════════════════════════");
+        player.sendMessage("§e/kit create §f<nombre> §8» §7Crear kit del inventario");
+        player.sendMessage("§e/kit edit §f<nombre>   §8» §7Sobreescribir kit");
+        player.sendMessage("§e/kit delete §f<nombre> §8» §7Eliminar kit");
+        player.sendMessage("§e/kit list              §8» §7Listar todos los kits");
+        player.sendMessage("§8§m══════════════════════════════");
     }
 
     @Override

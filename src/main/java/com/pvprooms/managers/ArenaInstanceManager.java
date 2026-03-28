@@ -40,47 +40,63 @@ public class ArenaInstanceManager {
     public World createInstance(ArenaTemplate template, String matchId) {
         String instanceName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchId;
 
-        // Source: <serverRoot>/<templateName>  (the world created by /arena create)
-        File sourceWorld = new File(Bukkit.getWorldContainer(), template.getName());
+        // ── Fuente: mundo raíz con el nombre de la plantilla ──────────────
+        File sourceDir = new File(Bukkit.getWorldContainer(), template.getName());
 
-        if (!sourceWorld.exists() || !sourceWorld.isDirectory()) {
-            plugin.getLogger().warning("Arena template world not found: " + sourceWorld.getAbsolutePath()
-                    + " — use /arena create <name> to generate it.");
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) {
+            plugin.getLogger().warning("[PvPRooms] Mundo plantilla no encontrado: "
+                    + sourceDir.getAbsolutePath()
+                    + " — usa /arena create <nombre> o copia tu mundo a la raíz del servidor.");
             return null;
         }
 
-        // Destination: server root/<instanceName>
-        File destWorld = new File(Bukkit.getWorldContainer(), instanceName);
-        if (destWorld.exists()) {
-            deleteDirectory(destWorld);
+        // ── Guardar el mundo fuente si está cargado ────────────────────────
+        // Esto garantiza que los chunks en memoria se escriban al disco
+        // antes de copiar, incluso con múltiples partidas en curso.
+        World sourceWorld = Bukkit.getWorld(template.getName());
+        if (sourceWorld != null) {
+            sourceWorld.save();
+        }
+
+        // ── Destino único por partida: pvp_match_<matchId> ────────────────
+        File destDir = new File(Bukkit.getWorldContainer(), instanceName);
+        if (destDir.exists()) {
+            deleteDirectory(destDir);
         }
 
         try {
-            copyDirectory(sourceWorld.toPath(), destWorld.toPath());
+            copyDirectory(sourceDir.toPath(), destDir.toPath());
         } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to copy arena template " + template.getName(), e);
+            plugin.getLogger().log(Level.SEVERE,
+                    "[PvPRooms] Error copiando plantilla " + template.getName() + " → " + instanceName, e);
             return null;
         }
 
-        // Remove session.lock so Bukkit can load the world
-        new File(destWorld, "session.lock").delete();
+        // Borrar session.lock para que Bukkit pueda cargar el mundo
+        new File(destDir, "session.lock").delete();
 
-        // Load the world through Bukkit
+        // ── Cargar la instancia con generador vacío ────────────────────────
+        // El generador vacío evita que Bukkit genere chunks nuevos
+        // fuera de los ya copiados de la plantilla.
         WorldCreator creator = new WorldCreator(instanceName);
-        creator.generator(new VoidChunkGenerator()); // prevent chunk regeneration
+        creator.generator(new VoidChunkGenerator());
         creator.generateStructures(false);
-        World world = Bukkit.createWorld(creator);
+        World instance = Bukkit.createWorld(creator);
 
-        if (world != null) {
-            world.setAutoSave(false);
-            world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-            world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
-            world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
-            world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-            world.setTime(6000L);
+        if (instance != null) {
+            instance.setAutoSave(false);
+            instance.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+            instance.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+            instance.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+            instance.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+            instance.setTime(6000L);
+            plugin.getLogger().info("[PvPRooms] Instancia creada: " + instanceName
+                    + " (plantilla: " + template.getName() + ")");
+        } else {
+            plugin.getLogger().severe("[PvPRooms] Bukkit devolvió null al crear " + instanceName);
         }
 
-        return world;
+        return instance;
     }
 
     // ── World destruction ──────────────────────────────────────────────────

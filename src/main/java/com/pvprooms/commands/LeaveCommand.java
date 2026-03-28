@@ -24,43 +24,41 @@ public class LeaveCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("pvprooms.leave")) {
-            sender.sendMessage(plugin.prefix() + "§cYou do not have permission to use this command.");
+            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
             return true;
         }
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.prefix() + "§cThis command must be run by a player.");
+            sender.sendMessage(plugin.prefix() + "§cEste comando solo puede usarlo un jugador.");
             return true;
         }
 
         UUID uuid = player.getUniqueId();
 
-        // Check if spectating
         Duel spectatedDuel = findSpectatedDuel(uuid);
         if (spectatedDuel != null) {
             plugin.getDuelManager().removeSpectatorFromDuel(player, spectatedDuel);
-            player.sendMessage(plugin.prefix() + "§aYou have stopped spectating.");
+            plugin.getScoreboardManager().restoreLobbyScoreboard(player);
+            player.sendMessage(plugin.prefix() + "§aHas dejado de espectear.");
             return true;
         }
 
-        // Check if in queue
         if (plugin.getQueueManager().isInQueue(uuid)) {
             String kit = plugin.getQueueManager().getQueuedKit(uuid);
             plugin.getQueueManager().removeFromQueue(uuid);
-            plugin.getScoreboardManager().clearScoreboard(player);
-            player.sendMessage(plugin.prefix() + "§aYou have left the §e" + kit + " §aqueue.");
+            plugin.getScoreboardManager().restoreLobbyScoreboard(player);
+            player.sendMessage(plugin.prefix() + "§aSaliste de la cola de §e" + kit + "§a.");
             return true;
         }
 
-        // Check if in a duel
         Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
         if (duel != null && duel.getState() != Duel.State.ENDED) {
             UUID opponentUUID = duel.getOpponent(uuid);
-            player.sendMessage(plugin.prefix() + "§cYou forfeited the duel.");
-            plugin.getDuelManager().endDuel(duel, opponentUUID, "forfeit");
+            player.sendMessage(plugin.prefix() + "§cTe has rendido en el duelo.");
+            plugin.getDuelManager().endDuel(duel, opponentUUID, "rendición");
             return true;
         }
 
-        player.sendMessage(plugin.prefix() + "§cYou are not in a queue, duel, or spectating.");
+        player.sendMessage(plugin.prefix() + "§cNo estás en ninguna cola, duelo ni especteando.");
         return true;
     }
 
