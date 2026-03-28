@@ -43,6 +43,10 @@ commands:
     description: Establece el mundo del lobby al mundo actual
     usage: /setspawnworld
     permission: pvprooms.admin
+  spawn:
+    description: Teletransportarse al spawn del lobby
+    usage: /spawn
+    permission: pvprooms.spawn
 
 permissions:
   pvprooms.kit:
@@ -65,6 +69,9 @@ permissions:
     default: true
   pvprooms.top:
     description: View ELO leaderboard
+    default: true
+  pvprooms.spawn:
+    description: Usar /spawn para ir al lobby
     default: true
   pvprooms.admin:
     description: Full admin access

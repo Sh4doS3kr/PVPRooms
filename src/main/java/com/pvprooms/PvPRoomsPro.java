@@ -129,6 +129,7 @@ public class PvPRoomsPro extends JavaPlugin {
 
         getCommand("setspawn").setExecutor(new SetSpawnCommand(this, false));
         getCommand("setspawnworld").setExecutor(new SetSpawnCommand(this, true));
+        getCommand("spawn").setExecutor(new SpawnCommand(this));
     }
 
     private void registerListeners() {
