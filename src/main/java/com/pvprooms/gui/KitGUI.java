@@ -111,6 +111,35 @@ public class KitGUI {
         return glass;
     }
 
+    // ── Kit Reorder GUI ──────────────────────────────────────────────────────
+
+    public static final String REORDER_TITLE_PREFIX = "§8Reordenar kit: §e";
+
+    /**
+     * Opens a 36-slot chest showing the kit's current inventory contents.
+     * The player can drag items to new positions; items cannot leave the chest.
+     * Closing the inventory saves the new order.
+     */
+    public void openReorder(Player player, String kitName) {
+        Kit kit = plugin.getKitManager().getKit(kitName);
+        if (kit == null) {
+            player.sendMessage(plugin.prefix() + "§cKit '§e" + kitName + "§c' no encontrado.");
+            return;
+        }
+        KitReorderHolder holder = new KitReorderHolder(kitName.toLowerCase());
+        Inventory inv = Bukkit.createInventory(holder, 36,
+                REORDER_TITLE_PREFIX + capitalize(kitName));
+        holder.setInventory(inv);
+
+        ItemStack[] contents = kit.getContents();
+        for (int i = 0; i < Math.min(contents.length, 36); i++) {
+            if (contents[i] != null && contents[i].getType() != Material.AIR) {
+                inv.setItem(i, contents[i].clone());
+            }
+        }
+        player.openInventory(inv);
+    }
+
     // ── Utility ────────────────────────────────────────────────────────────
 
     /**

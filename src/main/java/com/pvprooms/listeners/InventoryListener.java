@@ -8,6 +8,7 @@ import com.pvprooms.gui.ArenaConfigHolder;
 import com.pvprooms.gui.KitEditorGUI;
 import com.pvprooms.gui.KitEditorHolder;
 import com.pvprooms.gui.KitGUI;
+import com.pvprooms.gui.KitReorderHolder;
 import com.pvprooms.gui.QueueModeGUI;
 import com.pvprooms.gui.QueueModeHolder;
 import com.pvprooms.model.ArenaTemplate;
@@ -67,6 +68,12 @@ public class InventoryListener implements Listener {
             if (clicked == null) return;
             String kitName = plugin.getKitGUI().extractKitName(clicked);
             if (kitName == null || !plugin.getKitManager().kitExists(kitName)) return;
+            // Right-click → open reorder GUI (admin only)
+            if (event.isRightClick() && player.hasPermission("pvprooms.admin")) {
+                player.closeInventory();
+                plugin.getKitGUI().openReorder(player, kitName);
+                return;
+            }
             player.closeInventory();
             boolean joined = plugin.getQueueManager().addToQueue(player, kitName);
             if (joined) {
@@ -89,6 +96,12 @@ public class InventoryListener implements Listener {
             if (clicked == null) return;
             String kitName = plugin.getKitGUI().extractKitName(clicked);
             if (kitName == null || !plugin.getKitManager().kitExists(kitName)) return;
+            // Right-click → open reorder GUI (admin only)
+            if (event.isRightClick() && player.hasPermission("pvprooms.admin")) {
+                player.closeInventory();
+                plugin.getKitGUI().openReorder(player, kitName);
+                return;
+            }
             player.closeInventory();
             boolean joined = plugin.getQueueManager().addToTierQueue(player, kitName);
             if (joined) {
@@ -165,6 +178,22 @@ public class InventoryListener implements Listener {
                 return;
             }
             // Allow all other clicks (inventory + armor slots)
+            return;
+        }
+
+        // ── Kit Reorder GUI ───────────────────────────────────────────────
+        if (event.getInventory().getHolder() instanceof KitReorderHolder) {
+            // Block shift-click and clicks on the player's own inventory (prevent extracting items)
+            if (event.getAction() == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+                event.setCancelled(true);
+                return;
+            }
+            if (event.getClickedInventory() != null
+                    && event.getClickedInventory().equals(player.getInventory())) {
+                event.setCancelled(true);
+                return;
+            }
+            // Allow drag/swap freely within the reorder chest
             return;
         }
 
@@ -254,6 +283,21 @@ public class InventoryListener implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        // Nothing to clean up currently; reserved for future drag-drop prevention
+        if (!(event.getInventory().getHolder() instanceof KitReorderHolder holder)) return;
+        if (!(event.getPlayer() instanceof Player player)) return;
+
+        // Read the 36 reorder slots and save as the new kit contents order
+        ItemStack[] newContents = new ItemStack[36];
+        for (int i = 0; i < 36; i++) {
+            ItemStack it = event.getInventory().getItem(i);
+            newContents[i] = (it != null && it.getType() != Material.AIR) ? it.clone() : null;
+        }
+        boolean saved = plugin.getKitManager().setKitFromEditor(
+                holder.getKitName(), newContents,
+                plugin.getKitManager().getKit(holder.getKitName()).getArmorContents(),
+                plugin.getKitManager().getKit(holder.getKitName()).getOffhand());
+        if (saved) {
+            player.sendMessage(plugin.prefix() + "§aOrden del kit §e" + holder.getKitName() + "§a guardado.");
+        }
     }
 }
