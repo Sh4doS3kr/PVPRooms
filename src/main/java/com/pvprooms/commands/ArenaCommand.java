@@ -57,31 +57,29 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
                 if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUso: /arena create <nombre>"); return true; }
                 String name = args[1];
 
-                if (plugin.getArenaManager().getArena(name) != null) {
-                    player.sendMessage(plugin.prefix() + "§cYa existe una arena llamada §e" + name + "§c.");
+                boolean existsOnDisk = new java.io.File(
+                        org.bukkit.Bukkit.getWorldContainer(), name).isDirectory();
+                boolean alreadyRegistered = plugin.getArenaManager().getArena(name) != null;
+
+                // Si ya está registrada Y no hay carpeta en disco → nada que hacer
+                if (alreadyRegistered && !existsOnDisk) {
+                    player.sendMessage(plugin.prefix() + "§cLa arena §e" + name + " §cya está registrada y no se encontró la carpeta del mundo.");
+                    player.sendMessage(plugin.prefix() + "§7Usa §e/arena setspawn1 §7y §e/arena setspawn2 §7para configurar los spawns.");
                     return true;
                 }
 
-                player.sendMessage(plugin.prefix() + "§eBuscando mundo §f" + name + "§e en la raíz del servidor...");
-
-                // ¿Ya está cargado?
+                // ── Obtener/cargar/crear el mundo ──────────────────────────
                 World world = Bukkit.getWorld(name);
 
-                // ¿Existe la carpeta en la raíz aunque no esté cargado?
-                boolean existsOnDisk = new java.io.File(
-                        org.bukkit.Bukkit.getWorldContainer(), name).isDirectory();
-
                 if (world == null && existsOnDisk) {
-                    // Cargar el mundo existente (mundo del admin, construido a mano)
-                    player.sendMessage(plugin.prefix() + "§7Carpeta encontrada, cargando mundo...");
+                    player.sendMessage(plugin.prefix() + "§7Carpeta encontrada, cargando mundo §e" + name + "§7...");
                     WorldCreator loader = new WorldCreator(name);
                     loader.generateStructures(false);
                     world = Bukkit.createWorld(loader);
                 }
 
                 if (world == null && !existsOnDisk) {
-                    // No existe → crear mundo vacío (void) para construir el mapa
-                    player.sendMessage(plugin.prefix() + "§7No se encontró carpeta, creando mundo vacío nuevo...");
+                    player.sendMessage(plugin.prefix() + "§7No se encontró carpeta, creando mundo vacío para §e" + name + "§7...");
                     WorldCreator creator = new WorldCreator(name);
                     creator.generator(plugin.getArenaInstanceManager().voidGenerator());
                     creator.generateStructures(false);
@@ -99,14 +97,18 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
                 world.setGameRule(GameRule.KEEP_INVENTORY, true);
                 world.setTime(6000L);
 
-                plugin.getArenaManager().createArena(name);
+                // Registrar solo si no lo estaba ya
+                if (!alreadyRegistered) {
+                    plugin.getArenaManager().createArena(name);
+                }
+
                 player.teleport(world.getSpawnLocation());
 
-                String modoStr = existsOnDisk ? "§acargado desde disco" : "§acreado como mundo flat";
+                String modoStr = existsOnDisk ? "§acargado desde disco" : "§acreado como mundo vacío";
                 player.sendMessage(plugin.prefix() + "§aMundo §e" + name + " §a" + modoStr + " y registrado como arena.");
-                player.sendMessage(plugin.prefix() + "§7Establece los spawns cuando estés listo:");
-                player.sendMessage(plugin.prefix() + "§e  /arena setspawn1 " + name + " §8» §7Spawn del jugador 1");
-                player.sendMessage(plugin.prefix() + "§e  /arena setspawn2 " + name + " §8» §7Spawn del jugador 2");
+                player.sendMessage(plugin.prefix() + "§7Ahora establece los spawns:");
+                player.sendMessage(plugin.prefix() + "§e  /arena setspawn1 " + name + " §8» §7Párate en el spawn 1 y ejecútalo");
+                player.sendMessage(plugin.prefix() + "§e  /arena setspawn2 " + name + " §8» §7Párate en el spawn 2 y ejecútalo");
             }
             case "setspawn1" -> {
                 if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUso: /arena setspawn1 <nombre>"); return true; }
