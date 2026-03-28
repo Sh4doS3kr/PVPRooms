@@ -212,7 +212,7 @@ public class QueueManager {
                 tierJoinTimes.remove(uuid1);
                 tierJoinTimes.remove(uuid2);
                 String kitName = kitFromTierKey(key);
-                plugin.getDuelManager().startDuel(uuid1, uuid2, kitName);
+                plugin.getDuelManager().startDuel(uuid1, uuid2, kitName, true);
             }
 
             // After TIER_EXPAND_MS seconds, allow ±1 tier matching
@@ -232,7 +232,7 @@ public class QueueManager {
                         playerTierMode.remove(partner);
                         tierJoinTimes.remove(waiter);
                         tierJoinTimes.remove(partner);
-                        plugin.getDuelManager().startDuel(waiter, partner, kitName);
+                        plugin.getDuelManager().startDuel(waiter, partner, kitName, true);
                     }
                 }
             }

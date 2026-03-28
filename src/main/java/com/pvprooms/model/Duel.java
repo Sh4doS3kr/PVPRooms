@@ -35,6 +35,12 @@ public class Duel {
 
     private final Set<UUID> spectators = new HashSet<>();
 
+    // ── Best-of-3 fields ──────────────────────────────────────────────────
+    private boolean bo3          = false;
+    private int     wins1        = 0;   // wins for player1
+    private int     wins2        = 0;   // wins for player2
+    private int     currentRound = 1;
+
     public Duel(UUID player1, UUID player2, String kitName,
                 String instanceWorldName, ArenaTemplate template) {
         this.id                = UUID.randomUUID();
@@ -98,4 +104,27 @@ public class Duel {
 
     public int getScoreboardTask() { return scoreboardTask; }
     public void setScoreboardTask(int t) { this.scoreboardTask = t; }
+
+    // ── BO3 helpers ───────────────────────────────────────────────────────
+
+    public boolean isBo3()              { return bo3; }
+    public void    setBo3(boolean bo3)  { this.bo3 = bo3; }
+
+    public int getWins1()        { return wins1; }
+    public int getWins2()        { return wins2; }
+    public int getCurrentRound() { return currentRound; }
+
+    /** Returns the number of rounds won by the given player UUID. */
+    public int getWins(UUID uuid) {
+        if (player1.equals(uuid)) return wins1;
+        if (player2.equals(uuid)) return wins2;
+        return 0;
+    }
+
+    /** Increments the win counter for the given player and advances the round number. */
+    public void addWin(UUID uuid) {
+        if (player1.equals(uuid)) wins1++;
+        else if (player2.equals(uuid)) wins2++;
+        currentRound++;
+    }
 }

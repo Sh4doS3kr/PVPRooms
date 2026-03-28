@@ -134,6 +134,12 @@ public class ScoreboardManager {
 
         setLine(obj, "  ", line--);
         setLine(obj, leg("&e&l» &fKit: &e" + duel.getKitName()), line--);
+        if (duel.isBo3()) {
+            int myW  = duel.getWins(player.getUniqueId());
+            int opW  = duel.getWins(duel.getOpponent(player.getUniqueId()));
+            int rnd  = Math.min(duel.getCurrentRound(), 3);
+            setLine(obj, leg("&e&l» &fRonda &e" + rnd + "&7/3  &a" + myW + "&7-&c" + opW), line--);
+        }
         setLine(obj, "   ", line--);
         setLine(obj, leg("&e&l» &fRival: &c" + opponentName), line--);
 

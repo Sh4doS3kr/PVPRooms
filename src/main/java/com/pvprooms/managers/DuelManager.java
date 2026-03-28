@@ -47,7 +47,12 @@ public class DuelManager {
      * Initiates a duel between two players using a given kit.
      * Called by QueueManager once two players are matched.
      */
+    /** Overload without bo3 — keeps ELO duels unchanged. */
     public void startDuel(UUID uuid1, UUID uuid2, String kitName) {
+        startDuel(uuid1, uuid2, kitName, false);
+    }
+
+    public void startDuel(UUID uuid1, UUID uuid2, String kitName, boolean bo3) {
         Player p1 = Bukkit.getPlayer(uuid1);
         Player p2 = Bukkit.getPlayer(uuid2);
 
@@ -84,6 +89,7 @@ public class DuelManager {
         }
 
         Duel duel = new Duel(uuid1, uuid2, kitName, instanceWorldName, template);
+        duel.setBo3(bo3);
         activeDuels.put(duel.getId(), duel);
         playerDuelMap.put(uuid1, duel.getId());
         playerDuelMap.put(uuid2, duel.getId());
@@ -109,8 +115,9 @@ public class DuelManager {
         plugin.getScoreboardManager().clearScoreboard(p2);
 
         // Notificar emparejamiento
-        p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]");
-        p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]");
+        String modeTag = bo3 ? " §8[§bBO3§8]" : "";
+        p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
+        p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
 
         // Start countdown
         startCountdown(duel, instanceWorld);
@@ -205,6 +212,14 @@ public class DuelManager {
      * Handles ELO updates, cleanup, and world destruction.
      */
     public void endDuel(Duel duel, UUID winnerUUID, String reason) {
+        // BO3 interception: a single-round death should start the next round
+        if (duel.isBo3()
+                && "death".equals(reason)
+                && duel.getState() == Duel.State.FIGHTING
+                && winnerUUID != null) {
+            handleBo3Round(duel, winnerUUID);
+            return;
+        }
         if (duel.getState() == Duel.State.ENDED) return;
         duel.setState(Duel.State.ENDED);
         duel.setWinner(winnerUUID);
@@ -275,6 +290,78 @@ public class DuelManager {
                 plugin.getArenaInstanceManager().destroyInstance(worldName);
             }
         }.runTaskLater(plugin, 5L);
+    }
+
+    // ── BO3 round logic ────────────────────────────────────────────────────
+
+    /**
+     * Called after a round ends in a BO3 duel.
+     * Increments the winner's round count, then either starts the next round
+     * or finalises the match if someone has reached 2 wins.
+     */
+    private void handleBo3Round(Duel duel, UUID roundWinnerUUID) {
+        duel.addWin(roundWinnerUUID);
+
+        int w1 = duel.getWins1();
+        int w2 = duel.getWins2();
+        int round = duel.getCurrentRound() - 1; // addWin already incremented it
+
+        Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+        Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+        Player roundWinner = Bukkit.getPlayer(roundWinnerUUID);
+        String winnerName  = roundWinner != null ? roundWinner.getName() : "?";
+
+        // Round result announcement
+        String scoreStr = "§a" + w1 + "§7-§c" + w2;
+        String roundMsg = plugin.prefix()
+                + "§e⚔ Ronda " + round + ": §6§l" + winnerName
+                + " §egana! §8[" + scoreStr + "§8]";
+        if (p1 != null) { p1.sendMessage(roundMsg); sendTitle(p1, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]"); }
+        if (p2 != null) { p2.sendMessage(roundMsg); sendTitle(p2, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]"); }
+
+        // Check for match winner (first to 2)
+        UUID matchWinner = w1 >= 2 ? duel.getPlayer1() : (w2 >= 2 ? duel.getPlayer2() : null);
+        if (matchWinner != null) {
+            // Full match decided — run normal cleanup after a short pause for titles to show
+            Bukkit.getScheduler().runTaskLater(plugin, () ->
+                    endDuel(duel, matchWinner, "bo3_finished"), 40L); // 2s pause
+            return;
+        }
+
+        // ── Next round ────────────────────────────────────────────────────
+        // Cancel running duration timer
+        if (duel.getDurationTask() != -1) {
+            Bukkit.getScheduler().cancelTask(duel.getDurationTask());
+            duel.setDurationTask(-1);
+        }
+
+        // Stop health holograms
+        plugin.getHealthHologramManager().stopHolograms(duel.getId());
+
+        World world = Bukkit.getWorld(duel.getInstanceWorldName());
+        if (world != null) plugin.getWallManager().animateClose(duel.getArenaTemplate().getName(), world);
+
+        // Prepare and teleport both players after 3 ticks (lets respawn packet process)
+        duel.setState(Duel.State.COUNTDOWN);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
+            Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
+            World w    = Bukkit.getWorld(duel.getInstanceWorldName());
+            if (rp1 == null || rp2 == null || w == null) {
+                // Someone disconnected mid-round, end it
+                UUID winner = rp1 != null ? duel.getPlayer1() : (rp2 != null ? duel.getPlayer2() : null);
+                endDuel(duel, winner, "disconnect");
+                return;
+            }
+            preparePlayer(rp1);
+            preparePlayer(rp2);
+            rp1.teleport(duel.getArenaTemplate().getSpawn1(w));
+            rp2.teleport(duel.getArenaTemplate().getSpawn2(w));
+            plugin.getKitManager().applyKit(rp1, duel.getKitName());
+            plugin.getKitManager().applyKit(rp2, duel.getKitName());
+            duel.setStartTimeMillis(System.currentTimeMillis());
+            startCountdown(duel, w);
+        }, 3L);
     }
 
     /** Ends a duel by looking up the duel from a player UUID. */
