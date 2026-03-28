@@ -70,6 +70,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "elo" -> handleElo(sender, args);
             case "kick" -> handleKick(sender, args);
             case "forceend" -> handleForceEnd(sender, args);
+            case "travel" -> handleTravel(sender, args);
             case "reload" -> handleReload(sender);
             case "info" -> handleInfo(sender);
             default -> sendHelp(sender);
@@ -175,6 +176,36 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(plugin.prefix() + "§aDuelo terminado en §e§lempate §apor orden de admin.");
     }
 
+    // ── Travel ────────────────────────────────────────────────
+
+    private void handleTravel(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.prefix() + "§cEste subcomando solo puede usarlo un jugador.");
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(plugin.prefix() + "§cUso: /admin travel <mundo>");
+            return;
+        }
+        String worldName = args[1];
+        org.bukkit.World world = org.bukkit.Bukkit.getWorld(worldName);
+        if (world == null) {
+            // Intentar cargar el mundo si existe en disco
+            java.io.File worldFolder = new java.io.File(org.bukkit.Bukkit.getWorldContainer(), worldName);
+            if (worldFolder.exists() && worldFolder.isDirectory()) {
+                world = org.bukkit.Bukkit.createWorld(new org.bukkit.WorldCreator(worldName));
+            }
+        }
+        if (world == null) {
+            sender.sendMessage(plugin.prefix() + "§cNo existe ningún mundo llamado §e" + worldName + "§c.");
+            return;
+        }
+        player.setGameMode(org.bukkit.GameMode.CREATIVE);
+        player.teleport(world.getSpawnLocation());
+        sender.sendMessage(plugin.prefix() + "§aTeleportado al mundo §e" + world.getName()
+                + " §a. Modo creativo activado.");
+    }
+
     // ── Reload ────────────────────────────────────────────────────────────
 
     private void handleReload(CommandSender sender) {
@@ -211,6 +242,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/admin elo resetall                §8» §7⚠ Resetear TODOS");
         sender.sendMessage("§e/admin kick §f<jugador>             §8» §7Sacar de cola/duelo");
         sender.sendMessage("§e/admin forceend §f<jugador>         §8» §7Terminar duelo (empate)");
+        sender.sendMessage("§e/admin travel §f<mundo>              §8» §7Teleportarse a un mundo");
         sender.sendMessage("§e/admin reload                      §8» §7Recargar config");
         sender.sendMessage("§e/admin info                        §8» §7Info del plugin");
         sender.sendMessage("§8§m══════════════════════════════════════");
@@ -237,7 +269,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (label.equalsIgnoreCase("adminpanel")) return List.of();
 
         if (args.length == 1) {
-            return Arrays.asList("elo", "kick", "forceend", "reload", "info").stream()
+            return Arrays.asList("elo", "kick", "forceend", "travel", "reload", "info").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
         }
@@ -246,6 +278,27 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                     .filter(s -> s.startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
         }
+        // World name suggestions for /admin travel
+        if (args.length == 2 && args[0].equalsIgnoreCase("travel")) {
+            String partial = args[1].toLowerCase();
+            List<String> worlds = new ArrayList<>();
+            org.bukkit.Bukkit.getWorlds().stream()
+                    .map(org.bukkit.World::getName)
+                    .filter(n -> n.toLowerCase().startsWith(partial))
+                    .forEach(worlds::add);
+            // Also suggest unloaded world folders
+            java.io.File container = org.bukkit.Bukkit.getWorldContainer();
+            java.io.File[] dirs = container.listFiles(java.io.File::isDirectory);
+            if (dirs != null) {
+                for (java.io.File d : dirs) {
+                    if (d.getName().toLowerCase().startsWith(partial) && !worlds.contains(d.getName())) {
+                        worlds.add(d.getName());
+                    }
+                }
+            }
+            return worlds;
+        }
+
         // Player name suggestions for commands that need a player argument
         boolean needsPlayer = (args.length == 2 && (args[0].equalsIgnoreCase("kick")
                 || args[0].equalsIgnoreCase("forceend")))

@@ -162,6 +162,12 @@ public class PlayerListener implements Listener {
             player.sendMessage(plugin.prefix() + "§cNo puedes romper bloques en el spawn.");
             return;
         }
+        // Bloquear a todos en mundos de instancia de arena (PvP)
+        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        if (event.getBlock().getWorld().getName().startsWith(instancePrefix)) {
+            event.setCancelled(true);
+            return;
+        }
         // Bloquear a espectadores en mundos de arena
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.isSpectator(player.getUniqueId())) {
@@ -177,6 +183,12 @@ public class PlayerListener implements Listener {
         if (event.getBlock().getWorld().getName().equals(lobbyWorld) && !player.isOp()) {
             event.setCancelled(true);
             player.sendMessage(plugin.prefix() + "§cNo puedes colocar bloques en el spawn.");
+            return;
+        }
+        // Bloquear a todos en mundos de instancia de arena (PvP)
+        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        if (event.getBlock().getWorld().getName().startsWith(instancePrefix)) {
+            event.setCancelled(true);
             return;
         }
         // Bloquear a espectadores en mundos de arena

@@ -94,6 +94,7 @@ public class ScoreboardManager {
 
         player.setScoreboard(board);
         activeBoards.put(player.getUniqueId(), board);
+        lobbyPlayers.remove(player.getUniqueId()); // no sobreescribir con el de lobby
     }
 
     // ── Duel scoreboard ────────────────────────────────────────────────────
