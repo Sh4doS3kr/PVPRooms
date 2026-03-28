@@ -54,7 +54,8 @@ public class TopCommand implements CommandExecutor {
                         .filter(e -> e.getValue().equalsIgnoreCase(rawName))
                         .map(java.util.Map.Entry::getKey).findFirst().orElse(null);
                 int elo = uuidKey != null ? eloMap.getOrDefault(uuidKey, 1000) : 1000;
-                Tier tier = Tier.fromElo(elo);
+                java.util.UUID uuid = uuidKey != null ? java.util.UUID.fromString(uuidKey) : null;
+                Tier tier = uuid != null ? Tier.forPlayer(plugin.getEloManager(), uuid) : Tier.fromElo(elo);
                 sender.sendMessage(medal + "§r" + entry + "  " + tier.formatted());
             }
         }

@@ -1,7 +1,9 @@
 package com.pvprooms.gui;
 
+import com.pvprooms.managers.EloManager;
 import com.pvprooms.model.Tier;
 import org.bukkit.Bukkit;
+import java.util.UUID;
 import org.bukkit.Material;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -22,7 +24,7 @@ public class QueueModeGUI {
     public static final int SLOT_ELO  = 11;
     public static final int SLOT_TIER = 15;
 
-    public Inventory build(int playerElo) {
+    public Inventory build(EloManager eloManager, UUID uuid) {
         QueueModeHolder holder = new QueueModeHolder();
         Inventory inv = Bukkit.createInventory(holder, 27, "§8Selecciona el modo de §6juego");
         holder.setInventory(inv);
@@ -31,7 +33,8 @@ public class QueueModeGUI {
         ItemStack filler = item(Material.GRAY_STAINED_GLASS_PANE, "§r");
         for (int i = 0; i < 27; i++) inv.setItem(i, filler);
 
-        Tier tier = Tier.fromElo(playerElo);
+        int playerElo = eloManager.getElo(uuid);
+        Tier tier = Tier.forPlayer(eloManager, uuid);
 
         // ELO button
         inv.setItem(SLOT_ELO, item(Material.COMPARATOR,

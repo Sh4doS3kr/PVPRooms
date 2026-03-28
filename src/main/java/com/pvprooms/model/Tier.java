@@ -59,6 +59,15 @@ public enum Tier {
         return Math.abs(this.ordinal() - other.ordinal()) <= 1;
     }
 
+    /**
+     * Returns UNRANKED if the player hasn't played yet,
+     * otherwise resolves from their ELO.
+     */
+    public static Tier forPlayer(com.pvprooms.managers.EloManager eloManager, java.util.UUID uuid) {
+        if (!eloManager.hasEloRecord(uuid)) return UNRANKED;
+        return fromElo(eloManager.getElo(uuid));
+    }
+
     /** Returns the highest tier whose minElo ≤ elo. */
     public static Tier fromElo(int elo) {
         Tier result = UNRANKED;

@@ -2,6 +2,7 @@ package com.pvprooms.managers;
 
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
+import com.pvprooms.model.Tier;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -84,8 +85,10 @@ public class ScoreboardManager {
 
         int line = 10;
         setLine(obj, " ", line--);
-        setLine(obj, leg("&e&l» &fKit: &e" + kitName), line--);
-        setLine(obj, leg("&e&l» &fTu ELO: &6" + plugin.getEloManager().getElo(player.getUniqueId())), line--);
+        Tier qTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
+        setLine(obj, leg("&e&l» &fKit:  &e" + kitName), line--);
+        setLine(obj, leg("&e&l» &fTier: " + qTier.colour + qTier.displayName), line--);
+        setLine(obj, leg("&e&l» &fELO:  &6" + plugin.getEloManager().getElo(player.getUniqueId())), line--);
         setLine(obj, "  ", line--);
         setLine(obj, leg("&e&l» &fEn cola: &a" + plugin.getQueueManager().getTotalQueued()), line--);
         setLine(obj, "   ", line--);
@@ -132,12 +135,15 @@ public class ScoreboardManager {
         setLine(obj, "   ", line--);
         setLine(obj, leg("&e&l» &fRival: &c" + opponentName), line--);
 
-        int myElo = plugin.getEloManager().getElo(player.getUniqueId());
-        setLine(obj, leg("&e&l» &fTu ELO: &6" + myElo), line--);
+        int myElo  = plugin.getEloManager().getElo(player.getUniqueId());
+        Tier myTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
+        setLine(obj, leg("&e&l» &fTier:     " + myTier.colour + myTier.displayName), line--);
+        setLine(obj, leg("&e&l» &fTu ELO:   &6" + myElo), line--);
 
         if (opponent != null) {
-            int opElo = plugin.getEloManager().getElo(opponentUUID);
-            setLine(obj, leg("&e&l» &fELO rival: &c" + opElo), line--);
+            int opElo   = plugin.getEloManager().getElo(opponentUUID);
+            Tier opTier = Tier.forPlayer(plugin.getEloManager(), opponentUUID);
+            setLine(obj, leg("&e&l» &fELO rival: &c" + opElo + " &7(" + opTier.colour + opTier.displayName + "&7)"), line--);
         }
 
         setLine(obj, "    ", line--);
@@ -176,6 +182,9 @@ public class ScoreboardManager {
         setLine(obj, leg("&e&l» &fDuelos activos"), line--);
         setLine(obj, leg("  &7" + activeMatches + " en curso · " + inQueue + " en cola"), line--);
         setLine(obj, "   ", line--);
+        Tier lobbyTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
+        setLine(obj, leg("&e&l» &fTu Tier"), line--);
+        setLine(obj, leg("  " + lobbyTier.colour + "&l" + lobbyTier.displayName), line--);
         setLine(obj, leg("&e&l» &fTu ELO"), line--);
         setLine(obj, leg("  &6" + elo + " ELO  " + rankStr), line--);
         setLine(obj, "    ", line--);

@@ -169,6 +169,11 @@ public class EloManager {
         return null;
     }
 
+    /** Returns true if the player has at least one recorded game (is in elo.yml). */
+    public boolean hasEloRecord(UUID uuid) {
+        return eloMap.containsKey(uuid.toString());
+    }
+
     public int getDefaultElo() {
         return plugin.getConfig().getInt("elo.starting-elo", 1000);
     }
