@@ -12,6 +12,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 
 import java.util.UUID;
 
@@ -142,9 +143,16 @@ public class PlayerListener implements Listener {
         }
     }
 
+    // ── Advancement messages ────────────────────────────────────────────────
+
+    @EventHandler
+    public void onAdvancement(PlayerAdvancementDoneEvent event) {
+        event.message(null);
+    }
+
     // ── Block break / place by spectators ─────────────────────────────────
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         // Bloquear en el mundo lobby salvo OPs
