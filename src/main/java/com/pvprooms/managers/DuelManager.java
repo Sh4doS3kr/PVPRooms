@@ -190,6 +190,10 @@ public class DuelManager {
                     // Holograma de vida sobre cada jugador
                     plugin.getHealthHologramManager().startHolograms(duel, world);
 
+                    // Mostrar scoreboard de duelo inmediatamente
+                    plugin.getScoreboardManager().updateDuelScoreboard(p1, duel);
+                    plugin.getScoreboardManager().updateDuelScoreboard(p2, duel);
+
                     startDurationTimer(duel);
                     cancel();
                 }

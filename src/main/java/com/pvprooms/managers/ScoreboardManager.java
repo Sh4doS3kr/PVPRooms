@@ -168,6 +168,11 @@ public class ScoreboardManager {
         }
         tl(obj, s++, " ", 9);
         tl(obj, s++, leg("&e&l» &fRival: &c" + opponentName), 8);
+        if (opponent != null) {
+            int opPing = opponent.getPing();
+            String pingCol = opPing < 50 ? "§a" : opPing < 100 ? "§e" : opPing < 150 ? "§6" : "§c";
+            tl(obj, s++, leg("&e&l» &fPing rival: " + pingCol + opPing + "ms"), 7);
+        }
 
         if (duel.isBo3()) {
             Tier myKitTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
@@ -281,6 +286,10 @@ public class ScoreboardManager {
         board = Bukkit.getScoreboardManager().getNewScoreboard();
         Objective obj = board.registerNewObjective(objName, Criteria.DUMMY, comp(title));
         obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+
+        // Remove any health below name display (prevents duplicate health bars)
+        Objective healthObj = board.getObjective(DisplaySlot.BELOW_NAME);
+        if (healthObj != null) healthObj.unregister();
 
         for (int i = 0; i < SLOTS.length; i++) {
             Team t = board.registerNewTeam("t" + i);
