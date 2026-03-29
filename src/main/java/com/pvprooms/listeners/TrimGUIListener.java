@@ -46,12 +46,12 @@ public class TrimGUIListener implements Listener {
     // ── MAIN page ─────────────────────────────────────────────────────────
 
     private void handleMain(int slot, boolean shift, Player player, TrimGUIHolder h, TrimGUI gui) {
-        // Armor piece slots: 20=HELMET, 22=CHESTPLATE, 24=LEGGINGS, 26=BOOTS
+        // New armor piece slots: 11=HELMET, 15=CHESTPLATE, 29=LEGGINGS, 33=BOOTS
         ArmorPiece piece = pieceFromMainSlot(slot);
         if (piece != null) {
             if (shift) {
                 plugin.getTrimManager().clearPlayerTrim(player.getUniqueId(), piece);
-                player.sendMessage(plugin.prefix() + "§7Trim de §f" + piece.getDisplayName() + " §7eliminado.");
+                player.sendMessage(plugin.prefix() + "§aTrim de §f" + piece.getDisplayName() + " §aeliminado.");
                 gui.openMain(player);
             } else {
                 gui.openPickPattern(player, piece.name().toLowerCase());
@@ -62,7 +62,7 @@ public class TrimGUIListener implements Listener {
         switch (slot) {
             case 49 -> { // Clear all
                 plugin.getTrimManager().clearAllTrims(player.getUniqueId());
-                player.sendMessage(plugin.prefix() + "§7Todos tus trims han sido eliminados.");
+                player.sendMessage(plugin.prefix() + "§aTodos tus trims han sido eliminados.");
                 gui.openMain(player);
             }
             case 45 -> player.closeInventory(); // Close
@@ -71,11 +71,21 @@ public class TrimGUIListener implements Listener {
 
     // ── PICK_PATTERN page ─────────────────────────────────────────────────
 
-    private void handlePickPattern(int slot, Player player, TrimGUIHolder h, TrimGUI gui) {
-        if (slot == 49) { gui.openMain(player); return; } // Back
-        if (isBorder(slot)) return;
+    private static final int[] PATTERN_SLOTS = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
 
-        String pattern = patternFromSlot(slot, plugin.getTrimManager().getPatternKeys());
+    private void handlePickPattern(int slot, Player player, TrimGUIHolder h, TrimGUI gui) {
+        if (slot == 45) { gui.openMain(player); return; } // Back
+        if (slot == 49) { // Clear this piece
+            ArmorPiece piece = ArmorPiece.fromName(h.getPieceKey());
+            if (piece != null) {
+                plugin.getTrimManager().clearPlayerTrim(player.getUniqueId(), piece);
+                player.sendMessage(plugin.prefix() + "§aTrim de §f" + piece.getDisplayName() + " §aeliminado.");
+            }
+            gui.openMain(player);
+            return;
+        }
+
+        String pattern = patternFromSlot(slot, plugin.getTrimManager().getPatternKeys(), PATTERN_SLOTS);
         if (pattern == null) return;
 
         gui.openPickMaterial(player, h.getPieceKey(), pattern);
@@ -83,14 +93,15 @@ public class TrimGUIListener implements Listener {
 
     // ── PICK_MATERIAL page ────────────────────────────────────────────────
 
+    private static final int[] MATERIAL_SLOTS = {19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
+
     private void handlePickMaterial(int slot, Player player, TrimGUIHolder h, TrimGUI gui) {
-        if (slot == 49) { // Back to pick pattern
+        if (slot == 45) { // Back to pick pattern
             gui.openPickPattern(player, h.getPieceKey());
             return;
         }
-        if (isBorder(slot)) return;
 
-        String material = materialFromSlot(slot, plugin.getTrimManager().getMaterialKeys());
+        String material = materialFromSlot(slot, plugin.getTrimManager().getMaterialKeys(), MATERIAL_SLOTS);
         if (material == null) return;
 
         ArmorPiece piece = ArmorPiece.fromName(h.getPieceKey());
@@ -101,7 +112,7 @@ public class TrimGUIListener implements Listener {
 
         String col = plugin.getTrimManager().patternColour(trim.getPattern());
         String mc  = plugin.getTrimManager().materialColour(material);
-        player.sendMessage(plugin.prefix() + "§7Trim §f" + piece.getDisplayName()
+        player.sendMessage(plugin.prefix() + "§a✓ §7Trim §f" + piece.getDisplayName()
                 + " §7→ " + col + cap(trim.getPattern()) + " §7de §r" + mc + cap(material));
 
         gui.openMain(player);
@@ -111,13 +122,13 @@ public class TrimGUIListener implements Listener {
 
     private void handleReward(int slot, Player player, TrimGUIHolder h, TrimGUI gui) {
         if (slot == 49) { // Discard
-            player.sendMessage(plugin.prefix() + "§7Trim descartado.");
+            player.sendMessage(plugin.prefix() + "§cTrim descartado.");
             player.closeInventory();
             return;
         }
 
-        // Armor piece slots: 20, 22, 24, 26
-        ArmorPiece piece = pieceFromMainSlot(slot);
+        // Reward page armor slots: 20, 21, 23, 24
+        ArmorPiece piece = pieceFromRewardSlot(slot);
         if (piece == null) return;
 
         Trim trim = Trim.fromString(h.getRewardTrim());
@@ -134,38 +145,40 @@ public class TrimGUIListener implements Listener {
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    /** Returns the ArmorPiece for the slot positions used in MAIN and REWARD pages. */
+    /** Returns the ArmorPiece for the slot positions used in MAIN page. */
     private static ArmorPiece pieceFromMainSlot(int slot) {
         return switch (slot) {
-            case 20 -> ArmorPiece.HELMET;
-            case 22 -> ArmorPiece.CHESTPLATE;
-            case 24 -> ArmorPiece.LEGGINGS;
-            case 26 -> ArmorPiece.BOOTS;
+            case 11 -> ArmorPiece.HELMET;
+            case 15 -> ArmorPiece.CHESTPLATE;
+            case 29 -> ArmorPiece.LEGGINGS;
+            case 33 -> ArmorPiece.BOOTS;
             default -> null;
         };
     }
 
-    private static String patternFromSlot(int slot, java.util.List<String> keys) {
-        return itemFromSlot(slot, keys);
+    /** Returns the ArmorPiece for the slot positions used in REWARD page. */
+    private static ArmorPiece pieceFromRewardSlot(int slot) {
+        return switch (slot) {
+            case 20 -> ArmorPiece.HELMET;
+            case 21 -> ArmorPiece.CHESTPLATE;
+            case 23 -> ArmorPiece.LEGGINGS;
+            case 24 -> ArmorPiece.BOOTS;
+            default -> null;
+        };
     }
 
-    private static String materialFromSlot(int slot, java.util.List<String> keys) {
-        return itemFromSlot(slot, keys);
-    }
-
-    /** Maps a raw inventory slot (10–43, skipping borders) to a key list index. */
-    private static String itemFromSlot(int slot, java.util.List<String> keys) {
-        int index = 0;
-        for (int s = 10; s <= 43; s++) {
-            if (s % 9 == 0 || s % 9 == 8) continue;
-            if (s == slot) return index < keys.size() ? keys.get(index) : null;
-            index++;
+    private static String patternFromSlot(int slot, java.util.List<String> keys, int[] validSlots) {
+        for (int i = 0; i < validSlots.length && i < keys.size(); i++) {
+            if (validSlots[i] == slot) return keys.get(i);
         }
         return null;
     }
 
-    private static boolean isBorder(int slot) {
-        return slot < 9 || slot >= 45 || slot % 9 == 0 || slot % 9 == 8;
+    private static String materialFromSlot(int slot, java.util.List<String> keys, int[] validSlots) {
+        for (int i = 0; i < validSlots.length && i < keys.size(); i++) {
+            if (validSlots[i] == slot) return keys.get(i);
+        }
+        return null;
     }
 
     private static String cap(String s) {

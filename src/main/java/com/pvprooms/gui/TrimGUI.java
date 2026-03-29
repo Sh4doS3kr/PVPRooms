@@ -6,10 +6,13 @@ import com.pvprooms.model.ArmorPiece;
 import com.pvprooms.model.Trim;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,26 +78,96 @@ public class TrimGUI {
 
         TrimGUIHolder holder = new TrimGUIHolder(player.getUniqueId(),
                 TrimGUIHolder.Page.MAIN, null, null, null);
-        Inventory inv = Bukkit.createInventory(holder, 54, "§5⚙ §dMis Trims de Armadura");
+        Inventory inv = Bukkit.createInventory(holder, 54, "§5✦ §d§lARMOR TRIMS §5✦");
         holder.setInventory(inv);
 
-        fillBorder(inv);
+        // Premium background
+        fillPremiumBackground(inv);
 
-        ArmorPiece[] pieces = ArmorPiece.values();
-        // Slots 20, 22, 24, 26 for the 4 pieces
-        int[] pieceSlots = {20, 22, 24, 26};
-        for (int i = 0; i < pieces.length; i++) {
-            ArmorPiece piece = pieces[i];
-            Trim current = trims.get(piece);
-            inv.setItem(pieceSlots[i], buildPieceItem(piece, current, tm));
-        }
+        // Title decoration - top center
+        inv.setItem(4, buildGlowItem(Material.ARMOR_STAND, "§d§l⚔ TUS TRIMS §d§l⚔",
+                List.of("§7Personaliza tu armadura con",
+                        "§7patrones y materiales únicos.",
+                        "",
+                        "§8▸ Click en una pieza para editar")));
 
-        // Clear-all button — slot 49
-        inv.setItem(49, buildItem(Material.BARRIER, "§c§lLimpiar todos los trims",
-                List.of("§7Elimina todos tus trims personales.")));
+        // Player head - slot 13 (center)
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta skullMeta = (SkullMeta) head.getItemMeta();
+        skullMeta.setOwningPlayer(player);
+        skullMeta.setDisplayName("§e§l" + player.getName());
+        List<String> headLore = new ArrayList<>();
+        headLore.add("§8━━━━━━━━━━━━━━━━━━");
+        int configured = (int) trims.values().stream().filter(t -> t != null).count();
+        headLore.add("§7Trims configurados: §a" + configured + "§7/§f4");
+        headLore.add("§8━━━━━━━━━━━━━━━━━━");
+        skullMeta.setLore(headLore);
+        head.setItemMeta(skullMeta);
+        inv.setItem(13, head);
 
-        // Close — slot 45
-        inv.setItem(45, buildItem(Material.DARK_OAK_DOOR, "§7Cerrar", List.of()));
+        // Armor mannequin layout (vertical)
+        // Helmet - slot 10 (left of head)
+        // Chestplate - slot 22 (below head)
+        // Leggings - slot 31 (below chestplate)
+        // Boots - slot 40 (below leggings)
+        
+        // Or horizontal centered layout:
+        // Row 2: [deco] [HELMET] [head] [CHEST] [deco]
+        // Row 3: [deco] [LEGS] [info] [BOOTS] [deco]
+        
+        // Let's do a nice centered layout
+        inv.setItem(11, buildPieceItemPremium(ArmorPiece.HELMET, trims.get(ArmorPiece.HELMET), tm));
+        inv.setItem(15, buildPieceItemPremium(ArmorPiece.CHESTPLATE, trims.get(ArmorPiece.CHESTPLATE), tm));
+        inv.setItem(29, buildPieceItemPremium(ArmorPiece.LEGGINGS, trims.get(ArmorPiece.LEGGINGS), tm));
+        inv.setItem(33, buildPieceItemPremium(ArmorPiece.BOOTS, trims.get(ArmorPiece.BOOTS), tm));
+
+        // Decorative connectors
+        inv.setItem(12, buildDecor(Material.PURPLE_STAINED_GLASS_PANE, "§d§m   "));
+        inv.setItem(14, buildDecor(Material.PURPLE_STAINED_GLASS_PANE, "§d§m   "));
+        inv.setItem(20, buildDecor(Material.MAGENTA_STAINED_GLASS_PANE, "§5↓"));
+        inv.setItem(24, buildDecor(Material.MAGENTA_STAINED_GLASS_PANE, "§5↓"));
+        inv.setItem(30, buildDecor(Material.PURPLE_STAINED_GLASS_PANE, "§d§m   "));
+        inv.setItem(32, buildDecor(Material.PURPLE_STAINED_GLASS_PANE, "§d§m   "));
+
+        // Info panel - center (slot 22, 31)
+        inv.setItem(22, buildGlowItem(Material.NETHER_STAR, "§b§lINFORMACIÓN",
+                List.of("§7Los trims son decoraciones",
+                        "§7visuales para tu armadura.",
+                        "",
+                        "§d▸ §fPatrones: §7Diseño del trim",
+                        "§6▸ §fMateriales: §7Color del trim",
+                        "",
+                        "§8Obtén trims de §5Crates§8!")));
+
+        inv.setItem(31, buildItem(Material.SMITHING_TABLE, "§e§lCÓMO FUNCIONA",
+                List.of("§71. §fClick §7en una pieza de armadura",
+                        "§72. §fElige §7un patrón",
+                        "§73. §fElige §7un material",
+                        "§74. §f¡Listo! §7Tu trim se aplicará")));
+
+        // Quick actions - bottom row
+        inv.setItem(47, buildGlowItem(Material.EXPERIENCE_BOTTLE, "§a§lPATRONES DESBLOQUEADOS",
+                List.of("§7Tienes acceso a:",
+                        "§f• §7" + tm.getPatternKeys().size() + " patrones normales",
+                        "§5• §d" + tm.getLegendaryPatternKeys().size() + " patrones legendarios",
+                        "",
+                        "§8Desbloquea más en §5Crates§8!")));
+
+        inv.setItem(49, buildItem(Material.BARRIER, "§c§lLIMPIAR TODO",
+                List.of("§7Elimina todos tus trims.",
+                        "",
+                        "§c⚠ §7Esta acción no se puede deshacer.",
+                        "",
+                        "§8▸ Click para limpiar")));
+
+        inv.setItem(51, buildGlowItem(Material.CHEST, "§6§lABRIR CRATE",
+                List.of("§7Abre un Trim Crate para obtener",
+                        "§7patrones y materiales aleatorios.",
+                        "",
+                        "§8▸ Click para ver tus crates")));
+
+        // Close button
+        inv.setItem(45, buildItem(Material.DARK_OAK_DOOR, "§c✖ §7Cerrar", List.of("§8▸ Click para salir")));
 
         player.openInventory(inv);
     }
@@ -104,30 +177,55 @@ public class TrimGUI {
         TrimGUIHolder holder = new TrimGUIHolder(player.getUniqueId(),
                 TrimGUIHolder.Page.PICK_PATTERN, pieceKey, null, null);
         Inventory inv = Bukkit.createInventory(holder, 54,
-                "§5Patrón — " + cap(pieceKey));
+                "§5✦ §d§lELIGE PATRÓN §5✦ §7" + cap(pieceKey));
         holder.setInventory(inv);
 
-        fillBorder(inv);
+        fillPremiumBackground(inv);
+
+        // Title
+        inv.setItem(4, buildGlowItem(Material.PAPER, "§d§lPATRONES DISPONIBLES",
+                List.of("§7Selecciona un patrón para tu",
+                        "§f" + cap(pieceKey) + "§7.",
+                        "",
+                        "§5★ §d= Legendario")));
 
         List<String> patterns = tm.getPatternKeys();
-        int slot = 10;
+        int[] contentSlots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
+        int idx = 0;
         for (String pattern : patterns) {
-            if (slot > 43) break;
-            if (slot % 9 == 0 || slot % 9 == 8) { slot++; continue; }
+            if (idx >= contentSlots.length) break;
             boolean legendary = tm.getLegendaryPatternKeys().contains(pattern);
             String colour = tm.patternColour(pattern);
             Material icon = PATTERN_ICONS.getOrDefault(pattern, Material.PAPER);
-            List<String> lore = new ArrayList<>(List.of(
-                    "§8Patrón: " + colour + cap(pattern),
-                    legendary ? "§5§lLEGENDARIO" : "§7Normal",
-                    "",
-                    "§7Click para seleccionar."
-            ));
-            inv.setItem(slot, buildItem(icon, colour + "§l" + cap(pattern), lore));
-            slot++;
+            
+            List<String> lore = new ArrayList<>();
+            lore.add("§8━━━━━━━━━━━━━━━━━━");
+            lore.add("§7Patrón: " + colour + "§l" + cap(pattern));
+            if (legendary) {
+                lore.add("");
+                lore.add("§5★ §d§lLEGENDARIO §5★");
+            } else {
+                lore.add("§8Común");
+            }
+            lore.add("§8━━━━━━━━━━━━━━━━━━");
+            lore.add("");
+            lore.add("§a▸ Click para seleccionar");
+            
+            ItemStack item = legendary ? buildGlowItem(icon, colour + "§l" + cap(pattern), lore)
+                                       : buildItem(icon, colour + "§l" + cap(pattern), lore);
+            inv.setItem(contentSlots[idx], item);
+            idx++;
         }
 
-        inv.setItem(49, buildItem(Material.ARROW, "§7← Volver", List.of()));
+        // Back button
+        inv.setItem(45, buildItem(Material.ARROW, "§c← §7Volver", List.of("§8▸ Volver al menú principal")));
+        
+        // Clear this piece button
+        inv.setItem(49, buildItem(Material.BARRIER, "§c§lQUITAR TRIM",
+                List.of("§7Quita el trim de tu §f" + cap(pieceKey) + "§7.",
+                        "",
+                        "§8▸ Click para quitar")));
+
         player.openInventory(inv);
     }
 
@@ -136,26 +234,52 @@ public class TrimGUI {
         TrimGUIHolder holder = new TrimGUIHolder(player.getUniqueId(),
                 TrimGUIHolder.Page.PICK_MATERIAL, pieceKey, patternKey, null);
         Inventory inv = Bukkit.createInventory(holder, 54,
-                "§5Material — " + cap(patternKey));
+                "§5✦ §6§lELIGE MATERIAL §5✦");
         holder.setInventory(inv);
 
-        fillBorder(inv);
+        fillPremiumBackground(inv);
+
+        // Title with pattern info
+        String patternCol = tm.patternColour(patternKey);
+        inv.setItem(4, buildGlowItem(PATTERN_ICONS.getOrDefault(patternKey, Material.PAPER), 
+                "§6§lMATERIALES DISPONIBLES",
+                List.of("§7Patrón: " + patternCol + "§l" + cap(patternKey),
+                        "§7Pieza: §f" + cap(pieceKey),
+                        "",
+                        "§7Selecciona un material para",
+                        "§7darle color a tu trim.")));
 
         List<String> materials = tm.getMaterialKeys();
-        int slot = 10;
+        int[] contentSlots = {19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
+        int idx = 0;
         for (String mat : materials) {
-            if (slot > 43) break;
-            if (slot % 9 == 0 || slot % 9 == 8) { slot++; continue; }
+            if (idx >= contentSlots.length) break;
             String colour = tm.materialColour(mat);
             Material icon = MATERIAL_ICONS.getOrDefault(mat, Material.IRON_INGOT);
-            inv.setItem(slot, buildItem(icon, colour + "§l" + cap(mat),
-                    List.of("§8Material: " + colour + cap(mat),
-                            "§8Patrón:   §f" + cap(patternKey),
-                            "", "§7Click para aplicar.")));
-            slot++;
+            
+            List<String> lore = new ArrayList<>();
+            lore.add("§8━━━━━━━━━━━━━━━━━━");
+            lore.add("§7Material: " + colour + "§l" + cap(mat));
+            lore.add("§7Patrón: " + patternCol + cap(patternKey));
+            lore.add("§7Pieza: §f" + cap(pieceKey));
+            lore.add("§8━━━━━━━━━━━━━━━━━━");
+            lore.add("");
+            lore.add("§a▸ Click para aplicar");
+            
+            inv.setItem(contentSlots[idx], buildGlowItem(icon, colour + "§l" + cap(mat), lore));
+            idx++;
         }
 
-        inv.setItem(49, buildItem(Material.ARROW, "§7← Volver", List.of()));
+        // Preview indicator
+        inv.setItem(13, buildItem(Material.SPYGLASS, "§e§lPREVISUALIZACIÓN",
+                List.of("§7Tu trim se verá así:",
+                        "",
+                        "§7Patrón: " + patternCol + cap(patternKey),
+                        "§7+ Material: §fSelecciona abajo")));
+
+        // Back button
+        inv.setItem(45, buildItem(Material.ARROW, "§c← §7Volver", List.of("§8▸ Volver a patrones")));
+
         player.openInventory(inv);
     }
 
@@ -167,78 +291,186 @@ public class TrimGUI {
         TrimManager tm = plugin.getTrimManager();
         String colour = tm.patternColour(trim.getPattern());
         String matCol = tm.materialColour(trim.getMaterial());
+        boolean legendary = tm.getLegendaryPatternKeys().contains(trim.getPattern());
 
         TrimGUIHolder holder = new TrimGUIHolder(player.getUniqueId(),
                 TrimGUIHolder.Page.REWARD, null, null, trim.toString());
-        Inventory inv = Bukkit.createInventory(holder, 54, "§6✦ Recompensa del Crate §6✦");
+        Inventory inv = Bukkit.createInventory(holder, 54, 
+                legendary ? "§5✦ §d§l¡LEGENDARIO! §5✦" : "§6✦ §e§lRECOMPENSA §6✦");
         holder.setInventory(inv);
 
-        fillBorder(inv);
+        fillPremiumBackground(inv);
+
+        // Celebration decorations
+        inv.setItem(3, buildDecor(Material.GOLD_NUGGET, "§6✦"));
+        inv.setItem(5, buildDecor(Material.GOLD_NUGGET, "§6✦"));
+        if (legendary) {
+            inv.setItem(2, buildDecor(Material.AMETHYST_SHARD, "§5★"));
+            inv.setItem(6, buildDecor(Material.AMETHYST_SHARD, "§5★"));
+        }
 
         // Trim info — center top (slot 13)
         Material patternIcon = PATTERN_ICONS.getOrDefault(trim.getPattern(), Material.PAPER);
-        inv.setItem(13, buildItem(patternIcon,
-                colour + "§l" + cap(trim.getPattern()) + " §fde §r" + matCol + cap(trim.getMaterial()),
-                List.of("§8Patrón:   " + colour + cap(trim.getPattern()),
-                        "§8Material: " + matCol + cap(trim.getMaterial()),
-                        "",
-                        "§7Elige una pieza de armadura para equipar",
-                        "§7este trim. §8(No se puede deshacer aquí)")));
+        List<String> trimLore = new ArrayList<>();
+        trimLore.add("§8━━━━━━━━━━━━━━━━━━━━━━");
+        trimLore.add("");
+        trimLore.add("§7Patrón:   " + colour + "§l" + cap(trim.getPattern()));
+        trimLore.add("§7Material: " + matCol + "§l" + cap(trim.getMaterial()));
+        trimLore.add("");
+        if (legendary) {
+            trimLore.add("§5★ §d§lPATRÓN LEGENDARIO §5★");
+            trimLore.add("");
+        }
+        trimLore.add("§8━━━━━━━━━━━━━━━━━━━━━━");
+        trimLore.add("");
+        trimLore.add("§e▸ Elige una pieza de armadura abajo");
+        
+        inv.setItem(13, buildGlowItem(patternIcon,
+                colour + "§l" + cap(trim.getPattern()) + " §fde §r" + matCol + "§l" + cap(trim.getMaterial()),
+                trimLore));
 
-        // Armor piece choices — row 3 (slots 20, 22, 24, 26)
+        // Armor piece choices — row 3 (slots 20, 21, 23, 24 - centered)
         ArmorPiece[] pieces = ArmorPiece.values();
-        int[] slots = {20, 22, 24, 26};
+        int[] slots = {20, 21, 23, 24};
         Map<ArmorPiece, Trim> current = tm.getPlayerTrims(player.getUniqueId());
         for (int i = 0; i < pieces.length; i++) {
             ArmorPiece piece = pieces[i];
             Trim existing = current.get(piece);
             List<String> lore = new ArrayList<>();
-            lore.add("§7Equipar en: §f" + piece.getDisplayName());
+            lore.add("§8━━━━━━━━━━━━━━━━━━");
+            lore.add("§7Equipar en: §f§l" + piece.getDisplayName());
+            lore.add("");
             if (existing != null) {
-                lore.add("§8Reemplazará: §7" + cap(existing.getPattern()) + " de " + cap(existing.getMaterial()));
+                lore.add("§c⚠ §7Reemplazará:");
+                lore.add("§8  " + cap(existing.getPattern()) + " de " + cap(existing.getMaterial()));
+                lore.add("");
             }
-            lore.add(""); lore.add("§aClick para equipar.");
-            inv.setItem(slots[i], buildItem(piece.getDisplayMaterial(),
-                    piece.getSymbol() + " §f" + piece.getDisplayName(), lore));
+            lore.add("§a▸ Click para equipar");
+            inv.setItem(slots[i], buildGlowItem(piece.getDisplayMaterial(),
+                    piece.getSymbol() + " §f§l" + piece.getDisplayName(), lore));
         }
 
+        // Center decoration
+        inv.setItem(22, buildDecor(Material.END_ROD, "§7↑"));
+
+        // Info text
+        inv.setItem(31, buildItem(Material.BOOK, "§e§lINFO",
+                List.of("§7Selecciona la pieza de armadura",
+                        "§7donde quieres aplicar este trim.",
+                        "",
+                        "§8El trim se aplicará automáticamente",
+                        "§8cuando uses un kit con esa pieza.")));
+
         // Discard — slot 49
-        inv.setItem(49, buildItem(Material.BARRIER, "§c§lDescartar trim",
-                List.of("§7Pierdes este trim sin aplicarlo.")));
+        inv.setItem(49, buildItem(Material.BARRIER, "§c§lDESCARTAR",
+                List.of("§7Pierdes este trim sin aplicarlo.",
+                        "",
+                        "§c⚠ §7Esta acción no se puede deshacer.",
+                        "",
+                        "§8▸ Click para descartar")));
 
         player.openInventory(inv);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    private ItemStack buildPieceItem(ArmorPiece piece, Trim current, TrimManager tm) {
+    private ItemStack buildPieceItemPremium(ArmorPiece piece, Trim current, TrimManager tm) {
         List<String> lore = new ArrayList<>();
+        lore.add("§8━━━━━━━━━━━━━━━━━━");
+        
         if (current != null) {
             String col = tm.patternColour(current.getPattern());
             String mc  = tm.materialColour(current.getMaterial());
-            lore.add("§8Patrón:   " + col + cap(current.getPattern()));
-            lore.add("§8Material: " + mc  + cap(current.getMaterial()));
             lore.add("");
-            lore.add("§7Click para cambiar.");
-            lore.add("§cShift+Click para limpiar.");
+            lore.add("§7Patrón:   " + col + "§l" + cap(current.getPattern()));
+            lore.add("§7Material: " + mc + "§l" + cap(current.getMaterial()));
+            lore.add("");
+            lore.add("§8━━━━━━━━━━━━━━━━━━");
+            lore.add("");
+            lore.add("§a▸ Click §7para cambiar");
+            lore.add("§c▸ Shift+Click §7para limpiar");
         } else {
-            lore.add("§8Sin trim configurado.");
             lore.add("");
-            lore.add("§7Click para añadir un trim.");
+            lore.add("§8Sin trim configurado");
+            lore.add("");
+            lore.add("§8━━━━━━━━━━━━━━━━━━");
+            lore.add("");
+            lore.add("§a▸ Click §7para añadir trim");
         }
+        
         String title = piece.getSymbol() + " §f§l" + piece.getDisplayName();
-        if (current != null) title += " §8(" + cap(current.getPattern()) + ")";
-        return buildItem(piece.getDisplayMaterial(), title, lore);
+        if (current != null) {
+            String col = tm.patternColour(current.getPattern());
+            title = piece.getSymbol() + " " + col + "§l" + piece.getDisplayName();
+        }
+        
+        return current != null 
+            ? buildGlowItem(piece.getDisplayMaterial(), title, lore)
+            : buildItem(piece.getDisplayMaterial(), title, lore);
     }
 
-    private void fillBorder(Inventory inv) {
-        ItemStack border = buildItem(Material.GRAY_STAINED_GLASS_PANE, "§r", List.of());
-        for (int i = 0; i < 9; i++)  inv.setItem(i, border);
-        for (int i = 45; i < 54; i++) inv.setItem(i, border);
-        for (int i = 0; i < 6; i++) {
-            inv.setItem(i * 9,     border);
-            inv.setItem(i * 9 + 8, border);
+    private void fillPremiumBackground(Inventory inv) {
+        // Gradient border with purple theme
+        ItemStack corner = buildDecor(Material.BLACK_STAINED_GLASS_PANE, "§r");
+        ItemStack edge1 = buildDecor(Material.PURPLE_STAINED_GLASS_PANE, "§r");
+        ItemStack edge2 = buildDecor(Material.MAGENTA_STAINED_GLASS_PANE, "§r");
+        ItemStack inner = buildDecor(Material.GRAY_STAINED_GLASS_PANE, "§r");
+        
+        // Top row - gradient
+        inv.setItem(0, corner);
+        inv.setItem(1, edge1);
+        inv.setItem(2, edge2);
+        inv.setItem(3, edge1);
+        inv.setItem(4, null); // Title slot
+        inv.setItem(5, edge1);
+        inv.setItem(6, edge2);
+        inv.setItem(7, edge1);
+        inv.setItem(8, corner);
+        
+        // Bottom row - gradient
+        inv.setItem(45, corner);
+        inv.setItem(46, edge1);
+        inv.setItem(47, null); // Action slot
+        inv.setItem(48, edge2);
+        inv.setItem(49, null); // Action slot
+        inv.setItem(50, edge2);
+        inv.setItem(51, null); // Action slot
+        inv.setItem(52, edge1);
+        inv.setItem(53, corner);
+        
+        // Side borders
+        for (int row = 1; row < 5; row++) {
+            inv.setItem(row * 9, edge1);
+            inv.setItem(row * 9 + 8, edge1);
         }
+        
+        // Fill remaining empty slots with subtle background
+        for (int i = 0; i < 54; i++) {
+            if (inv.getItem(i) == null) {
+                inv.setItem(i, inner);
+            }
+        }
+    }
+
+    private ItemStack buildDecor(Material mat, String name) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        meta.setLore(List.of());
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack buildGlowItem(Material mat, String name, List<String> lore) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        meta.setLore(lore);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        item.setItemMeta(meta);
+        return item;
     }
 
     ItemStack buildItem(Material mat, String name, List<String> lore) {
@@ -246,6 +478,7 @@ public class TrimGUI {
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(name);
         meta.setLore(lore);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         item.setItemMeta(meta);
         return item;
     }
