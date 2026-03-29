@@ -79,6 +79,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private NpcManager npcManager;
     private LeaderboardHologramManager hologramManager;
     private StatsManager statsManager;
+    private NameTagManager nameTagManager;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -115,6 +116,7 @@ public class PvPRoomsPro extends JavaPlugin {
         kitTrimGUI              = new KitTrimGUI(this);
         npcManager              = new NpcManager(this);
         hologramManager         = new LeaderboardHologramManager(this);
+        nameTagManager          = new NameTagManager(this);
         SpearItem.init(this);
         TrimCrate.init(this);
         PhysicalTrimCrate.init(this);
@@ -137,6 +139,9 @@ public class PvPRoomsPro extends JavaPlugin {
 
         // Start lobby scoreboard task
         scoreboardManager.startLobbyTask();
+        
+        // Start nametag manager (tier suffixes)
+        nameTagManager.start();
 
         // Apply lobby world settings (always day, no weather) one tick after load
         Bukkit.getScheduler().runTaskLater(this, this::applyLobbyWorldSettings, 1L);
@@ -189,6 +194,7 @@ public class PvPRoomsPro extends JavaPlugin {
         // Shutdown NPC and Hologram managers
         if (npcManager != null) npcManager.shutdown();
         if (hologramManager != null) hologramManager.shutdown();
+        if (nameTagManager != null) nameTagManager.stop();
 
         // Cancel all scheduled tasks owned by this plugin
         Bukkit.getScheduler().cancelTasks(this);
@@ -334,5 +340,6 @@ public class PvPRoomsPro extends JavaPlugin {
     public NpcManager            getNpcManager()              { return npcManager; }
     public LeaderboardHologramManager getHologramManager()    { return hologramManager; }
     public StatsManager          getStatsManager()            { return statsManager; }
+    public NameTagManager        getNameTagManager()          { return nameTagManager; }
     public String                getServerRegion()           { return serverRegion; }
 }
