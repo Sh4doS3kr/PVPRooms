@@ -314,18 +314,15 @@ function officialRankPill(rank){
   return '<span class="official-pill" style="color:'+c+';border-color:'+c+'33;background:'+c+'18">'+esc(rank.toUpperCase())+'</span>';
 }
 
-/* Kit badge for the kits column — icon + kit name + tier */
+/* Kit badge for the kits column — icon + tier only */
 function kitBadge(kitName, tierName, pts, highlight){
   const c  = tc(tierName);
   const sk = slug(tierName);
   const ki = kitImg(kitName);
   const hl = highlight === kitName ? ' kit-badge-hl' : '';
-  return '<div class="kit-badge'+hl+'" data-tier="'+sk+'">' +
+  return '<div class="kit-badge'+hl+'" data-tier="'+sk+'" title="'+esc(cap(kitName))+'">' +
     '<img class="kb-kit-img" src="'+ki+'">' +
-    '<div class="kb-text">' +
-      '<span class="kb-kit">'+esc(cap(kitName))+'</span>' +
-      '<span class="kb-tier" style="color:'+c+'">'+esc(tierName)+'</span>' +
-    '</div>' +
+    '<span class="kb-tier" style="color:'+c+'">'+esc(tierName)+'</span>' +
   '</div>';
 }
 
