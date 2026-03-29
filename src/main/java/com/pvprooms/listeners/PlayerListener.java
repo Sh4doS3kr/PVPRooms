@@ -53,11 +53,8 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            plugin.getScoreboardManager().showLobbyScoreboard(player);
-            // Update tier suffix in tab/nametag
-            plugin.getNameTagManager().forceUpdate(player);
-        }, 5L);
+        plugin.getServer().getScheduler().runTaskLater(plugin, () ->
+                plugin.getScoreboardManager().showLobbyScoreboard(player), 5L);
         
         // Detect player country from IP (async)
         detectCountry(player);
@@ -104,9 +101,6 @@ public class PlayerListener implements Listener {
 
     private void handlePlayerExit(Player player) {
         UUID uuid = player.getUniqueId();
-
-        // Remove tier suffix from nametag system
-        plugin.getNameTagManager().removePlayer(player);
 
         // Remove from queue
         if (plugin.getQueueManager().isInQueue(uuid)) {
