@@ -22,6 +22,7 @@ import com.pvprooms.listeners.PlayerListener;
 import com.pvprooms.listeners.TrimCrateListener;
 import com.pvprooms.listeners.TrimGUIListener;
 import com.pvprooms.listeners.PhysicalTrimCrateListener;
+import com.pvprooms.listeners.LobbyListener;
 import com.pvprooms.api.TierApiServer;
 import com.pvprooms.listeners.SpearListener;
 import com.pvprooms.managers.TierManager;
@@ -79,6 +80,9 @@ public class PvPRoomsPro extends JavaPlugin {
     private NpcManager npcManager;
     private LeaderboardHologramManager hologramManager;
     private StatsManager statsManager;
+    private LobbyManager lobbyManager;
+    private PartyManager partyManager;
+    private com.pvprooms.gui.ProfileGUI profileGUI;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -115,6 +119,9 @@ public class PvPRoomsPro extends JavaPlugin {
         kitTrimGUI              = new KitTrimGUI(this);
         npcManager              = new NpcManager(this);
         hologramManager         = new LeaderboardHologramManager(this);
+        lobbyManager            = new LobbyManager(this);
+        partyManager            = new PartyManager(this);
+        profileGUI              = new com.pvprooms.gui.ProfileGUI(this);
         SpearItem.init(this);
         TrimCrate.init(this);
         PhysicalTrimCrate.init(this);
@@ -256,6 +263,10 @@ public class PvPRoomsPro extends JavaPlugin {
         getCommand("holo").setExecutor(holoCmd);
         getCommand("holo").setTabCompleter(holoCmd);
 
+        PartyCommand partyCmd = new PartyCommand(this);
+        getCommand("party").setExecutor(partyCmd);
+        getCommand("party").setTabCompleter(partyCmd);
+
         AdminNpcHoloCommand adminNpcHoloCmd = new AdminNpcHoloCommand(this);
         // Admin command already registered, just add NPC/Holo subcommands via the existing /admin
     }
@@ -270,6 +281,7 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new KitTrimGUIListener(this), this);
         pm.registerEvents(new TrimCrateListener(this), this);
         pm.registerEvents(new PhysicalTrimCrateListener(this), this);
+        pm.registerEvents(new LobbyListener(this), this);
     }
 
     // ── Lobby world setup ──────────────────────────────────────────────────
@@ -340,5 +352,8 @@ public class PvPRoomsPro extends JavaPlugin {
     public NpcManager            getNpcManager()              { return npcManager; }
     public LeaderboardHologramManager getHologramManager()    { return hologramManager; }
     public StatsManager          getStatsManager()            { return statsManager; }
+    public LobbyManager          getLobbyManager()            { return lobbyManager; }
+    public PartyManager          getPartyManager()            { return partyManager; }
+    public com.pvprooms.gui.ProfileGUI getProfileGUI()        { return profileGUI; }
     public String                getServerRegion()           { return serverRegion; }
 }

@@ -75,6 +75,11 @@ commands:
     description: Crear y gestionar hologramas
     usage: /holo <create|custom|addline|setline|delline|move|delete|list> ...
     permission: pvprooms.admin
+  party:
+    description: Gestión de parties para jugar en grupo
+    usage: /party <create|invite|accept|deny|leave|kick|disband|list>
+    permission: pvprooms.party
+    aliases: [p, grupo]
 
 permissions:
   pvprooms.kit:
@@ -110,6 +115,9 @@ permissions:
   pvprooms.kittrim:
     description: Usar /kittrim para configurar trims de kit (admin)
     default: op
+  pvprooms.party:
+    description: Usar parties
+    default: true
   pvprooms.admin:
     description: Full admin access
     default: op

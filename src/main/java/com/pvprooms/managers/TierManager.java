@@ -240,6 +240,11 @@ public class TierManager {
                 pointsByKit.getOrDefault(uuid, Collections.emptyMap()));
     }
 
+    /** Devuelve la suma total de puntos del jugador (alias de getTotalScore). */
+    public int getTotalPoints(UUID uuid) {
+        return getTotalScore(uuid);
+    }
+
     // ── Rankings ──────────────────────────────────────────────────────────
 
     /** Top N jugadores por puntuación total. */

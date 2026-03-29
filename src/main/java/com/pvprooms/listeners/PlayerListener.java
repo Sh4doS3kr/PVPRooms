@@ -53,8 +53,13 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        plugin.getServer().getScheduler().runTaskLater(plugin, () ->
-                plugin.getScoreboardManager().showLobbyScoreboard(player), 5L);
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            plugin.getScoreboardManager().showLobbyScoreboard(player);
+            // Give lobby items if in lobby world
+            if (plugin.getLobbyManager().isInLobby(player)) {
+                plugin.getLobbyManager().giveLobbyItems(player);
+            }
+        }, 5L);
         
         // Detect player country from IP (async)
         detectCountry(player);
@@ -117,6 +122,9 @@ public class PlayerListener implements Listener {
                 plugin.getDuelManager().endDuel(duel, null, "disconnect");
             }
         }
+
+        // Handle party disconnect
+        plugin.getPartyManager().handleDisconnect(uuid);
 
         // Remove scoreboard reference
         plugin.getScoreboardManager().clearScoreboard(player);
