@@ -29,6 +29,13 @@ public class TrimGUIListener implements Listener {
         event.setCancelled(true);
         if (event.getCurrentItem() == null) return;
 
+        // Handle crate selection GUI
+        String title = event.getView().getTitle();
+        if (title.contains("SELECCIONA PIEZA")) {
+            handleCrateSelection(event.getRawSlot(), player, event.getCurrentItem());
+            return;
+        }
+
         TrimGUI gui = plugin.getTrimGUI();
 
         switch (h.getPage()) {
@@ -41,6 +48,51 @@ public class TrimGUIListener implements Listener {
 
             case REWARD -> handleReward(event.getRawSlot(), player, h, gui);
         }
+    }
+
+    private void handleCrateSelection(int slot, Player player, org.bukkit.inventory.ItemStack item) {
+        if (slot == 22) { // Close button
+            player.closeInventory();
+            return;
+        }
+
+        // Check for crate_piece data
+        if (!item.hasItemMeta()) return;
+        var pdc = item.getItemMeta().getPersistentDataContainer();
+        var key = new org.bukkit.NamespacedKey(plugin, "crate_piece");
+        if (!pdc.has(key, org.bukkit.persistence.PersistentDataType.STRING)) return;
+
+        String pieceKey = pdc.get(key, org.bukkit.persistence.PersistentDataType.STRING);
+        ArmorPiece piece = ArmorPiece.fromName(pieceKey);
+        if (piece == null) return;
+
+        // Check for key in inventory
+        int keySlot = findKeySlot(player);
+        if (keySlot == -1) {
+            player.sendMessage(plugin.prefix() + "§cNo tienes llaves de crate.");
+            return;
+        }
+
+        // Consume key
+        var inv = player.getInventory();
+        var keyItem = inv.getItem(keySlot);
+        if (keyItem.getAmount() > 1) {
+            keyItem.setAmount(keyItem.getAmount() - 1);
+        } else {
+            inv.setItem(keySlot, null);
+        }
+
+        // Open roulette
+        player.closeInventory();
+        plugin.getTrimRouletteGUI().openRoulette(player, piece, "normal", false);
+    }
+
+    private int findKeySlot(Player player) {
+        var contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            if (com.pvprooms.model.TrimCrate.isKey(contents[i])) return i;
+        }
+        return -1;
     }
 
     // ── MAIN page ─────────────────────────────────────────────────────────

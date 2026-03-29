@@ -173,6 +173,50 @@ public class TrimGUI {
         player.openInventory(inv);
     }
 
+    public void openCrateSelection(Player player) {
+        TrimGUIHolder holder = new TrimGUIHolder(player.getUniqueId(),
+                TrimGUIHolder.Page.MAIN, null, null, null);
+        Inventory inv = Bukkit.createInventory(holder, 27, "§6✦ §e§lSELECCIONA PIEZA §6✦");
+        holder.setInventory(inv);
+
+        fillPremiumBackground(inv);
+
+        inv.setItem(4, buildGlowItem(Material.TRIPWIRE_HOOK, "§e§l⚡ ABRIR CRATE §e§l⚡",
+                List.of("§7Selecciona la pieza de armadura",
+                        "§7para la que quieres obtener un trim.",
+                        "",
+                        "§8▸ Click en una pieza")));
+
+        // Armor pieces in center row
+        inv.setItem(10, buildCratePieceItem(Material.DIAMOND_HELMET, "HELMET", "Casco"));
+        inv.setItem(12, buildCratePieceItem(Material.DIAMOND_CHESTPLATE, "CHESTPLATE", "Pechera"));
+        inv.setItem(14, buildCratePieceItem(Material.DIAMOND_LEGGINGS, "LEGGINGS", "Pantalones"));
+        inv.setItem(16, buildCratePieceItem(Material.DIAMOND_BOOTS, "BOOTS", "Botas"));
+
+        inv.setItem(22, buildItem(Material.DARK_OAK_DOOR, "§c✖ §7Cerrar", List.of("§8▸ Click para salir")));
+
+        player.openInventory(inv);
+    }
+
+    private ItemStack buildCratePieceItem(Material mat, String pieceKey, String displayName) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName("§e§l" + displayName.toUpperCase());
+        meta.setLore(List.of(
+                "§7Obtén un trim aleatorio para",
+                "§7tu §f" + displayName + "§7.",
+                "",
+                "§8▸ Click para abrir crate"
+        ));
+        meta.getPersistentDataContainer().set(
+                new org.bukkit.NamespacedKey(plugin, "crate_piece"),
+                org.bukkit.persistence.PersistentDataType.STRING,
+                pieceKey
+        );
+        item.setItemMeta(meta);
+        return item;
+    }
+
     public void openPickPattern(Player player, String pieceKey) {
         TrimManager tm = plugin.getTrimManager();
         ArmorPiece piece = ArmorPiece.fromName(pieceKey);

@@ -58,6 +58,17 @@ public class TrimCommand implements CommandExecutor, TabCompleter {
                 }
             }
 
+            case "crate", "crates", "abrir" -> {
+                // Check if player has a key
+                int keySlot = findKeySlot(player);
+                if (keySlot == -1) {
+                    player.sendMessage(plugin.prefix() + "§cNo tienes llaves de crate. Consíguelas jugando duelos.");
+                    return true;
+                }
+                // Open crate selection GUI
+                plugin.getTrimGUI().openCrateSelection(player);
+            }
+
             case "give" -> {
                 if (!player.hasPermission("pvprooms.admin")) {
                     player.sendMessage(plugin.prefix() + "§cSin permiso.");
@@ -105,15 +116,24 @@ public class TrimCommand implements CommandExecutor, TabCompleter {
     private void sendHelp(Player p) {
         p.sendMessage("§5§m          §r §dTrims §5§m          ");
         p.sendMessage("§7/trim §fgui §8— Abre tu gestor de trims");
+        p.sendMessage("§7/trim §fcrates §8— Abre una crate (si tienes llave)");
         p.sendMessage("§7/trim §fapply §8— Aplica trims a tu armadura actual");
         p.sendMessage("§7/trim §fclear [pieza] §8— Elimina trim(s)");
         p.sendMessage("§7/trim §fgive <crate|key|legendary|themed> [player] §8— (Admin) Da item");
         p.sendMessage("§7/trim §fgive themed <pieza> [jugador] §8— (Admin) Da caja temática");
     }
 
+    private int findKeySlot(Player player) {
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            if (TrimCrate.isKey(contents[i])) return i;
+        }
+        return -1;
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
-        if (args.length == 1) return List.of("gui", "apply", "clear", "give");
+        if (args.length == 1) return List.of("gui", "crates", "apply", "clear", "give");
         if (args.length == 2) {
             return switch (args[0].toLowerCase()) {
                 case "clear" -> List.of("helmet", "chestplate", "leggings", "boots");

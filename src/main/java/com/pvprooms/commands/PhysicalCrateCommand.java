@@ -54,6 +54,12 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // Need at least 2 arguments: type and piece
+        if (args.length < 2) {
+            sendHelp(player);
+            return true;
+        }
+
         String pieceName = args[1].toLowerCase();
         boolean legendary = args.length >= 3 && args[2].equalsIgnoreCase("legendary");
 
