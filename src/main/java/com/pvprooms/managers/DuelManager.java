@@ -205,22 +205,7 @@ public class DuelManager {
 
     /** Starts a max-duration timer that ends the duel in a draw if time runs out. */
     private void startDurationTimer(Duel duel) {
-        int maxDuration = plugin.getConfig().getInt("duels.max-duration", 0);
-        if (maxDuration <= 0) return;
-
-        int taskId = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (duel.getState() != Duel.State.FIGHTING) { cancel(); return; }
-                Player p1 = Bukkit.getPlayer(duel.getPlayer1());
-                Player p2 = Bukkit.getPlayer(duel.getPlayer2());
-                if (p1 != null) p1.sendMessage(plugin.prefix() + "§eTímite de tiempo alcanzado. §a¡Empate!");
-                if (p2 != null) p2.sendMessage(plugin.prefix() + "§eTímite de tiempo alcanzado. §a¡Empate!");
-                endDuel(duel, null, "tiempo agotado");
-            }
-        }.runTaskLater(plugin, maxDuration * 20L).getTaskId();
-
-        duel.setDurationTask(taskId);
+        // Time limit disabled - duels have no time limit
     }
 
     // ── Duel end ───────────────────────────────────────────────────────────
