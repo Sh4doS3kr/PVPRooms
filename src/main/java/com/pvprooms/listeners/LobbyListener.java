@@ -197,7 +197,7 @@ public class LobbyListener implements Listener {
 
         // Check if player is already in queue
         if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
-            player.sendMessage(plugin.prefix() + "§cYa estás en cola. Usa §e/leave §cpara salir.");
+            player.sendMessage(plugin.prefix() + "§cYa estás en cola. Usa §e/pvpleave §cpara salir.");
             return;
         }
 

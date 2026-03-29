@@ -96,7 +96,6 @@ public class ProfileGUI implements Listener {
         int elo = plugin.getEloManager().getElo(uuid);
 
         meta.displayName(Component.text(player.getName(), NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true)
                 .decoration(TextDecoration.ITALIC, false));
 
         List<Component> lore = new ArrayList<>();
@@ -121,14 +120,12 @@ public class ProfileGUI implements Listener {
         int elo = plugin.getEloManager().getElo(uuid);
         ItemStack item = new ItemStack(Material.GOLD_INGOT);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("⭐ ELO", NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("ELO", NamedTextColor.GOLD)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text("" + elo, NamedTextColor.YELLOW)
-                        .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true),
+                        .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Tu puntuación de ranking", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
@@ -142,14 +139,12 @@ public class ProfileGUI implements Listener {
         String rankStr = rank > 0 ? "#" + rank : "Sin ranking";
         ItemStack item = new ItemStack(Material.EMERALD);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("🏆 Ranking", NamedTextColor.GREEN)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Ranking", NamedTextColor.GREEN)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(rankStr, NamedTextColor.GREEN)
-                        .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true),
+                        .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Tu posición en el leaderboard", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
@@ -162,14 +157,12 @@ public class ProfileGUI implements Listener {
         Tier tier = plugin.getTierManager().getBestTier(uuid);
         ItemStack item = new ItemStack(Material.DIAMOND);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("◆ Mejor Tier", tierColor(tier))
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Mejor Tier", tierColor(tier))
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(tier.displayName, tierColor(tier))
-                        .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true),
+                        .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Tu tier más alto en cualquier kit", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
@@ -182,14 +175,12 @@ public class ProfileGUI implements Listener {
         TierTitle title = plugin.getTierManager().getTitle(uuid);
         ItemStack item = new ItemStack(Material.NAME_TAG);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("✦ Título", titleColor(title))
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Titulo", titleColor(title))
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(title.symbol + " " + title.name, titleColor(title))
-                        .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true),
+                        .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Tu título basado en puntos", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
@@ -202,14 +193,12 @@ public class ProfileGUI implements Listener {
         int points = plugin.getTierManager().getTotalPoints(uuid);
         ItemStack item = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("★ Puntos Totales", NamedTextColor.LIGHT_PURPLE)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Puntos Totales", NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(points), NamedTextColor.LIGHT_PURPLE)
-                        .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true),
+                        .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
                 Component.text("Suma de puntos en todos los kits", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
@@ -222,14 +211,12 @@ public class ProfileGUI implements Listener {
         var stats = plugin.getStatsManager().getStats(uuid);
         ItemStack item = new ItemStack(Material.LIME_DYE);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("✓ Victorias", NamedTextColor.GREEN)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Victorias", NamedTextColor.GREEN)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(stats.wins()), NamedTextColor.GREEN)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -239,14 +226,12 @@ public class ProfileGUI implements Listener {
         var stats = plugin.getStatsManager().getStats(uuid);
         ItemStack item = new ItemStack(Material.RED_DYE);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("✗ Derrotas", NamedTextColor.RED)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Derrotas", NamedTextColor.RED)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(stats.losses()), NamedTextColor.RED)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -256,14 +241,12 @@ public class ProfileGUI implements Listener {
         var stats = plugin.getStatsManager().getStats(uuid);
         ItemStack item = new ItemStack(Material.IRON_SWORD);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("⚔ Kills", NamedTextColor.AQUA)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Kills", NamedTextColor.AQUA)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(stats.kills()), NamedTextColor.AQUA)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -273,14 +256,12 @@ public class ProfileGUI implements Listener {
         var stats = plugin.getStatsManager().getStats(uuid);
         ItemStack item = new ItemStack(Material.SKELETON_SKULL);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("☠ Muertes", NamedTextColor.GRAY)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Muertes", NamedTextColor.GRAY)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(stats.deaths()), NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -291,14 +272,12 @@ public class ProfileGUI implements Listener {
         double kdr = stats.getKDR();
         ItemStack item = new ItemStack(Material.BLAZE_POWDER);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("⚡ K/D Ratio", NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("K/D Ratio", NamedTextColor.GOLD)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.format("%.2f", kdr), NamedTextColor.GOLD)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -308,14 +287,12 @@ public class ProfileGUI implements Listener {
         var stats = plugin.getStatsManager().getStats(uuid);
         ItemStack item = new ItemStack(Material.FIRE_CHARGE);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("🔥 Racha Actual", NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Racha Actual", NamedTextColor.GOLD)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(stats.currentStreak()), NamedTextColor.GOLD)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -325,14 +302,12 @@ public class ProfileGUI implements Listener {
         var stats = plugin.getStatsManager().getStats(uuid);
         ItemStack item = new ItemStack(Material.MAGMA_CREAM);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("🔥 Mejor Racha", NamedTextColor.RED)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Mejor Racha", NamedTextColor.RED)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(stats.bestStreak()), NamedTextColor.RED)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -344,14 +319,12 @@ public class ProfileGUI implements Listener {
         double wr = total > 0 ? (stats.wins() * 100.0 / total) : 0;
         ItemStack item = new ItemStack(Material.EXPERIENCE_BOTTLE);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("% Winrate", NamedTextColor.AQUA)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Winrate", NamedTextColor.AQUA)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.format("%.1f%%", wr), NamedTextColor.AQUA)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -362,14 +335,12 @@ public class ProfileGUI implements Listener {
         int games = stats.wins() + stats.losses();
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("📊 Partidas Jugadas", NamedTextColor.WHITE)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Partidas Jugadas", NamedTextColor.WHITE)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
                 Component.text(String.valueOf(games), NamedTextColor.WHITE)
                         .decoration(TextDecoration.ITALIC, false)
-                        .decoration(TextDecoration.BOLD, true)
         ));
         item.setItemMeta(meta);
         return item;
@@ -378,8 +349,7 @@ public class ProfileGUI implements Listener {
     private ItemStack createKitTiersItem(UUID uuid) {
         ItemStack item = new ItemStack(Material.CHEST);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("⚔ Tiers por Kit", NamedTextColor.LIGHT_PURPLE)
-                .decoration(TextDecoration.BOLD, true)
+        meta.displayName(Component.text("Tiers por Kit", NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.ITALIC, false));
 
         List<Component> lore = new ArrayList<>();

@@ -25,6 +25,9 @@ public class PartyGUI implements Listener {
     private final PvPRoomsPro plugin;
     private static final String GUI_TITLE = "Gestion de Party";
     private static final String INVITE_TITLE = "Invitar Jugador";
+    private static final String MATCH_TITLE = "Configurar Partida";
+    private static final String KIT_SELECT_TITLE = "Seleccionar Kit";
+    private static final String ARENA_SELECT_TITLE = "Seleccionar Arena";
 
     public PartyGUI(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -119,21 +122,28 @@ public class PartyGUI implements Listener {
 
         // Action buttons
         if (isLeader) {
-            // Invite button (slot 37)
-            inv.setItem(37, createItem(Material.EMERALD, "Invitar Jugador",
+            // Start match button (slot 38)
+            inv.setItem(38, createItem(Material.DIAMOND_SWORD, "Iniciar Partida",
+                    List.of("", "§aClick para iniciar partida", "§7con todos los miembros")));
+
+            // Invite button (slot 39)
+            inv.setItem(39, createItem(Material.EMERALD, "Invitar Jugador",
                     List.of("", "§7Click para invitar", "§7a un jugador online")));
 
-            // Disband button (slot 43)
-            inv.setItem(43, createItem(Material.TNT, "Disolver Party",
+            // Close button (slot 40)
+            inv.setItem(40, createItem(Material.BARRIER, "Cerrar", List.of("", "§7Click para cerrar")));
+
+            // Disband button (slot 41)
+            inv.setItem(41, createItem(Material.TNT, "Disolver Party",
                     List.of("", "§cClick para disolver", "§cla party completamente")));
         } else {
-            // Leave button (slot 40)
-            inv.setItem(40, createItem(Material.IRON_DOOR, "Abandonar Party",
+            // Leave button (slot 39)
+            inv.setItem(39, createItem(Material.IRON_DOOR, "Abandonar Party",
                     List.of("", "§cClick para salir", "§cde la party")));
-        }
 
-        // Close button (slot 40 for leader, 37 for member)
-        inv.setItem(isLeader ? 40 : 43, createItem(Material.BARRIER, "Cerrar", List.of("", "§7Click para cerrar")));
+            // Close button (slot 40)
+            inv.setItem(40, createItem(Material.BARRIER, "Cerrar", List.of("", "§7Click para cerrar")));
+        }
 
         player.openInventory(inv);
     }
@@ -210,7 +220,9 @@ public class PartyGUI implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = event.getView().title().toString();
         
-        if (!title.contains(GUI_TITLE) && !title.contains(INVITE_TITLE)) return;
+        if (!title.contains(GUI_TITLE) && !title.contains(INVITE_TITLE) 
+                && !title.contains(MATCH_TITLE) && !title.contains(KIT_SELECT_TITLE) 
+                && !title.contains(ARENA_SELECT_TITLE)) return;
         event.setCancelled(true);
 
         ItemStack clicked = event.getCurrentItem();
@@ -282,6 +294,222 @@ public class PartyGUI implements Listener {
                 pm.leaveParty(player);
                 player.closeInventory();
             }
+            
+            case DIAMOND_SWORD -> {
+                if (pm.isPartyLeader(uuid)) {
+                    openMatchConfigMenu(player);
+                }
+            }
         }
+
+        // Handle match config menu
+        if (title.contains(MATCH_TITLE)) {
+            handleMatchConfigClick(player, clicked);
+        }
+
+        // Handle kit select menu
+        if (title.contains(KIT_SELECT_TITLE)) {
+            handleKitSelectClick(player, clicked);
+        }
+
+        // Handle arena select menu  
+        if (title.contains(ARENA_SELECT_TITLE)) {
+            handleArenaSelectClick(player, clicked);
+        }
+    }
+
+    // ── Match Configuration ─────────────────────────────────────────────────
+
+    private final Map<UUID, String> selectedKit = new HashMap<>();
+    private final Map<UUID, String> selectedArena = new HashMap<>();
+
+    public void openMatchConfigMenu(Player player) {
+        var pm = plugin.getPartyManager();
+        if (!pm.isPartyLeader(player.getUniqueId())) return;
+
+        Set<UUID> members = pm.getPartyMembers(player.getUniqueId());
+        int memberCount = members.size();
+
+        Inventory inv = Bukkit.createInventory(null, 27, Component.text(MATCH_TITLE, NamedTextColor.GOLD));
+
+        ItemStack glass = createItem(Material.GRAY_STAINED_GLASS_PANE, " ", null);
+        for (int i = 0; i < 27; i++) inv.setItem(i, glass);
+
+        // FFA option (slot 11)
+        inv.setItem(11, createItem(Material.IRON_SWORD, "FFA (Todos contra todos)",
+                List.of("", "§7Todos los miembros pelean", "§7entre si. Ultimo en pie gana.", "",
+                        "§eJugadores: §f" + memberCount)));
+
+        // Select Kit (slot 13)
+        String kit = selectedKit.getOrDefault(player.getUniqueId(), "Ninguno");
+        inv.setItem(13, createItem(Material.CHEST, "Seleccionar Kit",
+                List.of("", "§7Kit actual: §e" + kit, "", "§aClick para cambiar")));
+
+        // Select Arena (slot 15)
+        String arena = selectedArena.getOrDefault(player.getUniqueId(), "Aleatoria");
+        inv.setItem(15, createItem(Material.GRASS_BLOCK, "Seleccionar Arena",
+                List.of("", "§7Arena actual: §e" + arena, "", "§aClick para cambiar")));
+
+        // Start button (slot 22)
+        boolean ready = selectedKit.containsKey(player.getUniqueId());
+        if (ready) {
+            inv.setItem(22, createItem(Material.LIME_WOOL, "INICIAR PARTIDA",
+                    List.of("", "§aClick para iniciar FFA", "§7con " + memberCount + " jugadores")));
+        } else {
+            inv.setItem(22, createItem(Material.RED_WOOL, "Selecciona un kit",
+                    List.of("", "§cDebes seleccionar un kit", "§cpara iniciar la partida")));
+        }
+
+        // Back button (slot 18)
+        inv.setItem(18, createItem(Material.ARROW, "Volver", List.of("", "§7Volver al menu")));
+
+        player.openInventory(inv);
+    }
+
+    public void openKitSelectMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 36, Component.text(KIT_SELECT_TITLE, NamedTextColor.YELLOW));
+
+        ItemStack glass = createItem(Material.GRAY_STAINED_GLASS_PANE, " ", null);
+        for (int i = 0; i < 36; i++) inv.setItem(i, glass);
+
+        int slot = 10;
+        for (String kitName : plugin.getKitManager().getKitNames()) {
+            if (slot > 25) break;
+            if (slot % 9 == 0 || slot % 9 == 8) { slot++; continue; }
+
+            var kit = plugin.getKitManager().getKit(kitName);
+            Material icon = kit != null ? kit.getIconMaterial() : Material.DIAMOND_SWORD;
+            inv.setItem(slot++, createItem(icon, kitName,
+                    List.of("", "§aClick para seleccionar")));
+        }
+
+        inv.setItem(31, createItem(Material.ARROW, "Volver", List.of("", "§7Volver")));
+        player.openInventory(inv);
+    }
+
+    public void openArenaSelectMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 36, Component.text(ARENA_SELECT_TITLE, NamedTextColor.GREEN));
+
+        ItemStack glass = createItem(Material.GRAY_STAINED_GLASS_PANE, " ", null);
+        for (int i = 0; i < 36; i++) inv.setItem(i, glass);
+
+        // Random option
+        inv.setItem(10, createItem(Material.ENDER_PEARL, "Aleatoria",
+                List.of("", "§7Selecciona una arena", "§7al azar")));
+
+        int slot = 11;
+        for (var arena : plugin.getArenaManager().getAllArenas()) {
+            if (slot > 25) break;
+            if (slot % 9 == 0 || slot % 9 == 8) { slot++; continue; }
+
+            inv.setItem(slot++, createItem(Material.GRASS_BLOCK, arena.getName(),
+                    List.of("", "§aClick para seleccionar")));
+        }
+
+        inv.setItem(31, createItem(Material.ARROW, "Volver", List.of("", "§7Volver")));
+        player.openInventory(inv);
+    }
+
+    private void handleMatchConfigClick(Player player, ItemStack clicked) {
+        Material type = clicked.getType();
+        
+        switch (type) {
+            case ARROW -> openMatchConfigMenu(player);
+            case CHEST -> openKitSelectMenu(player);
+            case GRASS_BLOCK -> openArenaSelectMenu(player);
+            case LIME_WOOL -> startPartyFFA(player);
+            case IRON_SWORD -> {} // FFA info, no action
+        }
+    }
+
+    private void handleKitSelectClick(Player player, ItemStack clicked) {
+        if (clicked.getType() == Material.ARROW) {
+            openMatchConfigMenu(player);
+            return;
+        }
+        if (clicked.getType() == Material.GRAY_STAINED_GLASS_PANE) return;
+
+        String kitName = clicked.getItemMeta().getDisplayName();
+        if (kitName != null && !kitName.isEmpty()) {
+            // Remove color codes
+            kitName = kitName.replaceAll("§.", "");
+            selectedKit.put(player.getUniqueId(), kitName);
+            player.sendMessage(plugin.prefix() + "§aKit seleccionado: §e" + kitName);
+            openMatchConfigMenu(player);
+        }
+    }
+
+    private void handleArenaSelectClick(Player player, ItemStack clicked) {
+        if (clicked.getType() == Material.ARROW) {
+            openMatchConfigMenu(player);
+            return;
+        }
+        if (clicked.getType() == Material.GRAY_STAINED_GLASS_PANE) return;
+
+        String arenaName = clicked.getItemMeta().getDisplayName();
+        if (arenaName != null) {
+            arenaName = arenaName.replaceAll("§.", "");
+            selectedArena.put(player.getUniqueId(), arenaName);
+            player.sendMessage(plugin.prefix() + "§aArena seleccionada: §e" + arenaName);
+            openMatchConfigMenu(player);
+        }
+    }
+
+    private void startPartyFFA(Player player) {
+        var pm = plugin.getPartyManager();
+        UUID leaderUUID = player.getUniqueId();
+        
+        if (!pm.isPartyLeader(leaderUUID)) {
+            player.sendMessage(plugin.prefix() + "§cSolo el lider puede iniciar partidas.");
+            return;
+        }
+
+        String kitName = selectedKit.get(leaderUUID);
+        if (kitName == null) {
+            player.sendMessage(plugin.prefix() + "§cDebes seleccionar un kit primero.");
+            return;
+        }
+
+        Set<UUID> members = pm.getPartyMembers(leaderUUID);
+        if (members.size() < 2) {
+            player.sendMessage(plugin.prefix() + "§cNecesitas al menos 2 jugadores para iniciar.");
+            return;
+        }
+
+        // Check all members are online and not in duel/queue
+        for (UUID memberUUID : members) {
+            Player member = Bukkit.getPlayer(memberUUID);
+            if (member == null || !member.isOnline()) {
+                player.sendMessage(plugin.prefix() + "§cAlgunos miembros no estan online.");
+                return;
+            }
+            if (plugin.getDuelManager().isInDuel(memberUUID)) {
+                player.sendMessage(plugin.prefix() + "§c" + member.getName() + " esta en un duelo.");
+                return;
+            }
+            if (plugin.getQueueManager().isInQueue(memberUUID)) {
+                player.sendMessage(plugin.prefix() + "§c" + member.getName() + " esta en cola.");
+                return;
+            }
+        }
+
+        player.closeInventory();
+
+        // Announce to all members
+        for (UUID memberUUID : members) {
+            Player member = Bukkit.getPlayer(memberUUID);
+            if (member != null) {
+                member.sendMessage(plugin.prefix() + "§a¡Partida FFA iniciada! Kit: §e" + kitName);
+                member.sendMessage(plugin.prefix() + "§7Jugadores: §f" + members.size());
+            }
+        }
+
+        // TODO: Create actual FFA arena instance and teleport players
+        // For now, just announce
+        player.sendMessage(plugin.prefix() + "§e[FFA] Sistema en desarrollo. Proximamente...");
+        
+        // Clean up selections
+        selectedKit.remove(leaderUUID);
+        selectedArena.remove(leaderUUID);
     }
 }
