@@ -67,6 +67,10 @@ commands:
     description: Configura los trims por defecto de un kit (admin)
     usage: /kittrim <kit> [gui]
     permission: pvprooms.kittrim
+  crate:
+    description: Gestionar crates de trims físicas
+    usage: /crate <create|delete|give|list> ...
+    permission: pvprooms.admin
   holo:
     description: Crear y gestionar hologramas
     usage: /holo <create|custom|addline|setline|delline|move|delete|list> ...
