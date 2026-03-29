@@ -19,7 +19,7 @@ package com.pvprooms.model;
  */
 public enum TierTitle {
 
-    SIN_RANGO   ("Sin Rango",        "§7",      "◌",   0),
+    SIN_RANGO   ("Sin insignia",     "§7",      "◌",   0),
     NOVATO      ("Novato",           "§8",      "✦",   15),
     SOLDADO     ("Soldado",          "§f",      "⚔",   60),
     LUCHADOR    ("Luchador",         "§a",      "⚔",   150),

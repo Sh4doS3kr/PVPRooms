@@ -122,7 +122,7 @@ public class ScoreboardManager {
 
         tl(obj, s++, " ",                                                                          10);
         tl(obj, s++, leg("&e&l» &fKit:  &e" + kitName),                                          9);
-        tl(obj, s++, leg("&e&l» &fRango: " + qTier.colour + "&l" + qTier.displayName),            8);
+        tl(obj, s++, leg("&e&l» &fTier: " + qTier.colour + "&l" + qTier.displayName),            8);
         tl(obj, s++, leg("&e&l» &fELO: &6" + qElo + (qPts >= 0 ? "  &8| &7Pts: &6" + qPts : "")), 7);
         tl(obj, s++, " ",                                                          6);
         tl(obj, s++, leg("&e&l» &fEn cola: &a" + plugin.getQueueManager().getTotalQueued()), 5);
@@ -188,7 +188,7 @@ public class ScoreboardManager {
         } else {
             int  myElo  = plugin.getEloManager().getElo(player.getUniqueId());
             Tier myTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
-            tl(obj, s++, leg("&e&l» &fRango:    " + myTier.colour + "&l" + myTier.displayName), 7);
+            tl(obj, s++, leg("&e&l» &fTier:     " + myTier.colour + "&l" + myTier.displayName), 7);
             tl(obj, s++, leg("&e&l» &fTu ELO:   &6" + myElo), 6);
             if (opponent != null) {
                 int  opElo  = plugin.getEloManager().getElo(opponentUUID);
@@ -229,7 +229,7 @@ public class ScoreboardManager {
         tl(obj, s++, leg("&e&l» &fDuelos activos"),                                                   11);
         tl(obj, s++, leg("  &7" + activeMatches + " en curso · " + inQueue + " en cola"),             10);
         tl(obj, s++, " ",                                                                              9);
-        tl(obj, s++, leg("&e&l» &fTu Rango"),                                                         8);
+        tl(obj, s++, leg("&e&l» &fTu Tier"),                                                          8);
         tl(obj, s++, leg("  " + lobbyTier.colour + "&l" + lobbyTier.displayName),                     7);
         tl(obj, s++, leg("&e&l» &fELO / Pos"),                                                        6);
         tl(obj, s++, leg("  &6" + elo + " ELO  &8| " + rankStr),                                     5);
