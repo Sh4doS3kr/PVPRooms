@@ -71,6 +71,8 @@ public class PvPRoomsPro extends JavaPlugin {
     private TrimManager trimManager;
     private TrimGUI trimGUI;
     private KitTrimGUI kitTrimGUI;
+    private NpcManager npcManager;
+    private LeaderboardHologramManager hologramManager;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -103,6 +105,8 @@ public class PvPRoomsPro extends JavaPlugin {
         tierManager             = new TierManager(this);
         trimGUI                 = new TrimGUI(this);
         kitTrimGUI              = new KitTrimGUI(this);
+        npcManager              = new NpcManager(this);
+        hologramManager         = new LeaderboardHologramManager(this);
         SpearItem.init(this);
 
         // Detect server region asynchronously
@@ -169,6 +173,10 @@ public class PvPRoomsPro extends JavaPlugin {
         // Save trim data
         if (trimManager != null) trimManager.save();
 
+        // Shutdown NPC and Hologram managers
+        if (npcManager != null) npcManager.shutdown();
+        if (hologramManager != null) hologramManager.shutdown();
+
         // Cancel all scheduled tasks owned by this plugin
         Bukkit.getScheduler().cancelTasks(this);
 
@@ -216,6 +224,17 @@ public class PvPRoomsPro extends JavaPlugin {
         KitTrimCommand kitTrimCmd = new KitTrimCommand(this);
         getCommand("kittrim").setExecutor(kitTrimCmd);
         getCommand("kittrim").setTabCompleter(kitTrimCmd);
+
+        NpcCommand npcCmd = new NpcCommand(this);
+        getCommand("npc").setExecutor(npcCmd);
+        getCommand("npc").setTabCompleter(npcCmd);
+
+        HoloCommand holoCmd = new HoloCommand(this);
+        getCommand("holo").setExecutor(holoCmd);
+        getCommand("holo").setTabCompleter(holoCmd);
+
+        AdminNpcHoloCommand adminNpcHoloCmd = new AdminNpcHoloCommand(this);
+        // Admin command already registered, just add NPC/Holo subcommands via the existing /admin
     }
 
     private void registerListeners() {
@@ -293,5 +312,7 @@ public class PvPRoomsPro extends JavaPlugin {
     public TrimManager           getTrimManager()            { return trimManager; }
     public TrimGUI               getTrimGUI()                { return trimGUI; }
     public KitTrimGUI            getKitTrimGUI()             { return kitTrimGUI; }
+    public NpcManager            getNpcManager()              { return npcManager; }
+    public LeaderboardHologramManager getHologramManager()    { return hologramManager; }
     public String                getServerRegion()           { return serverRegion; }
 }

@@ -63,6 +63,14 @@ commands:
     description: Configura los trims por defecto de un kit (admin)
     usage: /kittrim <kit> [gui]
     permission: pvprooms.kittrim
+  npc:
+    description: Crear y gestionar NPCs interactivos
+    usage: /npc <create|name|move|delete|list> ...
+    permission: pvprooms.admin
+  holo:
+    description: Crear y gestionar hologramas
+    usage: /holo <create|custom|addline|setline|delline|move|delete|list> ...
+    permission: pvprooms.admin
 
 permissions:
   pvprooms.kit:
