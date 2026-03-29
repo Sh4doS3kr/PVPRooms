@@ -361,13 +361,14 @@ function openModal(nombre){
   const p=allPlayers.find(x=>x.nombre===nombre); if(!p) return;
   const titleC=tc(p.titulo), bestC=tc(p.bestTier||'');
   const elo=p.elo??0, eloC=eloColor(elo);
-  const rn=(p.region||'EU').toUpperCase(), cc=regionCC(rn);
+  const playerCC = (p.pais||p.countryCode||'').toLowerCase();
+  const countryName = playerCC ? (COUNTRY_NAMES[playerCC]||playerCC.toUpperCase()) : '—';
   const eloRk = p.eloRank>0?`#${p.eloRank}`:'—';
 
   document.getElementById('modalAv').src=`https://mc-heads.net/avatar/${encodeURIComponent(nombre)}/90`;
   document.getElementById('modalName').textContent=p.nombre;
   document.getElementById('modalTitle').innerHTML=`<span style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>`;
-  document.getElementById('modalRegion').innerHTML=flagImg(cc,15)+' <span>'+rn+'</span>';
+  document.getElementById('modalRegion').innerHTML=playerCC?flagImg(playerCC,15)+' <span>'+countryName+'</span>':'<span>—</span>';
   document.getElementById('modalStats').innerHTML=`
     <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mstat-l">Puntos totales</div></div>
     <div class="mstat"><div class="mstat-v" style="color:${eloC}">${elo.toLocaleString()}</div><div class="mstat-l">ELO</div></div>

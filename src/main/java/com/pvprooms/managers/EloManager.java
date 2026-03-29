@@ -33,6 +33,9 @@ public class EloManager {
     /** uuid string → display name (cached for leaderboard) */
     private final Map<String, String> nameMap = new HashMap<>();
 
+    /** uuid string → country code (e.g. "es", "us") */
+    private final Map<String, String> countryMap = new HashMap<>();
+
     public EloManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
         this.eloFile = new File(plugin.getDataFolder(), "elo.yml");
@@ -44,6 +47,7 @@ public class EloManager {
     public void loadElo() {
         eloMap.clear();
         nameMap.clear();
+        countryMap.clear();
         if (!eloFile.exists()) {
             saveElo();
             return;
@@ -56,8 +60,10 @@ public class EloManager {
             int elo = eloConfig.getInt(p + ".elo",
                     plugin.getConfig().getInt("elo.starting-elo", 1000));
             String name = eloConfig.getString(p + ".name", uuidStr);
+            String country = eloConfig.getString(p + ".country", "");
             eloMap.put(uuidStr, elo);
             nameMap.put(uuidStr, name);
+            if (!country.isEmpty()) countryMap.put(uuidStr, country);
         }
     }
 
@@ -67,6 +73,10 @@ public class EloManager {
             String p = "players." + entry.getKey();
             eloConfig.set(p + ".elo",  entry.getValue());
             eloConfig.set(p + ".name", nameMap.getOrDefault(entry.getKey(), entry.getKey()));
+            String country = countryMap.get(entry.getKey());
+            if (country != null && !country.isEmpty()) {
+                eloConfig.set(p + ".country", country);
+            }
         }
         try {
             eloConfig.save(eloFile);
@@ -185,6 +195,16 @@ public class EloManager {
 
     /** Returns a copy of the elo map. */
     public Map<String, Integer> getEloMap() { return Collections.unmodifiableMap(eloMap); }
+
+    /** Gets the country code for a player (e.g. "es", "us"). */
+    public String getCountry(UUID uuid) { return countryMap.getOrDefault(uuid.toString(), ""); }
+
+    /** Sets the country code for a player. */
+    public void setCountry(UUID uuid, String countryCode) {
+        if (countryCode != null && !countryCode.isEmpty()) {
+            countryMap.put(uuid.toString(), countryCode.toLowerCase());
+        }
+    }
 
     /** Returns the rank (1-based) of a player, or -1 if not ranked yet. */
     public int getRank(UUID uuid) {

@@ -183,6 +183,8 @@ public class TierApiServer {
         String focusTier = focusKit != null && focusPts >= 0
                 ? Tier.fromPoints(focusPts).displayName : null;
 
+        String country = plugin.getEloManager().getCountry(uuid);
+
         return "{"
                 + "\"uuid\":\""           + uuid                       + "\""
                 + ",\"nombre\":\""        + esc(name)                  + "\""
@@ -195,6 +197,7 @@ public class TierApiServer {
                 + ",\"bestTier\":\""      + esc(bestTier.displayName)  + "\""
                 + ",\"bestTierOrdinal\":" + bestTier.ordinal()
                 + ",\"region\":\""        + esc(plugin.getServerRegion().toUpperCase()) + "\""
+                + ",\"pais\":\""          + esc(country)               + "\""
                 + (focusTier != null ? ",\"focusTier\":\"" + esc(focusTier) + "\",\"focusPts\":" + focusPts : "")
                 + ",\"kits\":"            + kitsJson
                 + "}";

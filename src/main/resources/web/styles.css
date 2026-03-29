@@ -4,7 +4,7 @@
 
 /* ── Reset & base ─────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:16px;scroll-behavior:smooth;}
+html{font-size:18px;scroll-behavior:smooth;}
 body{
   background:#0a0a0f;color:#e8eaf0;
   font-family:'Geist','Inter',system-ui,-apple-system,sans-serif;

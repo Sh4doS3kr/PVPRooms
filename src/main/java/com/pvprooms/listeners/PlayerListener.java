@@ -52,8 +52,39 @@ public class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
         plugin.getServer().getScheduler().runTaskLater(plugin, () ->
-                plugin.getScoreboardManager().showLobbyScoreboard(event.getPlayer()), 5L);
+                plugin.getScoreboardManager().showLobbyScoreboard(player), 5L);
+        
+        // Detect player country from IP (async)
+        detectCountry(player);
+    }
+
+    private void detectCountry(Player player) {
+        String ip = player.getAddress() != null ? player.getAddress().getAddress().getHostAddress() : null;
+        if (ip == null || ip.equals("127.0.0.1") || ip.startsWith("192.168.") || ip.startsWith("10.")) return;
+        
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                java.net.URL url = new java.net.URL("https://ipapi.co/" + ip + "/country_code/");
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                conn.setRequestProperty("User-Agent", "PvPRoomsPro/1.0");
+                
+                if (conn.getResponseCode() == 200) {
+                    try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(conn.getInputStream()))) {
+                        String country = reader.readLine();
+                        if (country != null && country.length() == 2) {
+                            plugin.getEloManager().setCountry(player.getUniqueId(), country.toLowerCase());
+                        }
+                    }
+                }
+                conn.disconnect();
+            } catch (Exception ignored) {}
+        });
     }
 
     // ── Disconnect ─────────────────────────────────────────────────────────
