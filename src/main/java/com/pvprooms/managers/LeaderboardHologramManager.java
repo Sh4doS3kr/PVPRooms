@@ -227,20 +227,41 @@ public class LeaderboardHologramManager {
                 lines.add(title);
                 lines.add("&8&m                              ");
                 
-                // Get top players
-                List<TierManager.PlayerRank> top = plugin.getTierManager().getTopPlayers(count);
-                int rank = 1;
-                for (TierManager.PlayerRank ps : top) {
-                    String medal = switch(rank) {
-                        case 1 -> "&6①";
-                        case 2 -> "&7②";
-                        case 3 -> "&c③";
-                        default -> "&8" + rank + ".";
-                    };
-                    String name = plugin.getServer().getOfflinePlayer(ps.uuid()).getName();
-                    if (name == null) name = "???";
-                    lines.add(medal + " &f" + name + " &7- &f" + ps.score() + " pts");
-                    rank++;
+                // Get top players based on type
+                if (type == HoloType.TOP_ELO) {
+                    // Use EloManager for ELO rankings
+                    List<String> topElo = plugin.getEloManager().getTopPlayers(count);
+                    int rank = 1;
+                    for (String entry : topElo) {
+                        String medal = switch(rank) {
+                            case 1 -> "&6①";
+                            case 2 -> "&7②";
+                            case 3 -> "&c③";
+                            default -> "&8" + rank + ".";
+                        };
+                        // entry format: "Name §7— §eELO"
+                        String[] parts = entry.split(" §7— §e");
+                        String name = parts.length > 0 ? parts[0] : "???";
+                        String elo = parts.length > 1 ? parts[1] : "0";
+                        lines.add(medal + " &f" + name + " &7- &e" + elo + " ELO");
+                        rank++;
+                    }
+                } else {
+                    // Use TierManager for points-based rankings
+                    List<TierManager.PlayerRank> top = plugin.getTierManager().getTopPlayers(count);
+                    int rank = 1;
+                    for (TierManager.PlayerRank ps : top) {
+                        String medal = switch(rank) {
+                            case 1 -> "&6①";
+                            case 2 -> "&7②";
+                            case 3 -> "&c③";
+                            default -> "&8" + rank + ".";
+                        };
+                        String name = plugin.getServer().getOfflinePlayer(ps.uuid()).getName();
+                        if (name == null) name = "???";
+                        lines.add(medal + " &f" + name + " &7- &f" + ps.score() + " pts");
+                        rank++;
+                    }
                 }
                 lines.add("&8&m                              ");
             }
