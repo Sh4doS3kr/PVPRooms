@@ -246,10 +246,6 @@ public class PvPRoomsPro extends JavaPlugin {
         getCommand("kittrim").setExecutor(kitTrimCmd);
         getCommand("kittrim").setTabCompleter(kitTrimCmd);
 
-        NpcCommand npcCmd = new NpcCommand(this);
-        getCommand("npc").setExecutor(npcCmd);
-        getCommand("npc").setTabCompleter(npcCmd);
-
         HoloCommand holoCmd = new HoloCommand(this);
         getCommand("holo").setExecutor(holoCmd);
         getCommand("holo").setTabCompleter(holoCmd);

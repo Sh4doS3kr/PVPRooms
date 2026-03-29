@@ -70,6 +70,8 @@ public class LeaderboardHologramManager {
         return id;
     }
 
+    private static final String HOLO_TAG = "pvprooms_hologram";
+
     private List<UUID> spawnHologramLines(Location baseLoc, List<String> lines) {
         List<UUID> uuids = new ArrayList<>();
         double y = baseLoc.getY() + (lines.size() * 0.28);
@@ -86,6 +88,7 @@ public class LeaderboardHologramManager {
             stand.setCustomName(colorize(line));
             stand.setCustomNameVisible(true);
             stand.setInvulnerable(true);
+            stand.addScoreboardTag(HOLO_TAG);
             
             uuids.add(stand.getUniqueId());
             y -= 0.28;
@@ -94,11 +97,33 @@ public class LeaderboardHologramManager {
         return uuids;
     }
 
+    /** Remove all armor stands with our tag near a location */
+    private void removeHologramEntitiesNear(Location loc, double radius) {
+        if (loc.getWorld() == null) return;
+        loc.getWorld().getNearbyEntities(loc, radius, radius, radius).stream()
+            .filter(e -> e instanceof ArmorStand)
+            .filter(e -> e.getScoreboardTags().contains(HOLO_TAG))
+            .forEach(e -> e.remove());
+    }
+
+    /** Remove all hologram armor stands in all worlds */
+    public void removeAllHologramEntities() {
+        for (var world : Bukkit.getWorlds()) {
+            world.getEntities().stream()
+                .filter(e -> e instanceof ArmorStand)
+                .filter(e -> e.getScoreboardTags().contains(HOLO_TAG))
+                .forEach(e -> e.remove());
+        }
+    }
+
     public boolean deleteHologram(int id) {
         HoloData data = holograms.remove(id);
         if (data == null) return false;
         
-        // Remove entities
+        // Remove entities by tag near location (more reliable)
+        removeHologramEntitiesNear(data.location(), 5.0);
+        
+        // Also try by UUID as backup
         for (UUID uuid : data.entityUuids()) {
             Bukkit.getWorlds().forEach(w -> w.getEntities().stream()
                 .filter(e -> e.getUniqueId().equals(uuid))
@@ -418,12 +443,8 @@ public class LeaderboardHologramManager {
             if (holo.type() == HoloType.CUSTOM) continue;
             if (holo.refreshSeconds() <= 0) continue;
             
-            // Remove old entities
-            for (UUID uuid : holo.entityUuids()) {
-                Bukkit.getWorlds().forEach(w -> w.getEntities().stream()
-                    .filter(e -> e.getUniqueId().equals(uuid))
-                    .forEach(e -> e.remove()));
-            }
+            // Remove old entities by tag near location (reliable)
+            removeHologramEntitiesNear(holo.location(), 5.0);
             
             // Spawn new
             List<String> lines = generateLines(holo.type(), holo.subtype(), holo.lines());
@@ -434,6 +455,9 @@ public class LeaderboardHologramManager {
     }
 
     public void load() {
+        // Clean up ALL hologram entities first to prevent accumulation
+        Bukkit.getScheduler().runTaskLater(plugin, this::removeAllHologramEntities, 20L);
+        
         if (!dataFile.exists()) return;
         
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
