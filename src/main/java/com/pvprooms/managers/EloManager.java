@@ -36,6 +36,9 @@ public class EloManager {
     /** uuid string → country code (e.g. "es", "us") */
     private final Map<String, String> countryMap = new HashMap<>();
 
+    /** uuid string → official MCTiers rank (e.g. "HT5", "LT3") */
+    private final Map<String, String> officialRankMap = new HashMap<>();
+
     public EloManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
         this.eloFile = new File(plugin.getDataFolder(), "elo.yml");
@@ -48,6 +51,7 @@ public class EloManager {
         eloMap.clear();
         nameMap.clear();
         countryMap.clear();
+        officialRankMap.clear();
         if (!eloFile.exists()) {
             saveElo();
             return;
@@ -61,9 +65,11 @@ public class EloManager {
                     plugin.getConfig().getInt("elo.starting-elo", 1000));
             String name = eloConfig.getString(p + ".name", uuidStr);
             String country = eloConfig.getString(p + ".country", "");
+            String officialRank = eloConfig.getString(p + ".officialRank", "");
             eloMap.put(uuidStr, elo);
             nameMap.put(uuidStr, name);
             if (!country.isEmpty()) countryMap.put(uuidStr, country);
+            if (!officialRank.isEmpty()) officialRankMap.put(uuidStr, officialRank);
         }
     }
 
@@ -76,6 +82,10 @@ public class EloManager {
             String country = countryMap.get(entry.getKey());
             if (country != null && !country.isEmpty()) {
                 eloConfig.set(p + ".country", country);
+            }
+            String officialRank = officialRankMap.get(entry.getKey());
+            if (officialRank != null && !officialRank.isEmpty()) {
+                eloConfig.set(p + ".officialRank", officialRank);
             }
         }
         try {
@@ -214,5 +224,17 @@ public class EloManager {
                 .collect(Collectors.toList());
         int idx = sorted.indexOf(uuid.toString());
         return idx == -1 ? -1 : idx + 1;
+    }
+
+    /** Gets the official MCTiers rank for a player (e.g. "HT5", "LT3"). */
+    public String getOfficialRank(UUID uuid) { return officialRankMap.getOrDefault(uuid.toString(), ""); }
+
+    /** Sets the official MCTiers rank for a player. */
+    public void setOfficialRank(UUID uuid, String rank) {
+        if (rank != null && !rank.isEmpty()) {
+            officialRankMap.put(uuid.toString(), rank.toUpperCase());
+        } else {
+            officialRankMap.remove(uuid.toString());
+        }
     }
 }

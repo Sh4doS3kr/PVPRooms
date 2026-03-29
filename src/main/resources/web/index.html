@@ -89,10 +89,9 @@
         <div class="col-country">País</div>
         <div class="col-tier">Mejor Tier</div>
         <div class="col-elo">ELO</div>
-        <div class="col-wins">Wins</div>
-        <div class="col-kdr">KDR</div>
         <div class="col-kits">Tiers por Kit</div>
         <div class="col-pts">Puntos</div>
+        <div class="col-official">Rango Oficial</div>
       </div>
 
       <!-- Rows -->
@@ -101,6 +100,40 @@
       </div>
 
     </div>
+
+    <!-- Official Ranks Info Section -->
+    <div class="info-section">
+      <div class="info-card">
+        <h2 class="info-title">🏆 Sistema de Rangos Oficiales (MCTiers)</h2>
+        <p class="info-desc">Los rangos oficiales siguen el sistema <strong>MCTiers</strong>, el estándar de la comunidad competitiva de Minecraft PvP.</p>
+        
+        <div class="rank-grid">
+          <div class="rank-item rank-ht1"><span class="rank-name">HT1</span><span class="rank-desc">Élite Mundial</span></div>
+          <div class="rank-item rank-lt1"><span class="rank-name">LT1</span><span class="rank-desc">Top Profesional</span></div>
+          <div class="rank-item rank-ht2"><span class="rank-name">HT2</span><span class="rank-desc">Semi-Pro Alto</span></div>
+          <div class="rank-item rank-lt2"><span class="rank-name">LT2</span><span class="rank-desc">Semi-Pro</span></div>
+          <div class="rank-item rank-ht3"><span class="rank-name">HT3</span><span class="rank-desc">Muy Bueno</span></div>
+          <div class="rank-item rank-lt3"><span class="rank-name">LT3</span><span class="rank-desc">Bueno</span></div>
+          <div class="rank-item rank-ht4"><span class="rank-name">HT4</span><span class="rank-desc">Por encima del promedio</span></div>
+          <div class="rank-item rank-lt4"><span class="rank-name">LT4</span><span class="rank-desc">Promedio alto</span></div>
+          <div class="rank-item rank-ht5"><span class="rank-name">HT5</span><span class="rank-desc">Promedio</span></div>
+          <div class="rank-item rank-lt5"><span class="rank-name">LT5</span><span class="rank-desc">Principiante</span></div>
+        </div>
+
+        <h3 class="info-subtitle">📋 ¿Cómo obtener tu rango oficial?</h3>
+        <ol class="info-steps">
+          <li><strong>Graba tus mejores clips</strong> — Necesitas vídeos de combates 1v1 mostrando tu habilidad real.</li>
+          <li><strong>Abre un ticket en Discord</strong> — Ve al canal de tickets y selecciona "Postulación de Rango".</li>
+          <li><strong>Envía tus clips</strong> — Comparte los enlaces a tus vídeos (YouTube, Medal, etc.).</li>
+          <li><strong>Espera la evaluación</strong> — El staff revisará tus clips y te asignará un rango basado en tu nivel.</li>
+        </ol>
+
+        <div class="info-note">
+          <strong>💡 Consejos:</strong> Los evaluadores buscan precisión en clicks, movimiento (strafing), manejo de combos, spacing y conocimiento general del PvP. ¡Graba tus mejores partidas!
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -198,6 +231,17 @@ function tierPill(tierName){
   return '<span class="tier-pill tier-'+sk+'" style="color:'+c+';border-color:'+c+'22;background:'+c+'12">' +
     '<img src="'+img+'" class="tier-pill-img">' +
     esc(tierName)+'</span>';
+}
+
+/* Official rank pill (MCTiers style: HT1, LT1, HT2, etc.) */
+function officialRankPill(rank){
+  const colors = {
+    'HT1':'#ff6b6b','LT1':'#ff8787','HT2':'#ffa94d','LT2':'#ffc078',
+    'HT3':'#ffd43b','LT3':'#ffe066','HT4':'#69db7c','LT4':'#8ce99a',
+    'HT5':'#74c0fc','LT5':'#a5d8ff'
+  };
+  const c = colors[rank.toUpperCase()] || '#9ca3af';
+  return '<span class="official-pill" style="color:'+c+';border-color:'+c+'33;background:'+c+'18">'+esc(rank.toUpperCase())+'</span>';
 }
 
 /* Kit badge for the kits column — icon + kit name + tier */
@@ -345,6 +389,9 @@ function renderTable(players){
     const winsTxt = p.wins || 0;
     const kdrTxt = (p.kdr || 0).toFixed(2);
 
+    const officialRank = p.officialRank || '—';
+    const officialRankHtml = officialRank !== '—' ? officialRankPill(officialRank) : '<span class="muted-text">—</span>';
+
     return `<div class="tbl-row ${rowCls}" onclick="openModal('${esc(p.nombre)}')" style="animation-delay:${Math.min(i*.018,.35)}s">
       <div class="col-rank">${rkHtml}</div>
       <div class="col-player">
@@ -357,10 +404,9 @@ function renderTable(players){
       <div class="col-country">`+(playerCC?flagImg(cc,18)+' <span class="country-nm">'+countryName+'</span>':'<span class="country-nm">—</span>')+`</div>
       <div class="col-tier">`+tierPill(bestTier)+`</div>
       <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
-      <div class="col-wins"><span style="color:#22c55e">${winsTxt}</span></div>
-      <div class="col-kdr"><span style="color:#06b6d4">${kdrTxt}</span></div>
       <div class="col-kits">${badgesHtml}</div>
       <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span>${pingTxt}</div>
+      <div class="col-official">${officialRankHtml}</div>
     </div>`;
   }).join('');
 }
