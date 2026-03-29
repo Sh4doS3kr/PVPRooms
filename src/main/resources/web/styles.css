@@ -4,7 +4,7 @@
 
 /* ── Reset & base ─────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:20px;scroll-behavior:smooth;}
+html{font-size:16px;scroll-behavior:smooth;}
 body{
   background:#0a0a0f;color:#e8eaf0;
   font-family:'Geist','Inter',system-ui,-apple-system,sans-serif;
@@ -210,8 +210,9 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* ═══ TABLE ════════════════════════════════════════════════ */
 .tbl-head,.tbl-row{
   display:grid;
-  grid-template-columns:50px minmax(160px,1fr) 85px 100px 65px minmax(180px,1.2fr) 80px 90px;
-  min-width:950px;
+  grid-template-columns:45px minmax(140px,1fr) 75px 90px 60px minmax(160px,1.1fr) 70px 85px;
+  min-width:850px;
+  gap:0.3rem;
 }
 .col-official{justify-content:center;}
 .official-pill{
@@ -498,6 +499,14 @@ footer{
 }
 .info-steps li{margin-bottom:.5rem;}
 .info-steps strong{color:var(--text);}
+.info-box{
+  background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);
+  border-radius:10px;padding:1rem 1.2rem;margin-bottom:1rem;
+}
+.info-box h4{color:#818cf8;font-size:.95rem;margin-bottom:.6rem;}
+.info-list{margin:0 0 0 1.2rem;padding:0;color:var(--muted);line-height:1.7;}
+.info-list li{margin-bottom:.3rem;}
+.info-list strong{color:var(--text);}
 .info-note{
   background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);
   border-radius:10px;padding:1rem 1.2rem;font-size:.85rem;color:#fbbf24;line-height:1.5;
