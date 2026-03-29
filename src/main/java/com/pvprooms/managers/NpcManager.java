@@ -135,6 +135,16 @@ public class NpcManager implements Listener {
         return npcs.get(id);
     }
 
+    /** Remove all villagers with pvpnpc metadata to prevent accumulation */
+    public void removeAllNpcEntities() {
+        for (var world : Bukkit.getWorlds()) {
+            world.getEntities().stream()
+                .filter(e -> e instanceof Villager)
+                .filter(e -> e.hasMetadata("pvpnpc"))
+                .forEach(e -> e.remove());
+        }
+    }
+
     @EventHandler
     public void onPlayerInteract(PlayerInteractAtEntityEvent event) {
         if (!event.getRightClicked().hasMetadata("pvpnpc")) return;
@@ -183,6 +193,11 @@ public class NpcManager implements Listener {
     }
 
     public void load() {
+        // Clean up ALL existing NPC villagers first to prevent accumulation
+        removeAllNpcEntities();
+        npcs.clear();
+        entityToNpc.clear();
+        
         if (!dataFile.exists()) return;
         
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
