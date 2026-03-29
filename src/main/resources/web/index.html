@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>PvP·Tiers — Rankings</title>
+<title>PvP·Tiers — Clasificaciones</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
@@ -21,19 +21,19 @@
       </a>
     </div>
     <ul class="nav-links">
-      <li><a class="nav-a" href="#main">Rankings</a></li>
-      <li><a class="nav-a" href="#stats">Stats</a></li>
+      <li><a class="nav-a" href="#main">Clasificación</a></li>
+      <li><a class="nav-a" href="#stats">Estadísticas</a></li>
       <li><a class="nav-a" href="https://mctiers.com/docs/v2" target="_blank">API Docs</a></li>
     </ul>
     <div class="nav-search-wrap">
       <div class="nav-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="searchInput" placeholder="Search player..." autocomplete="off" spellcheck="false"/>
+        <input id="searchInput" placeholder="Buscar jugador..." autocomplete="off" spellcheck="false"/>
         <kbd>/</kbd>
       </div>
       <div class="srv-pill">
         <span class="srv-dot" id="srvDot"></span>
-        <span id="srvStatus">Connecting…</span>
+        <span id="srvStatus">Conectando…</span>
       </div>
     </div>
   </nav>
@@ -42,17 +42,17 @@
 <!-- STATS BAR -->
 <div class="stats-bar" id="stats">
   <div class="stats-inner">
-    <div class="stat-item"><span class="stat-val" id="sOnline">—</span><span class="stat-lbl">Online</span></div>
+    <div class="stat-item"><span class="stat-val" id="sOnline">—</span><span class="stat-lbl">En línea</span></div>
     <div class="stat-sep"></div>
-    <div class="stat-item"><span class="stat-val" id="sDuels">—</span><span class="stat-lbl">Active duels</span></div>
+    <div class="stat-item"><span class="stat-val" id="sDuels">—</span><span class="stat-lbl">Duelos activos</span></div>
     <div class="stat-sep"></div>
-    <div class="stat-item"><span class="stat-val" id="sQueue">—</span><span class="stat-lbl">In queue</span></div>
+    <div class="stat-item"><span class="stat-val" id="sQueue">—</span><span class="stat-lbl">En cola</span></div>
     <div class="stat-sep"></div>
-    <div class="stat-item"><span class="stat-val" id="sTotal">—</span><span class="stat-lbl">Registered</span></div>
+    <div class="stat-item"><span class="stat-val" id="sTotal">—</span><span class="stat-lbl">Registrados</span></div>
     <div class="stat-sep"></div>
-    <div class="stat-item"><span class="stat-val" id="sRegion">—</span><span class="stat-lbl">Server region</span></div>
+    <div class="stat-item"><span class="stat-val" id="sRegion">—</span><span class="stat-lbl">Región del servidor</span></div>
     <div class="stat-sep"></div>
-    <div class="stat-item"><span class="stat-val" id="sYou">—</span><span class="stat-lbl">Your location</span></div>
+    <div class="stat-item"><span class="stat-val" id="sYou">—</span><span class="stat-lbl">Tu ubicación</span></div>
   </div>
 </div>
 
@@ -74,7 +74,7 @@
       <!-- Card header -->
       <div class="card-head">
         <div class="card-head-left">
-          <h1 class="card-title" id="cardTitle">Overall Rankings</h1>
+          <h1 class="card-title" id="cardTitle">Clasificación General</h1>
           <span class="card-sub" id="cardSub"></span>
         </div>
         <div class="card-head-right">
@@ -85,17 +85,17 @@
       <!-- Table header -->
       <div class="tbl-head">
         <div class="col-rank">#</div>
-        <div class="col-player">Player</div>
-        <div class="col-country">Country</div>
-        <div class="col-tier">Best Tier</div>
+        <div class="col-player">Jugador</div>
+        <div class="col-country">País</div>
+        <div class="col-tier">Mejor Tier</div>
         <div class="col-elo">ELO</div>
-        <div class="col-kits">Tiers by Kit</div>
-        <div class="col-pts">Points</div>
+        <div class="col-kits">Tiers por Kit</div>
+        <div class="col-pts">Puntos</div>
       </div>
 
       <!-- Rows -->
       <div id="tableBody">
-        <div class="empty-state"><div class="spinner"></div><span>Loading rankings…</span></div>
+        <div class="empty-state"><div class="spinner"></div><span>Cargando clasificación…</span></div>
       </div>
 
     </div>
@@ -120,7 +120,7 @@
     </div>
     <div class="modal-stats" id="modalStats"></div>
     <div class="modal-kits-wrap">
-      <div class="modal-kits-hd">⚔ Tiers by Kit</div>
+      <div class="modal-kits-hd">⚔ Tiers por Kit</div>
       <div class="modal-kits" id="modalKits"></div>
     </div>
   </div>
@@ -130,7 +130,7 @@
 <footer>
   <span class="ft-brand">PvP<span class="nav-dot">·</span>Tiers</span>
   <span class="ft-sep">·</span>
-  <span>Real-time competitive rankings</span>
+  <span>Clasificaciones competitivas en tiempo real</span>
   <span class="ft-sep">·</span>
   <span class="ft-ip">198.27.75.84:27090</span>
 </footer>
@@ -140,7 +140,7 @@ const API = window.location.origin;
 let allPlayers = [], currentKit = 'overall', kits = [], lastUpdMs = Date.now();
 
 const MC   = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/';
-const FLAGS = 'https://raw.githubusercontent.com/hampusborgos/country-flags/main/png100px/';
+const FLAGS = 'https://flagcdn.com/w40/';
 
 const TIER_COLS = {
   'sin-rango':'#6b7280','hierro':'#9ca3af','bronce':'#cd7f32',
@@ -154,12 +154,18 @@ const TIER_ITEMS = {
 };
 const KIT_ITEMS = {
   sword:'diamond_sword',espada:'diamond_sword',nodebuff:'golden_sword',
-  vanilla:'diamond_sword',combo:'stick',axe:'iron_axe',battleaxe:'iron_axe',
+  vanilla:'diamond_sword',combo:'stick',
+  axe:'iron_axe',axepvp:'iron_axe',battleaxe:'iron_axe',
   uhc:'golden_apple',meetup:'golden_apple',gapple:'enchanted_golden_apple',
   soup:'mushroom_stew',pot:'splash_potion',potion:'splash_potion',
   sumo:'feather',boxing:'leather_chestplate',bridge:'stone_bricks',
-  crystal:'amethyst_shard',bedfight:'white_bed',bedwars:'white_bed',
-  skywars:'firework_rocket',build:'bricks'
+  crystal:'end_crystal',crystalpvp:'end_crystal',
+  bedfight:'white_bed',bedwars:'white_bed',
+  skywars:'firework_rocket',build:'bricks',
+  nethpot:'netherite_sword',netherite:'netherite_sword',
+  mace:'mace',
+  smpkit:'lava_bucket',smp:'lava_bucket',
+  overall:'nether_star'
 };
 const REGION_CC = {EU:'eu',NA:'us',AS:'jp',SA:'br',OC:'au',AF:'za'};
 
@@ -208,19 +214,34 @@ function kitBadge(kitName, tierName, pts, highlight){
 }
 
 /* ── Region detection ──────────────────────────────────────────── */
+const COUNTRY_NAMES = {
+  'es':'España','us':'Estados Unidos','mx':'México','ar':'Argentina','co':'Colombia',
+  'pe':'Perú','cl':'Chile','ve':'Venezuela','ec':'Ecuador','gt':'Guatemala',
+  'cu':'Cuba','bo':'Bolivia','do':'Rep. Dominicana','hn':'Honduras','py':'Paraguay',
+  'sv':'El Salvador','ni':'Nicaragua','cr':'Costa Rica','pa':'Panamá','uy':'Uruguay',
+  'pr':'Puerto Rico','br':'Brasil','pt':'Portugal','fr':'Francia','de':'Alemania',
+  'it':'Italia','gb':'Reino Unido','nl':'Países Bajos','be':'Bélgica','pl':'Polonia',
+  'ru':'Rusia','ua':'Ucrania','jp':'Japón','cn':'China','kr':'Corea del Sur',
+  'au':'Australia','ca':'Canadá','in':'India','za':'Sudáfrica'
+};
+
 async function detectRegion(){
   const el = document.getElementById('sYou');
   try{
-    const r = await fetch('http://ip-api.com/json/?fields=country,countryCode',{signal:AbortSignal.timeout(6000)});
+    const r = await fetch('https://ipapi.co/json/',{signal:AbortSignal.timeout(6000)});
     const d = await r.json();
-    const cc = (d.countryCode||'eu').toLowerCase();
-    el.innerHTML = flagImg(cc,16) + ' ' + esc(d.country||cc.toUpperCase());
+    const cc = (d.country_code||d.country||'').toLowerCase();
+    const name = COUNTRY_NAMES[cc] || d.country_name || cc.toUpperCase();
+    if(cc) el.innerHTML = flagImg(cc,16) + ' ' + esc(name);
+    else el.textContent = '—';
   }catch{
     try{
       const r2 = await fetch('https://ipinfo.io/json',{signal:AbortSignal.timeout(5000)});
       const d2 = await r2.json();
-      const cc = (d2.country||'eu').toLowerCase();
-      el.innerHTML = flagImg(cc,16) + ' ' + esc(d2.country||'—');
+      const cc = (d2.country||'').toLowerCase();
+      const name = COUNTRY_NAMES[cc] || d2.country || '—';
+      if(cc) el.innerHTML = flagImg(cc,16) + ' ' + esc(name);
+      else el.textContent = '—';
     }catch{ el.textContent='—'; }
   }
 }
@@ -245,11 +266,12 @@ async function fetchStats(){
     document.getElementById('sQueue').textContent  = d.en_cola??'—';
     document.getElementById('sTotal').textContent  = d.total_jugadores??'—';
     const reg=(d.region||'EU').toUpperCase(), cc=regionCC(reg);
-    document.getElementById('sRegion').innerHTML = flagImg(cc,16) + ' ' + reg;
-    document.getElementById('srvStatus').textContent = `Online · ${d.online??'?'} players`;
+    const regName = {EU:'Europa',NA:'Norteamérica',SA:'Sudamérica',AS:'Asia',OC:'Oceanía',AF:'África'}[reg]||reg;
+    document.getElementById('sRegion').innerHTML = flagImg(cc,16) + ' ' + regName;
+    document.getElementById('srvStatus').textContent = `Online · ${d.online??'?'} jugadores`;
     document.getElementById('srvDot').classList.remove('off');
   }catch{
-    document.getElementById('srvStatus').textContent='Offline';
+    document.getElementById('srvStatus').textContent='Desconectado';
     document.getElementById('srvDot').classList.add('off');
   }
 }
@@ -260,17 +282,17 @@ async function fetchKits(){
 
 async function fetchTop(kit){
   currentKit = kit;
-  document.getElementById('tableBody').innerHTML='<div class="empty-state"><div class="spinner"></div><span>Loading…</span></div>';
+  document.getElementById('tableBody').innerHTML='<div class="empty-state"><div class="spinner"></div><span>Cargando…</span></div>';
   const isAll = kit==='overall';
-  document.getElementById('cardTitle').textContent = isAll?'Overall Rankings': cap(kit)+' Rankings';
+  document.getElementById('cardTitle').textContent = isAll?'Clasificación General': 'Clasificación '+cap(kit);
   try{
     const url = isAll?`${API}/api/top`:`${API}/api/top/${encodeURIComponent(kit)}`;
     allPlayers = await(await fetch(url)).json();
     lastUpdMs = Date.now();
-    document.getElementById('cardSub').textContent = allPlayers.length+' players';
+    document.getElementById('cardSub').textContent = allPlayers.length+' jugadores';
     renderTable(allPlayers);
   }catch{
-    document.getElementById('tableBody').innerHTML='<div class="empty-state">⚠ Connection error. Retry in a moment.</div>';
+    document.getElementById('tableBody').innerHTML='<div class="empty-state">⚠ Error de conexión. Inténtalo de nuevo.</div>';
   }
 }
 
@@ -298,7 +320,7 @@ function renderTable(players){
   const q = (document.getElementById('searchInput').value||'').toLowerCase().trim();
   const list = q ? players.filter(p=>p.nombre.toLowerCase().includes(q)) : players;
   const body = document.getElementById('tableBody');
-  if(!list.length){ body.innerHTML='<div class="empty-state">No players found.</div>'; return; }
+  if(!list.length){ body.innerHTML='<div class="empty-state">No se encontraron jugadores.</div>'; return; }
 
   body.innerHTML = list.map((p,i)=>{
     const rank=i+1;
@@ -346,11 +368,11 @@ function openModal(nombre){
   document.getElementById('modalTitle').innerHTML=`<span style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>`;
   document.getElementById('modalRegion').innerHTML=flagImg(cc,15)+' <span>'+rn+'</span>';
   document.getElementById('modalStats').innerHTML=`
-    <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mstat-l">Total pts</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mstat-l">Puntos totales</div></div>
     <div class="mstat"><div class="mstat-v" style="color:${eloC}">${elo.toLocaleString()}</div><div class="mstat-l">ELO</div></div>
-    <div class="mstat"><div class="mstat-v">${eloRk}</div><div class="mstat-l">ELO rank</div></div>
-    <div class="mstat"><div class="mstat-v" style="color:${bestC}">${esc(p.bestTier||'—')}</div><div class="mstat-l">Best tier</div></div>
-    <div class="mstat"><div class="mstat-v" style="color:#06b6d4">${p.kits?Object.keys(p.kits).length:0}</div><div class="mstat-l">Kits played</div></div>`;
+    <div class="mstat"><div class="mstat-v">${eloRk}</div><div class="mstat-l">Ranking ELO</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:${bestC}">${esc(p.bestTier||'—')}</div><div class="mstat-l">Mejor tier</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#06b6d4">${p.kits?Object.keys(p.kits).length:0}</div><div class="mstat-l">Kits jugados</div></div>`;
   document.getElementById('modalKits').innerHTML = p.kits
     ? Object.entries(p.kits).map(([k,v])=>{
         const kc=tc(v.tier);
@@ -366,7 +388,7 @@ function openModal(nombre){
           '</div>'+
         '</div>';
       }).join('')
-    : '<div class="empty-state" style="padding:1rem">No kit data.</div>';
+    : '<div class="empty-state" style="padding:1rem">Sin datos de kits.</div>';
 
   document.getElementById('modalOverlay').classList.add('open');
 }

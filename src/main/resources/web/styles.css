@@ -4,7 +4,7 @@
 
 /* ── Reset & base ─────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:15px;scroll-behavior:smooth;}
+html{font-size:16px;scroll-behavior:smooth;}
 body{
   background:#0a0a0f;color:#e8eaf0;
   font-family:'Geist','Inter',system-ui,-apple-system,sans-serif;
@@ -130,10 +130,10 @@ nav{
 }
 .stat-sep{width:1px;height:20px;background:var(--border2);flex-shrink:0;}
 .stat-val{
-  font-family:'Geist Mono',monospace;font-size:.8rem;font-weight:600;
-  display:flex;align-items:center;gap:.3rem;
+  font-family:'Geist Mono',monospace;font-size:.88rem;font-weight:600;
+  display:flex;align-items:center;gap:.35rem;
 }
-.stat-lbl{color:var(--muted);font-size:.74rem;}
+.stat-lbl{color:var(--muted);font-size:.8rem;}
 .flag{border-radius:2px;vertical-align:middle;display:inline-block;}
 
 /* ═══ MAIN + FOLDER TABS ═══════════════════════════════════ */
@@ -171,8 +171,8 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
   content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
   background:var(--card);
 }
-.ftab-ico{width:26px;height:26px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));}
-.folder-tab strong{font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:capitalize;line-height:1;}
+.ftab-ico{width:30px;height:30px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));}
+.folder-tab strong{font-size:.78rem;font-weight:600;letter-spacing:.03em;text-transform:capitalize;line-height:1;}
 
 /* ═══ MAIN CARD ════════════════════════════════════════════ */
 .main-card{
@@ -190,7 +190,7 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
   padding:.9rem 1.4rem;border-bottom:1px solid var(--border);
   background:rgba(255,255,255,.015);
 }
-.card-title{font-size:.98rem;font-weight:700;letter-spacing:-.01em;}
+.card-title{font-size:1.1rem;font-weight:700;letter-spacing:-.01em;}
 .card-sub{font-size:.76rem;color:var(--muted);margin-top:2px;}
 .card-head-left{display:flex;flex-direction:column;}
 .card-head-right{display:flex;align-items:center;gap:.65rem;}
@@ -209,8 +209,8 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* ═══ TABLE ════════════════════════════════════════════════ */
 .tbl-head,.tbl-row{
   display:grid;
-  grid-template-columns:52px minmax(190px,1fr) 80px 120px 80px minmax(200px,1.6fr) 80px;
-  min-width:850px;
+  grid-template-columns:58px minmax(220px,1fr) 100px 130px 90px minmax(240px,1.6fr) 90px;
+  min-width:950px;
 }
 .tbl-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 
@@ -249,35 +249,35 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* Player cell */
 .col-player{gap:.75rem;min-width:0;}
 .row-av{
-  width:36px;height:36px;border-radius:var(--r-sm);
+  width:42px;height:42px;border-radius:var(--r-sm);
   image-rendering:pixelated;border:1px solid var(--border2);
   background:var(--card-b);flex-shrink:0;
   transition:transform var(--tf);
 }
 .tbl-row:hover .row-av{transform:scale(1.08);}
 .av-fb{
-  width:36px;height:36px;border-radius:var(--r-sm);
+  width:42px;height:42px;border-radius:var(--r-sm);
   background:var(--card-b);border:1px solid var(--border2);
   display:flex;align-items:center;justify-content:center;
-  font-size:.82rem;font-weight:700;color:var(--sub);flex-shrink:0;
+  font-size:.88rem;font-weight:700;color:var(--sub);flex-shrink:0;
 }
 .row-player-info{min-width:0;display:flex;flex-direction:column;gap:2px;}
-.row-name{font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.row-title{font-size:.68rem;font-weight:600;opacity:.75;white-space:nowrap;}
+.row-name{font-size:.95rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-title{font-size:.72rem;font-weight:600;opacity:.75;white-space:nowrap;}
 
 /* Country */
-.col-country{gap:.4rem;font-size:.78rem;color:var(--sub);}
-.country-nm{font-size:.7rem;color:var(--muted);}
+.col-country{gap:.5rem;font-size:.85rem;color:var(--sub);}
+.country-nm{font-size:.78rem;color:var(--muted);}
 
 /* Tier pill — compact colored badge (mctiers style) */
 .tier-pill{
-  display:inline-flex;align-items:center;gap:.3rem;
-  padding:.18rem .5rem .18rem .38rem;
-  border-radius:4px;border:1px solid;
-  font-size:.72rem;font-weight:700;letter-spacing:.02em;
+  display:inline-flex;align-items:center;gap:.35rem;
+  padding:.22rem .6rem .22rem .45rem;
+  border-radius:5px;border:1px solid;
+  font-size:.78rem;font-weight:700;letter-spacing:.02em;
   white-space:nowrap;
 }
-.tier-pill-img{width:13px;height:13px;image-rendering:pixelated;object-fit:contain;}
+.tier-pill-img{width:16px;height:16px;image-rendering:pixelated;object-fit:contain;}
 
 /* ELO */
 .col-elo{flex-direction:column;gap:1px;justify-content:center;}
@@ -307,14 +307,14 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 .kit-badge[data-tier="leyenda"]  {border-color:rgba(248,113,113,.5);animation:lgPulse 2.4s ease infinite;}
 @keyframes lgPulse{0%,100%{box-shadow:0 0 6px rgba(248,113,113,.18)}50%{box-shadow:0 0 14px rgba(248,113,113,.4)}}
 
-.kb-kit-img{width:22px;height:22px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));}
-.kb-text{display:flex;flex-direction:column;gap:1px;min-width:0;}
-.kb-kit{font-size:.6rem;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42px;}
-.kb-tier{font-size:.6rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42px;}
+.kb-kit-img{width:26px;height:26px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));}
+.kb-text{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.kb-kit{font-size:.65rem;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52px;}
+.kb-tier{font-size:.65rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52px;}
 
 /* Points */
 .col-pts{justify-content:center;}
-.pts-val{font-family:'Geist Mono',monospace;font-size:.88rem;font-weight:600;}
+.pts-val{font-family:'Geist Mono',monospace;font-size:.95rem;font-weight:600;}
 
 /* Empty / loading */
 .empty-state{
