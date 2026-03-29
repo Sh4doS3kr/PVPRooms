@@ -56,7 +56,7 @@ public class PlayerListener implements Listener {
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             plugin.getScoreboardManager().showLobbyScoreboard(player);
             // Update tier suffix in tab/nametag
-            plugin.getNameTagManager().updatePlayer(player);
+            plugin.getNameTagManager().forceUpdate(player);
         }, 5L);
         
         // Detect player country from IP (async)

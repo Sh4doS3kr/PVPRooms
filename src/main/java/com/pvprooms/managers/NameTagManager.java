@@ -3,11 +3,15 @@ package com.pvprooms.managers;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Tier;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
@@ -22,39 +26,43 @@ import java.util.UUID;
  * - Above player heads (nametags)
  * - In chat messages
  * 
- * Format: PlayerName §7[§bLT5§7]
+ * Format: PlayerName §8[§bLT5§8]
  */
-public class NameTagManager {
+public class NameTagManager implements Listener {
 
     private final PvPRoomsPro plugin;
     private final Map<UUID, Tier> cachedTiers = new HashMap<>();
     private BukkitTask updateTask;
-    private Scoreboard mainBoard;
 
     public NameTagManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
     }
 
     public void start() {
-        mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
+        // Register as listener
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         
-        // Update all players on start
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            updatePlayer(p);
-        }
+        // Delayed start to ensure all players are loaded
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                updatePlayerForAll(p);
+            }
+        }, 20L);
         
-        // Periodic update task (every 5 seconds)
+        // Periodic update task (every 2 seconds)
         updateTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 Tier currentTier = plugin.getTierManager().getBestTier(p.getUniqueId());
                 Tier cached = cachedTiers.get(p.getUniqueId());
                 
-                // Only update if tier changed
+                // Always update tab name, check tier for nametag update
+                updateTabName(p);
+                
                 if (cached == null || cached != currentTier) {
-                    updatePlayer(p);
+                    updatePlayerForAll(p);
                 }
             }
-        }, 100L, 100L); // 5 seconds
+        }, 40L, 40L); // 2 seconds
     }
 
     public void stop() {
@@ -62,34 +70,104 @@ public class NameTagManager {
             updateTask.cancel();
             updateTask = null;
         }
-        // Clean up teams
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            removePlayer(p);
-        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        
+        // Update joining player's nametag for all existing players
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            updatePlayerForAll(player);
+            
+            // Update all other players' nametags for the joining player
+            for (Player other : Bukkit.getOnlinePlayers()) {
+                if (!other.equals(player)) {
+                    updatePlayerForViewer(other, player);
+                }
+            }
+        }, 5L);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onChat(AsyncChatEvent event) {
+        Player player = event.getPlayer();
+        Tier tier = plugin.getTierManager().getBestTier(player.getUniqueId());
+        String suffix = buildSuffix(tier);
+        
+        // Format: PlayerName [LT5] » message
+        Component nameWithSuffix = Component.text(player.getName() + " ")
+            .color(NamedTextColor.WHITE)
+            .append(LegacyComponentSerializer.legacySection().deserialize(suffix))
+            .append(Component.text(" » ").color(NamedTextColor.GRAY));
+        
+        event.renderer((source, sourceDisplayName, message, viewer) -> 
+            nameWithSuffix.append(message.color(NamedTextColor.WHITE))
+        );
     }
 
     /**
-     * Updates a player's display name with their tier suffix.
-     * Called on join and when tier changes.
+     * Updates a player's tab list name with tier suffix.
      */
-    public void updatePlayer(Player player) {
-        if (player == null) return;
+    private void updateTabName(Player player) {
+        if (player == null || !player.isOnline()) return;
         
-        UUID uuid = player.getUniqueId();
-        Tier tier = plugin.getTierManager().getBestTier(uuid);
-        cachedTiers.put(uuid, tier);
-        
-        // Build suffix: §7[§bLT5§7]
+        Tier tier = plugin.getTierManager().getBestTier(player.getUniqueId());
         String suffix = buildSuffix(tier);
         
-        // Update tab list name
         Component tabName = LegacyComponentSerializer.legacySection().deserialize(
             player.getName() + " " + suffix
         );
         player.playerListName(tabName);
+    }
+
+    /**
+     * Updates a player's nametag for ALL online players (including themselves).
+     */
+    public void updatePlayerForAll(Player target) {
+        if (target == null || !target.isOnline()) return;
         
-        // Update nametag using teams
-        updateNameTag(player, suffix);
+        UUID uuid = target.getUniqueId();
+        Tier tier = plugin.getTierManager().getBestTier(uuid);
+        cachedTiers.put(uuid, tier);
+        
+        // Update tab name
+        updateTabName(target);
+        
+        // Update nametag for all viewers
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            updatePlayerForViewer(target, viewer);
+        }
+    }
+
+    /**
+     * Updates a target player's nametag as seen by a specific viewer.
+     * Uses the viewer's scoreboard to set up teams.
+     */
+    private void updatePlayerForViewer(Player target, Player viewer) {
+        if (target == null || viewer == null) return;
+        if (!target.isOnline() || !viewer.isOnline()) return;
+        
+        Scoreboard board = viewer.getScoreboard();
+        if (board == null) return;
+        
+        Tier tier = plugin.getTierManager().getBestTier(target.getUniqueId());
+        String suffix = buildSuffix(tier);
+        String teamName = getTeamName(target);
+        
+        // Get or create team on viewer's scoreboard
+        Team team = board.getTeam(teamName);
+        if (team == null) {
+            team = board.registerNewTeam(teamName);
+        }
+        
+        // Set suffix
+        team.suffix(LegacyComponentSerializer.legacySection().deserialize(" " + suffix));
+        
+        // Add target to team
+        if (!team.hasEntry(target.getName())) {
+            team.addEntry(target.getName());
+        }
     }
 
     /**
@@ -100,15 +178,22 @@ public class NameTagManager {
         cachedTiers.remove(player.getUniqueId());
         
         String teamName = getTeamName(player);
-        Team team = mainBoard.getTeam(teamName);
-        if (team != null) {
-            team.unregister();
+        
+        // Remove from all online players' scoreboards
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            Scoreboard board = viewer.getScoreboard();
+            if (board != null) {
+                Team team = board.getTeam(teamName);
+                if (team != null) {
+                    team.unregister();
+                }
+            }
         }
     }
 
     /**
      * Builds the tier suffix string.
-     * Format: §7[§cHT1§7] with tier-specific color
+     * Format: §8[§cHT1§8] with tier-specific color
      */
     public String buildSuffix(Tier tier) {
         if (tier == null || tier == Tier.UNRANKED) {
@@ -133,45 +218,17 @@ public class NameTagManager {
         return player.getName() + " " + buildSuffix(tier);
     }
 
-    /**
-     * Updates the nametag above player's head using scoreboard teams.
-     */
-    private void updateNameTag(Player player, String suffix) {
-        String teamName = getTeamName(player);
-        
-        // Get or create team for this player
-        Team team = mainBoard.getTeam(teamName);
-        if (team == null) {
-            team = mainBoard.registerNewTeam(teamName);
-        }
-        
-        // Set suffix (appears after name above head)
-        team.suffix(LegacyComponentSerializer.legacySection().deserialize(" " + suffix));
-        
-        // Add player to team if not already
-        if (!team.hasEntry(player.getName())) {
-            team.addEntry(player.getName());
-        }
-        
-        // Apply the main scoreboard to all players so they see the nametags
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (online.getScoreboard() == Bukkit.getScoreboardManager().getMainScoreboard()) {
-                // Already using main board
-            }
-        }
-    }
-
     private String getTeamName(Player player) {
         // Team names must be ≤16 chars
-        String name = "tier_" + player.getName();
+        String name = "pvpt_" + player.getName();
         return name.length() > 16 ? name.substring(0, 16) : name;
     }
 
     /**
-     * Forces an immediate update for a player (e.g., after tier change).
+     * Forces an immediate update for a player.
      */
     public void forceUpdate(Player player) {
-        updatePlayer(player);
+        updatePlayerForAll(player);
     }
 
     /**
@@ -179,7 +236,7 @@ public class NameTagManager {
      */
     public void updateAll() {
         for (Player p : Bukkit.getOnlinePlayers()) {
-            updatePlayer(p);
+            updatePlayerForAll(p);
         }
     }
 }
