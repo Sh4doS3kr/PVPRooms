@@ -2,18 +2,27 @@ package com.pvprooms;
 
 import com.pvprooms.commands.*;
 import com.pvprooms.commands.SetSpawnCommand;
+import com.pvprooms.commands.TrimCommand;
+import com.pvprooms.commands.KitTrimCommand;
 import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.ArenaConfigGUI;
+import com.pvprooms.gui.KitTrimGUI;
 import com.pvprooms.gui.QueueModeGUI;
+import com.pvprooms.gui.TrimGUI;
 import com.pvprooms.managers.HealthHologramManager;
 import com.pvprooms.gui.KitGUI;
+import com.pvprooms.managers.TrimManager;
 import com.pvprooms.managers.WallManager;
 import com.pvprooms.listeners.CombatListener;
 import com.pvprooms.listeners.InventoryListener;
+import com.pvprooms.listeners.KitTrimGUIListener;
 import com.pvprooms.listeners.PlayerListener;
+import com.pvprooms.listeners.TrimCrateListener;
+import com.pvprooms.listeners.TrimGUIListener;
 import com.pvprooms.api.TierApiServer;
 import com.pvprooms.listeners.SpearListener;
 import com.pvprooms.managers.TierManager;
+import com.pvprooms.model.TrimCrate;
 import com.pvprooms.util.RegionDetector;
 import com.pvprooms.weapons.SpearItem;
 import com.pvprooms.managers.*;
@@ -58,6 +67,10 @@ public class PvPRoomsPro extends JavaPlugin {
     private HealthHologramManager healthHologramManager;
     private TierManager tierManager;
     private TierApiServer tierApiServer;
+    private PersonalKitManager personalKitManager;
+    private TrimManager trimManager;
+    private TrimGUI trimGUI;
+    private KitTrimGUI kitTrimGUI;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -71,6 +84,9 @@ public class PvPRoomsPro extends JavaPlugin {
         new File(getDataFolder(), "maps").mkdirs();
 
         // Initialise managers
+        personalKitManager   = new PersonalKitManager(this);
+        trimManager          = new TrimManager(this);
+        TrimCrate.init(this);
         kitManager           = new KitManager(this);
         arenaManager         = new ArenaManager(this);
         arenaInstanceManager = new ArenaInstanceManager(this);
@@ -85,6 +101,8 @@ public class PvPRoomsPro extends JavaPlugin {
         wallManager             = new WallManager(this);
         healthHologramManager   = new HealthHologramManager(this);
         tierManager             = new TierManager(this);
+        trimGUI                 = new TrimGUI(this);
+        kitTrimGUI              = new KitTrimGUI(this);
         SpearItem.init(this);
 
         // Detect server region asynchronously
@@ -148,6 +166,9 @@ public class PvPRoomsPro extends JavaPlugin {
         // Save tier data
         if (tierManager != null) tierManager.save();
 
+        // Save trim data
+        if (trimManager != null) trimManager.save();
+
         // Cancel all scheduled tasks owned by this plugin
         Bukkit.getScheduler().cancelTasks(this);
 
@@ -187,6 +208,14 @@ public class PvPRoomsPro extends JavaPlugin {
         getCommand("admin").setExecutor(adminCmd);
         getCommand("admin").setTabCompleter(adminCmd);
         getCommand("adminpanel").setExecutor(adminCmd);
+
+        TrimCommand trimCmd = new TrimCommand(this);
+        getCommand("trim").setExecutor(trimCmd);
+        getCommand("trim").setTabCompleter(trimCmd);
+
+        KitTrimCommand kitTrimCmd = new KitTrimCommand(this);
+        getCommand("kittrim").setExecutor(kitTrimCmd);
+        getCommand("kittrim").setTabCompleter(kitTrimCmd);
     }
 
     private void registerListeners() {
@@ -195,6 +224,9 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new PlayerListener(this), this);
         pm.registerEvents(new CombatListener(this), this);
         pm.registerEvents(new SpearListener(this), this);
+        pm.registerEvents(new TrimGUIListener(this), this);
+        pm.registerEvents(new KitTrimGUIListener(this), this);
+        pm.registerEvents(new TrimCrateListener(this), this);
     }
 
     // ── Lobby world setup ──────────────────────────────────────────────────
@@ -257,5 +289,9 @@ public class PvPRoomsPro extends JavaPlugin {
     public WallManager           getWallManager()          { return wallManager; }
     public HealthHologramManager getHealthHologramManager() { return healthHologramManager; }
     public TierManager           getTierManager()           { return tierManager; }
+    public PersonalKitManager    getPersonalKitManager()    { return personalKitManager; }
+    public TrimManager           getTrimManager()            { return trimManager; }
+    public TrimGUI               getTrimGUI()                { return trimGUI; }
+    public KitTrimGUI            getKitTrimGUI()             { return kitTrimGUI; }
     public String                getServerRegion()           { return serverRegion; }
 }

@@ -3,36 +3,31 @@ package com.pvprooms.model;
 import org.bukkit.Material;
 
 /**
- * Standard competitive Minecraft PvP tier ladder used by the community.
- * Source: mctiers.com / r/CompetitiveMinecraft
+ * Custom PvP rank ladder for this server.
  *
- * Order from lowest (ordinal 0) to highest (ordinal 10):
- *   0  UNRANKED  —  no rank yet             < 800  ELO
- *   1  LT5       —  Low  Tier 5             800  – 999
- *   2  HT5       —  High Tier 5            1000  – 1199  ← default start ~1000
- *   3  LT4       —  Low  Tier 4            1200  – 1499
- *   4  HT4       —  High Tier 4            1500  – 1799
- *   5  LT3       —  Low  Tier 3            1800  – 2099
- *   6  HT3       —  High Tier 3            2100  – 2399
- *   7  LT2       —  Low  Tier 2            2400  – 2699
- *   8  HT2       —  High Tier 2            2700  – 2999
- *   9  LT1       —  Low  Tier 1            3000  – 3399
- *  10  HT1       —  High Tier 1 (elite)    3400+
+ * Order from lowest (ordinal 0) to highest (ordinal 8):
+ *   0  UNRANKED   — never played           ELO  < 800  |  pts  < 0
+ *   1  HIERRO     — Iron                   ELO  800+   |  pts  0+
+ *   2  BRONCE     — Bronze                 ELO 1000+   |  pts  100+
+ *   3  PLATA      — Silver                 ELO 1200+   |  pts  300+
+ *   4  ORO        — Gold                   ELO 1500+   |  pts  600+
+ *   5  ESMERALDA  — Emerald                ELO 1800+   |  pts 1000+
+ *   6  DIAMANTE   — Diamond                ELO 2100+   |  pts 1400+
+ *   7  MAESTRO    — Master                 ELO 2400+   |  pts 1900+
+ *   8  LEYENDA    — Legend (elite)         ELO 2800+   |  pts 2600+
  */
 public enum Tier {
 
-    //                 minElo  minPts  display    colour   icon
-    UNRANKED(   0,    -1, "Sin Rango", "§7",    Material.GRAY_CONCRETE),
-    LT5     ( 800,     0, "LT5",      "§8",    Material.STONE),
-    HT5     (1000,   100, "HT5",      "§f",    Material.IRON_INGOT),
-    LT4     (1200,   300, "LT4",      "§a",    Material.GOLD_INGOT),
-    HT4     (1500,   600, "HT4",      "§2",    Material.GOLDEN_SWORD),
-    LT3     (1800,  1000, "LT3",      "§b",    Material.DIAMOND),
-    HT3     (2100,  1400, "HT3",      "§3",    Material.DIAMOND_SWORD),
-    LT2     (2400,  1900, "LT2",      "§9",    Material.EMERALD),
-    HT2     (2700,  2500, "HT2",      "§5",    Material.NETHER_STAR),
-    LT1     (3000,  3100, "LT1",      "§6",    Material.TOTEM_OF_UNDYING),
-    HT1     (3400,  3800, "HT1",      "§c§l",  Material.BEACON);
+    //                    minElo  minPts  display       colour    icon
+    UNRANKED  (    0,    -1, "Sin Rango",  "§7",     Material.GRAY_CONCRETE),
+    HIERRO    (  800,     0, "Hierro",     "§8",     Material.IRON_INGOT),
+    BRONCE    ( 1000,   100, "Bronce",     "§6",     Material.COPPER_INGOT),
+    PLATA     ( 1200,   300, "Plata",      "§f",     Material.IRON_BLOCK),
+    ORO       ( 1500,   600, "Oro",        "§e",     Material.GOLD_INGOT),
+    ESMERALDA ( 1800,  1000, "Esmeralda",  "§a",     Material.EMERALD),
+    DIAMANTE  ( 2100,  1400, "Diamante",   "§b",     Material.DIAMOND),
+    MAESTRO   ( 2400,  1900, "Maestro",    "§5",     Material.NETHER_STAR),
+    LEYENDA   ( 2800,  2600, "Leyenda",    "§c§l",   Material.BEACON);
 
     /** Minimum ELO required to reach this tier (ELO queue). */
     public final int      minElo;
@@ -64,17 +59,15 @@ public enum Tier {
      */
     public int tierScore() {
         return switch (this) {
-            case UNRANKED -> 0;
-            case LT5     -> 15;
-            case HT5     -> 25;
-            case LT4     -> 40;
-            case HT4     -> 60;
-            case LT3     -> 80;
-            case HT3     -> 100;
-            case LT2     -> 125;
-            case HT2     -> 150;
-            case LT1     -> 185;
-            case HT1     -> 220;
+            case UNRANKED   -> 0;
+            case HIERRO     -> 10;
+            case BRONCE     -> 25;
+            case PLATA      -> 45;
+            case ORO        -> 70;
+            case ESMERALDA  -> 100;
+            case DIAMANTE   -> 135;
+            case MAESTRO    -> 175;
+            case LEYENDA    -> 220;
         };
     }
 
@@ -84,7 +77,7 @@ public enum Tier {
      */
     public static Tier fromPoints(int pts) {
         if (pts < 0) return UNRANKED;
-        Tier result = LT5;
+        Tier result = HIERRO;
         for (Tier t : values()) {
             if (t == UNRANKED) continue;
             if (pts >= t.minPoints) result = t;

@@ -19,11 +19,14 @@ import java.util.UUID;
 
 /**
  * Manages per-player scoreboards for queue and duel states.
- * Uses the Paper Adventure scoreboard API (Paper 1.21 compatible).
  *
- * Each scoreboard is rebuilt from scratch every time it is shown/updated.
- * Sidebar lines are implemented as score entries with spacer strings
- * to avoid duplicate entry collisions.
+ * Anti-flicker design: each player gets one Scoreboard per state.
+ * player.setScoreboard() is called ONLY when the state changes (lobby→duel etc.).
+ * Subsequent updates only modify Team prefixes (a single packet, no board reset),
+ * which eliminates the ~1-tick blank that caused the visible flicker.
+ *
+ * Each sidebar line uses a fixed invisible "dummy" entry (§0-§f) whose visible
+ * text is provided entirely by a Team prefix.
  */
 public class ScoreboardManager {
 
@@ -45,6 +48,16 @@ public class ScoreboardManager {
     private BukkitTask updateTask;
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /**
+     * Invisible dummy entries — each is a unique §-color code with no printable char.
+     * Teams wrap them so only the prefix text is visible.
+     */
+    private static final String[] SLOTS = {
+        "\u00a70","\u00a71","\u00a72","\u00a73","\u00a74","\u00a75","\u00a76","\u00a77",
+        "\u00a78","\u00a79","\u00a7a","\u00a7b","\u00a7c","\u00a7d","\u00a7e","\u00a7f",
+        "\u00a7l","\u00a7r"   // \u00a7l = §l (bold), \u00a7r = §r (reset) — invisible as standalone entries
+    };
 
     public ScoreboardManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -77,9 +90,6 @@ public class ScoreboardManager {
 
     // ── Queue scoreboard ───────────────────────────────────────────────────
 
-    /**
-     * Shows the queue scoreboard to a player waiting for a match.
-     */
     public void showQueueScoreboard(Player player, String kitName) {
         if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
         UUID uuid = player.getUniqueId();
@@ -99,162 +109,135 @@ public class ScoreboardManager {
 
     private void buildQueueScoreboard(Player player, String kitName, long elapsedSeconds) {
         if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
+        Objective obj = getOrCreate(player, "pvpqueue", "&c&lPvPRooms");
 
-        Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
-        Objective obj = board.registerNewObjective(
-                "pvpqueue",
-                Criteria.DUMMY,
-                comp("&c&lPvPRooms")
-        );
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-
-        int line = 10;
-        setLine(obj, " ", line--);
-        Tier qTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
-        setLine(obj, leg("&e&l» &fKit:  &e" + kitName), line--);
-        setLine(obj, leg("&e&l» &fTier: " + qTier.colour + qTier.displayName), line--);
-        setLine(obj, leg("&e&l» &fELO:  &6" + plugin.getEloManager().getElo(player.getUniqueId())), line--);
-        setLine(obj, "  ", line--);
-        setLine(obj, leg("&e&l» &fEn cola: &a" + plugin.getQueueManager().getTotalQueued()), line--);
-        setLine(obj, "   ", line--);
+        int s = 0;
+        // Use kit-specific tier from TierManager (same source as the web page)
+        Tier qTier = plugin.getTierManager().getTier(player.getUniqueId(), kitName);
+        int  qElo  = plugin.getEloManager().getElo(player.getUniqueId());
+        int  qPts  = plugin.getTierManager().getPoints(player.getUniqueId(), kitName);
         String waitStr = elapsedSeconds < 60
                 ? "§e" + elapsedSeconds + "§fs"
                 : "§e" + (elapsedSeconds / 60) + "§fm §e" + (elapsedSeconds % 60) + "§fs";
-        setLine(obj, leg("&7⏳ Esperando: " + waitStr), line--);
-        setLine(obj, leg("&7¡Buscando rival..."), line--);
-        setLine(obj, leg("&7Usa &f/pvpleave &7para salir"), line--);
-        setLine(obj, "     ", line--);
-        setLine(obj, pingLine(player), line--);
 
-        player.setScoreboard(board);
-        activeBoards.put(player.getUniqueId(), board);
+        tl(obj, s++, " ",                                                                          10);
+        tl(obj, s++, leg("&e&l» &fKit:  &e" + kitName),                                          9);
+        tl(obj, s++, leg("&e&l» &fRango: " + qTier.colour + "&l" + qTier.displayName),            8);
+        tl(obj, s++, leg("&e&l» &fELO: &6" + qElo + (qPts >= 0 ? "  &8| &7Pts: &6" + qPts : "")), 7);
+        tl(obj, s++, " ",                                                          6);
+        tl(obj, s++, leg("&e&l» &fEn cola: &a" + plugin.getQueueManager().getTotalQueued()), 5);
+        tl(obj, s++, " ",                                                          4);
+        tl(obj, s++, leg("&7⏳ Esperando: " + waitStr),                           3);
+        tl(obj, s++, leg("&7¡Buscando rival..."),                                 2);
+        tl(obj, s++, leg("&7Usa &f/pvpleave &7para salir"),                       1);
+        tl(obj, s++, " ",                                                          0);
+        tl(obj, s,   pingLine(player),                                            -1);
     }
 
     // ── Duel scoreboard ────────────────────────────────────────────────────
 
-    /**
-     * Shows or refreshes the duel scoreboard for an active fight.
-     */
     public void updateDuelScoreboard(Player player, Duel duel) {
         if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
         if (player == null) return;
 
         UUID opponentUUID = duel.getOpponent(player.getUniqueId());
-        Player opponent = opponentUUID != null ? Bukkit.getPlayer(opponentUUID) : null;
+        Player opponent   = opponentUUID != null ? Bukkit.getPlayer(opponentUUID) : null;
         String opponentName = opponent != null ? opponent.getName() : "Unknown";
+        String titleCfg   = plugin.getConfig().getString("scoreboard.title", "&c&lPvPRooms");
 
-        String titleCfg = plugin.getConfig().getString("scoreboard.title", "&c&lPvPRooms");
+        Objective obj = getOrCreate(player, "pvpduel", titleCfg);
 
-        Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
-        Objective obj = board.registerNewObjective("pvpduel", Criteria.DUMMY, comp(titleCfg));
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-
-        int line = 10;
-        setLine(obj, " ", line--);
+        int s = 0;
+        tl(obj, s++, " ", 14);
 
         if (duel.getState() == Duel.State.COUNTDOWN) {
-            setLine(obj, leg("&e⏳ Preparando..."), line--);
+            tl(obj, s++, leg("&e⏳ Preparando..."), 13);
         } else {
             long elapsed = duel.getElapsedSeconds();
-            String time = String.format("%d:%02d", elapsed / 60, elapsed % 60);
-            setLine(obj, leg("&e&l» &fTiempo: &a" + time), line--);
+            String time  = String.format("%d:%02d", elapsed / 60, elapsed % 60);
+            tl(obj, s++, leg("&e&l» &fTiempo: &a" + time), 13);
         }
 
-        setLine(obj, "  ", line--);
-        setLine(obj, leg("&e&l» &fKit: &e" + duel.getKitName()), line--);
+        tl(obj, s++, " ", 12);
+        tl(obj, s++, leg("&e&l» &fKit: &e" + duel.getKitName()), 11);
         if (duel.isBo3()) {
-            int myW  = duel.getWins(player.getUniqueId());
-            int opW  = duel.getWins(duel.getOpponent(player.getUniqueId()));
-            int rnd  = Math.min(duel.getCurrentRound(), 3);
-            setLine(obj, leg("&e&l» &fRonda &e" + rnd + "&7/3  &a" + myW + "&7-&c" + opW), line--);
+            int myW = duel.getWins(player.getUniqueId());
+            int opW = duel.getWins(duel.getOpponent(player.getUniqueId()));
+            int rnd = Math.min(duel.getCurrentRound(), 3);
+            tl(obj, s++, leg("&e&l» &fRonda &e" + rnd + "&7/3  &a" + myW + "&7-&c" + opW), 10);
         }
-        setLine(obj, "   ", line--);
-        setLine(obj, leg("&e&l» &fRival: &c" + opponentName), line--);
+        tl(obj, s++, " ", 9);
+        tl(obj, s++, leg("&e&l» &fRival: &c" + opponentName), 8);
 
         if (duel.isBo3()) {
             Tier myKitTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
             int  myPts     = plugin.getTierManager().getPoints(player.getUniqueId(), duel.getKitName());
             com.pvprooms.model.TierTitle myTitle = plugin.getTierManager().getTitle(player.getUniqueId());
-            setLine(obj, leg("&e&l» &fTier &8(" + duel.getKitName() + "&8): " + myKitTier.colour + myKitTier.displayName), line--);
-            setLine(obj, leg("&e&l» &fPuntos: &6" + Math.max(0, myPts)), line--);
-            setLine(obj, leg("&e&l» &fInsignia: " + myTitle.colour + myTitle.symbol + " " + myTitle.name), line--);
+            tl(obj, s++, leg("&e&l» &fTier &8(" + duel.getKitName() + "&8): " + myKitTier.colour + myKitTier.displayName), 7);
+            tl(obj, s++, leg("&e&l» &fPuntos: &6" + Math.max(0, myPts)), 6);
+            tl(obj, s++, leg("&e&l» &fInsignia: " + myTitle.colour + myTitle.symbol + " " + myTitle.name), 5);
             if (opponent != null) {
                 Tier opKitTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
-                setLine(obj, leg("&e&l» &fTier rival: &c" + opKitTier.colour + opKitTier.displayName), line--);
+                tl(obj, s++, leg("&e&l» &fTier rival: &c" + opKitTier.colour + opKitTier.displayName), 4);
             }
         } else {
-            int myElo   = plugin.getEloManager().getElo(player.getUniqueId());
-            Tier myTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
-            setLine(obj, leg("&e&l» &fTier:     " + myTier.colour + myTier.displayName), line--);
-            setLine(obj, leg("&e&l» &fTu ELO:   &6" + myElo), line--);
+            int  myElo  = plugin.getEloManager().getElo(player.getUniqueId());
+            Tier myTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
+            tl(obj, s++, leg("&e&l» &fRango:    " + myTier.colour + "&l" + myTier.displayName), 7);
+            tl(obj, s++, leg("&e&l» &fTu ELO:   &6" + myElo), 6);
             if (opponent != null) {
-                int opElo   = plugin.getEloManager().getElo(opponentUUID);
-                Tier opTier = Tier.forPlayer(plugin.getEloManager(), opponentUUID);
-                setLine(obj, leg("&e&l» &fELO rival: &c" + opElo + " &7(" + opTier.colour + opTier.displayName + "&7)"), line--);
+                int  opElo  = plugin.getEloManager().getElo(opponentUUID);
+                Tier opTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
+                tl(obj, s++, leg("&e&l» &fRival: &c" + opElo + " ELO &7(" + opTier.colour + opTier.displayName + "&7)"), 5);
             }
         }
 
-        setLine(obj, "    ", line--);
-        setLine(obj, pingLine(player), line--);
-
-        player.setScoreboard(board);
-        activeBoards.put(player.getUniqueId(), board);
+        tl(obj, s++, " ", 3);
+        tl(obj, s,   pingLine(player), 2);
     }
 
     // ── Lobby scoreboard ───────────────────────────────────────────────────
 
-    /**
-     * Muestra el scoreboard del lobby a un jugador que no está en duelo ni en cola.
-     */
     public void showLobbyScoreboard(Player player) {
         if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
         if (player == null) return;
 
-        int elo          = plugin.getEloManager().getElo(player.getUniqueId());
-        int rank         = plugin.getEloManager().getRank(player.getUniqueId());
-        int online       = Bukkit.getOnlinePlayers().size();
-        int activeMatches= plugin.getDuelManager().getActiveDuelCount();
-        int inQueue      = plugin.getQueueManager().getTotalQueued();
-        String hora      = LocalTime.now().format(TIME_FMT);
+        int elo           = plugin.getEloManager().getElo(player.getUniqueId());
+        int rank          = plugin.getEloManager().getRank(player.getUniqueId());
+        int online        = Bukkit.getOnlinePlayers().size();
+        int activeMatches = plugin.getDuelManager().getActiveDuelCount();
+        int inQueue       = plugin.getQueueManager().getTotalQueued();
+        String hora       = LocalTime.now().format(TIME_FMT);
+        String rankStr    = rank == -1 ? "§7-" : "§e#" + rank;
+        // Use TierManager as single source of truth — same as the web page
+        Tier lobbyTier    = plugin.getTierManager().getBestTier(player.getUniqueId());
+        com.pvprooms.model.TierTitle title = plugin.getTierManager().getTitle(player.getUniqueId());
 
-        String rankStr = rank == -1 ? "§7Sin rango" : "§e#" + rank;
-
-        Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
-        Objective obj = board.registerNewObjective("pvplobby", Criteria.DUMMY, comp("&6&lPvPRooms"));
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-
-        int line = 15;
-        setLine(obj, " ", line--);
-        setLine(obj, leg("&e&l» &fJugadores online"), line--);
-        setLine(obj, leg("  &7" + online + " conectados"), line--);
-        setLine(obj, "  ", line--);
-        setLine(obj, leg("&e&l» &fDuelos activos"), line--);
-        setLine(obj, leg("  &7" + activeMatches + " en curso · " + inQueue + " en cola"), line--);
-        setLine(obj, "   ", line--);
-        Tier lobbyTier = Tier.forPlayer(plugin.getEloManager(), player.getUniqueId());
-        setLine(obj, leg("&e&l» &fTu Tier"), line--);
-        setLine(obj, leg("  " + lobbyTier.colour + "&l" + lobbyTier.displayName), line--);
-        setLine(obj, leg("&e&l» &fTu ELO"), line--);
-        setLine(obj, leg("  &6" + elo + " ELO  " + rankStr), line--);
-        setLine(obj, "    ", line--);
-        setLine(obj, leg("&e&l» &fHora"), line--);
-        setLine(obj, leg("  &7" + hora), line--);
-        setLine(obj, "     ", line--);
-        setLine(obj, leg("&a/queue &7para combatir"), line--);
-        setLine(obj, "      ", line--);
-        setLine(obj, pingLine(player), line--);
-
-        player.setScoreboard(board);
-        activeBoards.put(player.getUniqueId(), board);
+        Objective obj = getOrCreate(player, "pvplobby", "&6&lPvPRooms");
         lobbyPlayers.put(player.getUniqueId(), true);
+
+        int s = 0;
+        tl(obj, s++, " ",                                                                              15);
+        tl(obj, s++, leg("&e&l» &fJugadores online"),                                                 14);
+        tl(obj, s++, leg("  &7" + online + " conectados"),                                            13);
+        tl(obj, s++, " ",                                                                              12);
+        tl(obj, s++, leg("&e&l» &fDuelos activos"),                                                   11);
+        tl(obj, s++, leg("  &7" + activeMatches + " en curso · " + inQueue + " en cola"),             10);
+        tl(obj, s++, " ",                                                                              9);
+        tl(obj, s++, leg("&e&l» &fTu Rango"),                                                         8);
+        tl(obj, s++, leg("  " + lobbyTier.colour + "&l" + lobbyTier.displayName),                     7);
+        tl(obj, s++, leg("&e&l» &fELO / Pos"),                                                        6);
+        tl(obj, s++, leg("  &6" + elo + " ELO  &8| " + rankStr),                                     5);
+        tl(obj, s++, " ",                                                                              4);
+        tl(obj, s++, leg("&e&l» &fInsignia"),                                                         3);
+        tl(obj, s++, leg("  " + title.colour + title.symbol + " &r" + title.name),                    2);
+        tl(obj, s++, " ",                                                                              1);
+        tl(obj, s++, leg("&a/queue &7para combatir"),                                                  0);
+        tl(obj, s,   pingLine(player),                                                                -1);
     }
 
     // ── Clear ──────────────────────────────────────────────────────────────
 
-    /**
-     * Quita el scoreboard personalizado del jugador y restaura el por defecto.
-     * Llama a este método al entrar en duelo/cola o al salir del servidor.
-     */
     public void clearScoreboard(Player player) {
         if (player == null) return;
         UUID uuid = player.getUniqueId();
@@ -265,23 +248,75 @@ public class ScoreboardManager {
         player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
     }
 
-    /**
-     * Restaura el scoreboard de lobby (llamar al terminar duelo/cola).
-     */
     public void restoreLobbyScoreboard(Player player) {
         if (player == null) return;
         UUID uuid = player.getUniqueId();
         queuePlayers.remove(uuid);
         queueJoinTimes.remove(uuid);
+        // Force lobby board creation on next call by removing stale duel/queue board
+        activeBoards.remove(uuid);
         showLobbyScoreboard(player);
+    }
+
+    // ── Anti-flicker core ──────────────────────────────────────────────────
+
+    /**
+     * Returns the Objective for the given player and board type.
+     * If the player already has a board of the SAME type, it is reused
+     * (player.setScoreboard is NOT called again — zero flicker).
+     * If the type changed, a fresh Scoreboard is created and assigned once.
+     */
+    private Objective getOrCreate(Player player, String objName, String title) {
+        UUID uuid = player.getUniqueId();
+        Scoreboard board = activeBoards.get(uuid);
+
+        if (board != null) {
+            Objective existing = board.getObjective(objName);
+            if (existing != null) {
+                existing.displayName(comp(title));
+                return existing;   // ← same board, no setScoreboard() call
+            }
+        }
+
+        board = Bukkit.getScoreboardManager().getNewScoreboard();
+        Objective obj = board.registerNewObjective(objName, Criteria.DUMMY, comp(title));
+        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+
+        for (int i = 0; i < SLOTS.length; i++) {
+            Team t = board.registerNewTeam("t" + i);
+            t.addEntry(SLOTS[i]);
+        }
+
+        activeBoards.put(uuid, board);
+        player.setScoreboard(board);   // ← called exactly once per state
+        return obj;
+    }
+
+    /**
+     * Sets sidebar line at slot {@code slot} (0 = top) to {@code text} at
+     * vertical position {@code score}.  Updates only the Team prefix →
+     * one network packet, no board recreation, no visible flash.
+     */
+    private void tl(Objective obj, int slot, String text, int score) {
+        if (slot < 0 || slot >= SLOTS.length) return;
+        Scoreboard board = obj.getScoreboard();
+        if (board == null) return;
+
+        Team t = board.getTeam("t" + slot);
+        if (t != null) {
+            String prefix = text.length() > 64 ? text.substring(0, 64)  : text;
+            String suffix = text.length() > 64 ? text.substring(64, Math.min(128, text.length())) : "";
+            t.setPrefix(prefix);
+            t.setSuffix(suffix);
+        }
+
+        Score s = obj.getScore(SLOTS[slot]);
+        s.setScore(score);
+        s.numberFormat(NumberFormat.blank());
     }
 
     // ── Ping / region helper ───────────────────────────────────────────────
 
-    /**
-     * Builds a formatted ping+region string, e.g. "§7(eu) §a42ms".
-     * Colour: green <50 · yellow <100 · gold <150 · red ≥150.
-     */
     private String pingLine(Player player) {
         String region = plugin.getServerRegion();
         int ping = player.getPing();
@@ -295,18 +330,10 @@ public class ScoreboardManager {
 
     // ── Helpers ────────────────────────────────────────────────────────────
 
-    private void setLine(Objective obj, String entry, int score) {
-        Score s = obj.getScore(entry);
-        s.setScore(score);
-        s.numberFormat(NumberFormat.blank());
-    }
-
-    /** Converts a legacy &-color string to an Adventure Component. */
     private Component comp(String text) {
         return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
     }
 
-    /** Converts a legacy &-color string to a legacy §-color string (for score entries). */
     private String leg(String text) {
         return text.replace('&', '§');
     }

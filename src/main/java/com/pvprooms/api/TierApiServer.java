@@ -62,10 +62,30 @@ public class TierApiServer {
 
     private void handleRoot(HttpExchange ex) throws IOException {
         if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { ex.sendResponseHeaders(405, -1); return; }
-        InputStream is = plugin.getResource("web/index.html");
-        if (is == null) { sendError(ex, 404, "index.html no encontrado"); return; }
+
+        String path = ex.getRequestURI().getPath();
+        // Strip leading slash; default to index.html
+        String resource = path.equals("/") || path.isBlank() ? "index.html" : path.substring(1);
+
+        // Only allow known static web resources
+        String contentType;
+        if (resource.endsWith(".html"))      contentType = "text/html; charset=UTF-8";
+        else if (resource.endsWith(".css"))  contentType = "text/css; charset=UTF-8";
+        else if (resource.endsWith(".js"))   contentType = "application/javascript; charset=UTF-8";
+        else if (resource.endsWith(".png"))  contentType = "image/png";
+        else if (resource.endsWith(".ico"))  contentType = "image/x-icon";
+        else { resource = "index.html"; contentType = "text/html; charset=UTF-8"; }
+
+        InputStream is = plugin.getResource("web/" + resource);
+        if (is == null) {
+            // Fall back to index.html for SPA-style routing
+            is = plugin.getResource("web/index.html");
+            contentType = "text/html; charset=UTF-8";
+        }
+        if (is == null) { sendError(ex, 404, resource + " no encontrado"); return; }
+
         byte[] bytes = is.readAllBytes();
-        ex.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+        ex.getResponseHeaders().set("Content-Type", contentType);
         cors(ex);
         ex.sendResponseHeaders(200, bytes.length);
         try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }

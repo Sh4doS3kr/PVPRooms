@@ -55,6 +55,14 @@ commands:
     description: Abre el panel gráfico de administración
     usage: /adminpanel
     permission: pvprooms.admin
+  trim:
+    description: Gestiona tus trims de armadura personales
+    usage: /trim [gui|clear [piece]|give <crate|key|legendary> [player]]
+    permission: pvprooms.trim
+  kittrim:
+    description: Configura los trims por defecto de un kit (admin)
+    usage: /kittrim <kit> [gui]
+    permission: pvprooms.kittrim
 
 permissions:
   pvprooms.kit:
@@ -81,9 +89,16 @@ permissions:
   pvprooms.spawn:
     description: Usar /spawn para ir al lobby
     default: true
+  pvprooms.trim:
+    description: Usar /trim para gestionar trims personales
+    default: true
+  pvprooms.kittrim:
+    description: Usar /kittrim para configurar trims de kit (admin)
+    default: op
   pvprooms.admin:
     description: Full admin access
     default: op
     children:
       pvprooms.kit: true
       pvprooms.arena: true
+      pvprooms.kittrim: true

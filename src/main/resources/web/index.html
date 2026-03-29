@@ -3,179 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>PvP·Tiers — Clasificación Oficial</title>
+<title>PvP·Tiers — Clasificación</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"/>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg0:#030711;--bg1:#080d1a;--bg2:#0d1222;--bg3:#12182d;
-  --glass:rgba(255,255,255,0.035);--glass-h:rgba(255,255,255,0.06);
-  --border:rgba(255,255,255,0.07);--border-h:rgba(124,58,237,0.45);
-  --accent:#7c3aed;--accent2:#a855f7;--cyan:#06b6d4;
-  --gold:#f59e0b;--silver:#94a3b8;--bronze:#b45309;
-  --text:#f0f4ff;--sub:#8899bb;--dim:#3d4f6e;
-}
-/* ── BODY & BG ── */
-html{scroll-behavior:smooth}
-body{background:var(--bg0);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,58,237,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
-body::after{content:'';position:fixed;top:-60%;left:-40%;width:200%;height:200%;background:radial-gradient(ellipse at 65% 25%,rgba(124,58,237,.07) 0%,transparent 50%),radial-gradient(ellipse at 15% 75%,rgba(6,182,212,.05) 0%,transparent 45%);pointer-events:none;z-index:0;animation:bgdrift 25s ease-in-out infinite alternate}
-@keyframes bgdrift{to{transform:translate(4%,3%)}}
-header,div,main,footer{position:relative;z-index:1}
-
-/* ── HEADER ── */
-header{background:rgba(3,7,17,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:0 2rem;position:sticky;top:0;z-index:100}
-.nav-inner{max-width:1380px;margin:0 auto;display:flex;align-items:center;gap:1.5rem;height:66px}
-.logo{font-family:'Orbitron',monospace;font-size:1.45rem;font-weight:900;letter-spacing:3px;text-decoration:none;background:linear-gradient(135deg,#7c3aed 0%,#a855f7 45%,#06b6d4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px rgba(124,58,237,.35));flex-shrink:0}
-.logo em{font-style:normal;-webkit-text-fill-color:#06b6d4;color:#06b6d4}
-.nav-links{display:flex;gap:1.4rem;margin-left:.5rem}
-.nav-links a{color:var(--sub);text-decoration:none;font-size:.76rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;transition:color .2s;padding:.2rem 0;border-bottom:1px solid transparent}
-.nav-links a:hover{color:var(--text);border-bottom-color:var(--accent2)}
-.nav-right{display:flex;align-items:center;gap:.75rem;margin-left:auto}
-.search-box{position:relative;display:flex;align-items:center}
-.search-box svg{position:absolute;left:.7rem;width:13px;height:13px;color:var(--dim);pointer-events:none;flex-shrink:0}
-.search-box input{background:var(--glass);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:.42rem .85rem .42rem 2.1rem;font-family:'Inter',sans-serif;font-size:.8rem;width:195px;transition:border .2s,box-shadow .2s;outline:none}
-.search-box input::placeholder{color:var(--dim)}
-.search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,58,237,.14)}
-.srv-badge{display:flex;align-items:center;gap:.45rem;background:var(--glass);border:1px solid var(--border);border-radius:20px;padding:.32rem .85rem;font-size:.73rem;font-weight:600;white-space:nowrap;cursor:default}
-.srv-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px #22c55e;animation:pulse 2s infinite;flex-shrink:0}
-.srv-dot.off{background:#ef4444;box-shadow:0 0 5px #ef4444;animation:none}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.75);opacity:.5}}
-
-/* ── STATS BAR ── */
-.stats-bar{background:linear-gradient(90deg,rgba(124,58,237,.04),transparent 50%,rgba(6,182,212,.04));border-bottom:1px solid var(--border);padding:.55rem 2rem}
-.stats-inner{max-width:1380px;margin:0 auto;display:flex;align-items:stretch;flex-wrap:wrap;row-gap:.35rem}
-.s-chip{display:flex;align-items:center;gap:.55rem;padding:.28rem 1.1rem;border-right:1px solid var(--border);font-size:.76rem}
-.s-chip:first-child{padding-left:0}
-.s-chip:last-child{border-right:none}
-.s-ico{width:29px;height:29px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
-.s-ico.g{background:rgba(34,197,94,.11);color:#22c55e}
-.s-ico.p{background:rgba(168,85,247,.11);color:#a855f7}
-.s-ico.c{background:rgba(6,182,212,.11);color:#06b6d4}
-.s-ico.o{background:rgba(245,158,11,.11);color:#f59e0b}
-.s-ico.b{background:rgba(59,130,246,.11);color:#3b82f6}
-.s-lbl{color:var(--sub);font-size:.71rem;line-height:1.2}
-.s-val{color:var(--text);font-weight:700;font-size:.86rem;line-height:1.2}
-
-/* ── TABS ── */
-.tabs-outer{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 2rem;position:sticky;top:66px;z-index:90}
-.tabs{max-width:1380px;margin:0 auto;display:flex;overflow-x:auto;scrollbar-width:none;gap:.15rem}
-.tabs::-webkit-scrollbar{display:none}
-.tab-btn{display:flex;align-items:center;gap:.5rem;padding:.82rem 1.05rem;font-family:'Rajdhani',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .2s,border-color .2s;white-space:nowrap;flex-shrink:0}
-.tab-btn:hover{color:var(--text)}
-.tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
-.tab-pill{background:rgba(124,58,237,.22);color:#a855f7;border-radius:9px;padding:.05rem .38rem;font-size:.64rem;font-weight:700}
-.tab-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-
-/* ── MAIN ── */
-main{max-width:1380px;margin:1.8rem auto 3rem;padding:0 2rem;display:flex;flex-direction:column;gap:1.4rem}
-
-/* ── LEADERBOARD CARD ── */
-.lb-card{background:var(--glass);border:1px solid var(--border);border-radius:16px;overflow:hidden;backdrop-filter:blur(8px)}
-.lb-top{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.4rem;border-bottom:1px solid var(--border);background:linear-gradient(90deg,rgba(124,58,237,.07),transparent)}
-.lb-heading{font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;gap:.5rem}
-.lb-heading::before{content:'';display:block;width:3px;height:15px;background:var(--accent);border-radius:2px}
-.lb-cnt{font-size:.75rem;color:var(--dim)}
-
-/* Table */
-.th{display:grid;grid-template-columns:54px 1fr 88px 1fr 96px;padding:.55rem 1.4rem;background:rgba(255,255,255,.022);border-bottom:1px solid var(--border);font-size:.64rem;color:var(--dim);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.lb-row{display:grid;grid-template-columns:54px 1fr 88px 1fr 96px;padding:.78rem 1.4rem;border-bottom:1px solid rgba(255,255,255,.038);align-items:center;cursor:pointer;transition:background .14s;animation:rIn .32s both}
-.lb-row:last-child{border-bottom:none}
-.lb-row:hover{background:var(--glass-h)}
-.lb-row.g1{background:linear-gradient(90deg,rgba(245,158,11,.07),transparent 65%)}
-.lb-row.g2{background:linear-gradient(90deg,rgba(148,163,184,.045),transparent 65%)}
-.lb-row.g3{background:linear-gradient(90deg,rgba(180,83,9,.045),transparent 65%)}
-.lb-row.g1:hover{background:linear-gradient(90deg,rgba(245,158,11,.11),transparent 65%)}
-.lb-row.g2:hover{background:linear-gradient(90deg,rgba(148,163,184,.07),transparent 65%)}
-.lb-row.g3:hover{background:linear-gradient(90deg,rgba(180,83,9,.07),transparent 65%)}
-@keyframes rIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
-
-/* Rank */
-.rk-cell{display:flex;align-items:center;justify-content:center}
-.rk-num{font-family:'Orbitron',monospace;font-size:.82rem;font-weight:700;color:var(--dim)}
-.rk-ico{font-size:1.25rem;line-height:1}
-
-/* Player */
-.pc{display:flex;align-items:center;gap:.85rem;min-width:0}
-.av{width:42px;height:42px;border-radius:8px;image-rendering:pixelated;border:1px solid var(--border);background:var(--bg3);flex-shrink:0;display:block}
-.av-fb{width:42px;height:42px;border-radius:8px;background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:var(--sub);flex-shrink:0}
-.g1 .av{border-color:rgba(245,158,11,.45);box-shadow:0 0 10px rgba(245,158,11,.18)}
-.g2 .av{border-color:rgba(148,163,184,.35);box-shadow:0 0 6px rgba(148,163,184,.1)}
-.g3 .av{border-color:rgba(180,83,9,.35)}
-.pi{min-width:0}
-.pn{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
-.pt{display:inline-flex;align-items:center;gap:.22rem;margin-top:3px;font-size:.67rem;font-weight:700;padding:.09rem .42rem;border-radius:4px;border:1px solid currentColor;opacity:.82;letter-spacing:.04em}
-
-/* Region */
-.re-pill{display:inline-flex;align-items:center;gap:.28rem;padding:.22rem .58rem;border-radius:6px;font-size:.7rem;font-weight:700;letter-spacing:.06em}
-.re-eu{background:rgba(30,58,95,.55);color:#93c5fd;border:1px solid rgba(93,169,255,.18)}
-.re-na{background:rgba(59,31,43,.55);color:#fca5a5;border:1px solid rgba(252,165,165,.18)}
-.re-as{background:rgba(26,51,32,.55);color:#86efac;border:1px solid rgba(134,239,172,.18)}
-.re-sa{background:rgba(59,42,16,.55);color:#fcd34d;border:1px solid rgba(252,211,77,.18)}
-.re-oc{background:rgba(30,42,64,.55);color:#c4b5fd;border:1px solid rgba(196,181,253,.18)}
-.re-af{background:rgba(40,28,20,.55);color:#fb923c;border:1px solid rgba(251,146,60,.18)}
-.re-xx{background:rgba(30,30,40,.55);color:var(--sub);border:1px solid var(--border)}
-
-/* Tier emblems */
-.emblems{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;padding:.1rem 0}
-.emb{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;cursor:default}
-.emb-bg{width:52px;height:52px;border-radius:12px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;transition:transform .15s,border-color .2s,box-shadow .2s;overflow:hidden;position:relative}
-.emb:hover .emb-bg{transform:scale(1.1);border-color:rgba(255,255,255,.22);box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.emb-img{width:36px;height:36px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
-.emb-lbl{font-family:'Orbitron',monospace;font-size:7px;font-weight:900;letter-spacing:.6px;line-height:1}
-
-/* Score */
-.sc-cell{text-align:right;font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700}
-.sc-n{color:var(--text)}
-.sc-l{font-size:.62rem;color:var(--dim);letter-spacing:.06em}
-
-/* Loading / empty */
-.state-msg{padding:5rem 2rem;text-align:center;color:var(--dim);font-size:.88rem}
-.spinner{width:34px;height:34px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 1rem}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── MODAL ── */
-.mo-ov{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(9px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
-.mo-ov.open{opacity:1;pointer-events:all}
-.mo-card{background:var(--bg2);border:1px solid var(--border-h);border-radius:20px;padding:2rem;max-width:510px;width:92%;position:relative;transform:scale(.93) translateY(14px);transition:transform .26s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 60px rgba(124,58,237,.14),0 28px 52px rgba(0,0,0,.5)}
-.mo-ov.open .mo-card{transform:scale(1) translateY(0)}
-.mo-x{position:absolute;top:.9rem;right:.9rem;background:var(--glass);border:1px solid var(--border);color:var(--sub);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:color .2s,background .2s}
-.mo-x:hover{color:var(--text);background:var(--glass-h)}
-.mo-head{display:flex;align-items:center;gap:1.1rem;margin-bottom:1.5rem}
-.mo-av{width:70px;height:70px;border-radius:12px;image-rendering:pixelated;border:2px solid var(--accent);box-shadow:0 0 18px rgba(124,58,237,.28)}
-.mo-nm{font-family:'Orbitron',monospace;font-size:1.05rem;font-weight:700;letter-spacing:.04em}
-.mo-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.55rem;margin-bottom:1.3rem}
-.mo-s{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:.65rem .75rem;text-align:center}
-.mo-sv{font-weight:800;font-size:1.05rem}
-.mo-sl{color:var(--sub);font-size:.65rem;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
-.mo-kt-h{font-family:'Rajdhani',sans-serif;font-size:.74rem;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.65rem}
-.mo-kits{display:grid;grid-template-columns:1fr 1fr;gap:.48rem}
-.mo-kr{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:.58rem .75rem;display:flex;align-items:center;gap:.65rem;transition:border-color .15s}
-.mo-kr:hover{border-color:rgba(124,58,237,.3)}
-.mo-kn{font-size:.76rem;color:var(--sub);flex:1;text-transform:capitalize}
-.mo-kp{font-size:.7rem;color:var(--dim)}
-
-/* ── FOOTER ── */
-footer{text-align:center;padding:1.8rem 2rem;font-size:.7rem;color:var(--dim);border-top:1px solid var(--border)}
-footer em{color:var(--sub);font-style:normal}
-
-/* ── RESPONSIVE ── */
-@media(max-width:860px){
-  .th,.lb-row{grid-template-columns:44px 1fr 76px;}
-  .emblems,.sc-cell{display:none}
-  .search-box input{width:135px}
-}
-@media(max-width:540px){
-  .th,.lb-row{grid-template-columns:40px 1fr}
-  .re-pill-wrap{display:none}
-  .s-chip{padding:.28rem .6rem}
-  .logo{font-size:1.2rem}
-}
-</style>
+<link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
+<div class="rank-strip"></div>
 
 <header>
   <div class="nav-inner">
@@ -274,22 +109,41 @@ footer em{color:var(--sub);font-style:normal}
 const API = window.location.origin;
 let allPlayers=[], currentKit='overall', kits=[], lastUpd=Date.now();
 
-/* ── Tier emblem SVG generator ─────────────────────────────────────── */
+/* ── Custom tier config ──────────────────────────────────────────── */
+/*   Ranks: Sin Rango → Hierro → Bronce → Plata → Oro               */
+/*          Esmeralda → Diamante → Maestro → Leyenda                  */
 const T_CFG = {
-  ht1:{l:'HT1',c1:'#ef4444',c2:'#7f1d1d',glow:1,sh:'crown'},
-  lt1:{l:'LT1',c1:'#f59e0b',c2:'#78350f',glow:1,sh:'star'},
-  ht2:{l:'HT2',c1:'#a855f7',c2:'#4c1d95',glow:1,sh:'shield'},
-  lt2:{l:'LT2',c1:'#3b82f6',c2:'#1e3a8a',glow:0,sh:'shield'},
-  ht3:{l:'HT3',c1:'#06b6d4',c2:'#164e63',glow:0,sh:'hex'},
-  lt3:{l:'LT3',c1:'#67e8f9',c2:'#0e7490',glow:0,sh:'hex'},
-  ht4:{l:'HT4',c1:'#22c55e',c2:'#14532d',glow:0,sh:'badge'},
-  lt4:{l:'LT4',c1:'#86efac',c2:'#166534',glow:0,sh:'badge'},
-  ht5:{l:'HT5',c1:'#e2e8f0',c2:'#64748b',glow:0,sh:'circle'},
-  lt5:{l:'LT5',c1:'#475569',c2:'#1e293b',glow:0,sh:'circle'},
-  'sin-rango':{l:'?',c1:'#374151',c2:'#1f2937',glow:0,sh:'empty'},
-  unranked:{l:'?',c1:'#374151',c2:'#1f2937',glow:0,sh:'empty'},
+  'sin-rango':  {l:'?',   c1:'#6b7280',c2:'#374151',glow:0,sh:'empty'},
+  'unranked':   {l:'?',   c1:'#6b7280',c2:'#374151',glow:0,sh:'empty'},
+  'hierro':     {l:'Fe',  c1:'#9ca3af',c2:'#4b5563',glow:0,sh:'circle'},
+  'bronce':     {l:'Br',  c1:'#cd7f32',c2:'#78350f',glow:0,sh:'badge'},
+  'plata':      {l:'Ag',  c1:'#e2e8f0',c2:'#94a3b8',glow:0,sh:'hex'},
+  'oro':        {l:'Au',  c1:'#fbbf24',c2:'#92400e',glow:1,sh:'star'},
+  'esmeralda':  {l:'Em',  c1:'#34d399',c2:'#065f46',glow:1,sh:'hex'},
+  'diamante':   {l:'Di',  c1:'#67e8f9',c2:'#164e63',glow:1,sh:'shield'},
+  'maestro':    {l:'Ma',  c1:'#c084fc',c2:'#4c1d95',glow:1,sh:'crown'},
+  'leyenda':    {l:'Le',  c1:'#f87171',c2:'#7f1d1d',glow:1,sh:'crown'},
 };
+
+/* Minecraft item images for each tier icon (GitHub CDN) */
+const TIER_ITEMS = {
+  'hierro':    'iron_ingot',
+  'bronce':    'copper_ingot',
+  'plata':     'iron_block',
+  'oro':       'gold_ingot',
+  'esmeralda': 'emerald',
+  'diamante':  'diamond',
+  'maestro':   'nether_star',
+  'leyenda':   'beacon',
+};
+const MC_ASSET = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/';
+function tierItemUrl(t) {
+  const item = TIER_ITEMS[tkSlug(t)] || 'amethyst_shard';
+  return MC_ASSET + item + '.png';
+}
+
 function tkSlug(n){return(n||'').toLowerCase().replace(/\s+/g,'-').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+
 function makeSVGEmb(tierName,s=34){
   const k=tkSlug(tierName), cfg=T_CFG[k]||T_CFG['sin-rango'];
   const h=Math.round(s*1.12), id='e'+Math.random().toString(36).slice(2,7);
@@ -303,14 +157,15 @@ function makeSVGEmb(tierName,s=34){
     case'circle': path=`M${s*.5},${h*.07}A${s*.43},${s*.43}0 1 1 ${s*.5-.01},${h*.07}Z`; break;
     default: path=`M${s*.5},${h*.07}A${s*.4},${s*.4}0 1 1 ${s*.5-.01},${h*.07}Z`;
   }
-  const glowF=cfg.glow?`<filter id="${id}f"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`:'';
+  const glowF=cfg.glow?`<filter id="${id}f"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`:'';
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${h}" width="${s}" height="${h}">
     <defs><linearGradient id="${id}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${cfg.c1}"/><stop offset="100%" stop-color="${cfg.c2}"/></linearGradient>${glowF}</defs>
-    <path d="${path}" fill="url(#${id})" stroke="rgba(255,255,255,0.18)" stroke-width="0.7"${cfg.glow?` filter="url(#${id}f)"`:''}/> 
-    <text x="${s/2}" y="${h*.57}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,.95)" font-size="${cfg.l.length>3?7:8.2}" font-weight="900" font-family="Orbitron,monospace" letter-spacing="0.4">${cfg.l}</text>
+    <path d="${path}" fill="url(#${id})" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"${cfg.glow?` filter="url(#${id}f)"`:''}/> 
+    <text x="${s/2}" y="${h*.56}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,.96)" font-size="${cfg.l.length>3?7:8.5}" font-weight="900" font-family="Orbitron,monospace" letter-spacing="0.5">${cfg.l}</text>
   </svg>`;
   return 'data:image/svg+xml;base64,'+btoa(svg);
 }
+
 /* ── Kit item URL (Minecraft assets CDN) ────────────────────────── */
 const KIT_ITEMS={
   crystal:'amethyst_shard',glass:'glass',
@@ -328,33 +183,66 @@ const KIT_ITEMS={
 };
 function kitItemUrl(k){
   const item=KIT_ITEMS[(k||'').toLowerCase()]||'diamond_sword';
-  return`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/${item}.png`;
+  return MC_ASSET+item+'.png';
 }
+
+/* Per-tier accent colour */
+const TIER_COLOURS = {
+  'hierro':    '#9ca3af',
+  'bronce':    '#cd7f32',
+  'plata':     '#e2e8f0',
+  'oro':       '#fbbf24',
+  'esmeralda': '#34d399',
+  'diamante':  '#67e8f9',
+  'maestro':   '#c084fc',
+  'leyenda':   '#f87171',
+  'sin-rango': '#6b7280',
+  'unranked':  '#6b7280',
+};
+
 function tierBorderCol(t){
-  const m={'ht1':'rgba(239,68,68,.55)','lt1':'rgba(245,158,11,.5)','ht2':'rgba(168,85,247,.55)','lt2':'rgba(59,130,246,.45)','ht3':'rgba(6,182,212,.45)','lt3':'rgba(103,232,249,.35)','ht4':'rgba(34,197,94,.35)','lt4':'rgba(134,239,172,.3)','ht5':'rgba(226,232,240,.2)','lt5':'rgba(71,85,105,.3)'};
-  return m[tkSlug(t)]||'rgba(255,255,255,.08)';
+  const clr = TIER_COLOURS[tkSlug(t)];
+  if(!clr) return 'rgba(255,255,255,.08)';
+  const hex=clr.replace('#','');
+  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  return `rgba(${r},${g},${b},.45)`;
 }
 function tierGlow(t){
-  const m={'ht1':'rgba(239,68,68,.25)','lt1':'rgba(245,158,11,.2)','ht2':'rgba(168,85,247,.25)','lt2':'rgba(59,130,246,.2)','ht3':'rgba(6,182,212,.2)','lt3':'rgba(103,232,249,.15)'};
-  return m[tkSlug(t)]||'none';
+  const clr = TIER_COLOURS[tkSlug(t)];
+  if(!clr) return 'none';
+  const k=tkSlug(t);
+  if(['oro','esmeralda','diamante','maestro','leyenda'].includes(k)){
+    const hex=clr.replace('#','');
+    const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},.28)`;
+  }
+  return 'none';
 }
+
 function mkBadge(kitName,tierName,pts,focusKit){
   const isActive=focusKit===kitName;
-  const bc=tierBorderCol(tierName),tc2=tc(tierName)||tierBorderCol(tierName).replace(/,[\d.]+\)$/,',0.9)');
+  const bc=tierBorderCol(tierName);
+  const clr=TIER_COLOURS[tkSlug(tierName)]||'#8899bb';
   const gl=tierGlow(tierName);
-  const glowStyle=gl!=='none'?`box-shadow:0 0 10px ${gl},inset 0 1px 0 rgba(255,255,255,.08);`:'';
+  const glowStyle=gl!=='none'?`box-shadow:0 0 12px ${gl},inset 0 1px 0 rgba(255,255,255,.08);`:'';
   const activeStyle=isActive?`outline:2px solid rgba(255,255,255,.65);outline-offset:2px;`:'';
-  const imgSrc=kitItemUrl(kitName);
-  return`<div class="emb" title="${cap(kitName)}: ${tierName} (${pts} pts)">`+
+  /* Use the Minecraft item texture that represents this tier */
+  const imgSrc=tierItemUrl(tierName);
+  const slug=tkSlug(tierName);
+  return`<div class="emb" data-tier="${slug}" title="${cap(kitName)}: ${tierName} (${pts} pts)">`+
     `<div class="emb-bg" style="border-color:${bc};${glowStyle}${activeStyle}">`+
-    `<img class="emb-img" src="${imgSrc}" onerror="this.style.opacity='.25'" loading="lazy" alt=""/>`+
+    `<img class="emb-img" src="${imgSrc}" onerror="this.style.opacity='.25'" loading="lazy" alt="${tierName}"/>`+
     `</div>`+
-    `<span class="emb-lbl" style="color:${tc2}">${tierName.toUpperCase()}</span>`+
+    `<span class="emb-lbl" style="color:${clr}">${tierName.toUpperCase()}</span>`+
     `</div>`;
 }
 
-/* ── Title colour ─────────────────────────────────────────────────── */
-const TC={'leyenda':'#ef4444','gran maestro':'#f59e0b','maestro':'#f59e0b','elite':'#a855f7','élite':'#a855f7','gladiador':'#06b6d4','campeon':'#67e8f9','campeón':'#67e8f9','guerrero':'#22c55e','veterano':'#86efac','luchador':'#86efac','soldado':'#e2e8f0','novato':'#64748b','sin rango':'#475569'};
+/* ── Title colour (TierTitle system) ─────────────────────────────── */
+const TC={
+  'leyenda':'#f87171','maestro':'#c084fc','diamante':'#67e8f9',
+  'esmeralda':'#34d399','oro':'#fbbf24','plata':'#e2e8f0',
+  'bronce':'#cd7f32','hierro':'#9ca3af','sin rango':'#6b7280',
+};
 function tc(t){return TC[(t||'').toLowerCase()]||'#8899bb';}
 
 /* ── Region helpers ───────────────────────────────────────────────── */

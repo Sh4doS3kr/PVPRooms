@@ -76,7 +76,7 @@ public class KitGUI {
         return buildItem(kit.getIconMaterial(),
                 "§e§l" + capitalize(kit.getName()),
                 List.of("§7Click para entrar en cola ELO",
-                        "§7Click derecho para ajustar kit",
+                        "§7Click derecho §fpara editar kit",
                         "",
                         "§fEn cola: §a" + queueSize,
                         "§fTu ELO:  §e" + myElo,
@@ -92,7 +92,7 @@ public class KitGUI {
         return buildItem(kit.getIconMaterial(),
                 "§b§l" + capitalize(kit.getName()),
                 List.of("§7Click para entrar en cola TIER",
-                        "§7Click derecho para ajustar kit",
+                        "§7Click derecho §fpara editar kit",
                         "§7Solo rivales de " + kitTier.formatted() + "§7 (±1)",
                         "",
                         "§fEn cola TIER: §a" + queueSize,
@@ -121,12 +121,12 @@ public class KitGUI {
 
     // ── Kit Reorder GUI ──────────────────────────────────────────────────────
 
-    public static final String REORDER_TITLE_PREFIX = "§8Reordenar kit: §e";
+    public static final String REORDER_TITLE_PREFIX        = "§8Reordenar kit: §e";
+    public static final String PERSONAL_REORDER_TITLE_PRE = "§8Mi kit: §b";
 
     /**
-     * Opens a 36-slot chest showing the kit's current inventory contents.
-     * The player can drag items to new positions; items cannot leave the chest.
-     * Closing the inventory saves the new order.
+     * Opens a 36-slot chest with the GLOBAL kit contents (admin use).
+     * Closing the inventory saves globally.
      */
     public void openReorder(Player player, String kitName) {
         Kit kit = plugin.getKitManager().getKit(kitName);
@@ -134,7 +134,7 @@ public class KitGUI {
             player.sendMessage(plugin.prefix() + "§cKit '§e" + kitName + "§c' no encontrado.");
             return;
         }
-        KitReorderHolder holder = new KitReorderHolder(kitName.toLowerCase());
+        KitReorderHolder holder = new KitReorderHolder(kitName.toLowerCase()); // null UUID = global
         Inventory inv = Bukkit.createInventory(holder, 36,
                 REORDER_TITLE_PREFIX + capitalize(kitName));
         holder.setInventory(inv);
@@ -146,6 +146,34 @@ public class KitGUI {
             }
         }
         player.openInventory(inv);
+    }
+
+    /**
+     * Opens a 36-slot chest pre-filled with the player's PERSONAL kit layout
+     * (falls back to the global kit if no personal layout exists).
+     * Closing saves the layout only for this player.
+     */
+    public void openPersonalReorder(Player player, String kitName) {
+        Kit kit = plugin.getKitManager().getKit(kitName);
+        if (kit == null) {
+            player.sendMessage(plugin.prefix() + "§cKit '§e" + kitName + "§c' no encontrado.");
+            return;
+        }
+        KitReorderHolder holder = new KitReorderHolder(kitName.toLowerCase(), player.getUniqueId());
+        Inventory inv = Bukkit.createInventory(holder, 36,
+                PERSONAL_REORDER_TITLE_PRE + capitalize(kitName));
+        holder.setInventory(inv);
+
+        // Use personal layout if exists, otherwise fall back to global
+        ItemStack[] personal = plugin.getPersonalKitManager().getPersonalLayout(player.getUniqueId(), kitName);
+        ItemStack[] contents = (personal != null) ? personal : kit.getContents();
+        for (int i = 0; i < Math.min(contents.length, 36); i++) {
+            if (contents[i] != null && contents[i].getType() != Material.AIR) {
+                inv.setItem(i, contents[i].clone());
+            }
+        }
+        player.openInventory(inv);
+        player.sendMessage(plugin.prefix() + "§7Edita tu kit §e" + capitalize(kitName) + "§7. §8(Solo afecta a ti)");
     }
 
     // ── Utility ────────────────────────────────────────────────────────────

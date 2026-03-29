@@ -112,12 +112,7 @@ public class HealthHologramManager {
         else if (pct > 0.30) colour = "§e";   // yellow
         else                  colour = "§c";   // red
 
-        // Visual bar: 10 chars filled proportionally
-        int filled  = (int) Math.round(pct * 10);
-        String bar  = "§a" + "█".repeat(Math.max(0, filled))
-                    + "§8" + "█".repeat(Math.max(0, 10 - filled));
-
-        return colour + "❤ §f" + hpInt + " §8/ §f" + maxInt + "  " + bar;
+        return colour + "❤ §f" + hpInt + " §8/ §f" + maxInt;
     }
 
     private double maxHp(Player player) {

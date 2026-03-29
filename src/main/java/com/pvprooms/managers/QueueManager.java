@@ -97,8 +97,8 @@ public class QueueManager {
 
         // Use per-kit tier from TierManager (independent of ELO)
         Tier tier = plugin.getTierManager().getTier(uuid, kitName);
-        // Unranked players start matching at LT5 level
-        if (tier == Tier.UNRANKED) tier = Tier.LT5;
+        // Unranked players start matching at HIERRO level
+        if (tier == Tier.UNRANKED) tier = Tier.HIERRO;
         String key = tierKey(tier, kitName);
 
         tierQueues.computeIfAbsent(key, k -> new LinkedList<>()).add(uuid);

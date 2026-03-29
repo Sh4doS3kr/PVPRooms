@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerMoveEvent;
 import com.pvprooms.model.ArenaTemplate;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -141,6 +142,22 @@ public class PlayerListener implements Listener {
         if (duel != null && duel.getState() != Duel.State.ENDED) {
             // Allow drops during fight; some kits involve throwing items
             // Change to event.setCancelled(true) if you want to prevent it
+        }
+    }
+
+    // ── Movement freeze (countdown, no-walls arenas) ───────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (!plugin.getDuelManager().isFrozen(event.getPlayer().getUniqueId())) return;
+        org.bukkit.Location from = event.getFrom();
+        org.bukkit.Location to   = event.getTo();
+        if (to == null) return;
+        // Only block actual position change; allow yaw/pitch (head rotation)
+        if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
+            from.setYaw(to.getYaw());
+            from.setPitch(to.getPitch());
+            event.setTo(from);
         }
     }
 

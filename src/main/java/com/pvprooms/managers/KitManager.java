@@ -1,7 +1,9 @@
 package com.pvprooms.managers;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.model.ArmorPiece;
 import com.pvprooms.model.Kit;
+import com.pvprooms.model.Trim;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -75,6 +77,15 @@ public class KitManager {
                 kit.setConnectedArena(connectedArena);
             }
 
+            // Load per-piece trims
+            java.util.Map<ArmorPiece, Trim> kitTrims = new java.util.EnumMap<>(ArmorPiece.class);
+            for (ArmorPiece piece : ArmorPiece.values()) {
+                String trimStr = kitsConfig.getString(path + ".trims." + piece.name().toLowerCase());
+                Trim t = Trim.fromString(trimStr);
+                if (t != null) kitTrims.put(piece, t);
+            }
+            kit.setTrims(kitTrims);
+
             kits.put(kitName.toLowerCase(), kit);
         }
         plugin.getLogger().info("Loaded " + kits.size() + " kit(s).");
@@ -91,6 +102,9 @@ public class KitManager {
             kitsConfig.set(path + ".icon",     kit.getIconMaterial().name());
             kitsConfig.set(path + ".connected-arena",
                     kit.getConnectedArena() != null ? kit.getConnectedArena() : "");
+            // Save per-piece trims
+            kit.getTrims().forEach((piece, trim) ->
+                    kitsConfig.set(path + ".trims." + piece.name().toLowerCase(), trim.toString()));
         }
         try {
             kitsConfig.save(kitsFile);
@@ -198,11 +212,18 @@ public class KitManager {
         Kit kit = getKit(kitName);
         if (kit == null) return;
 
+        // Use the player's personal item arrangement if they have one
+        ItemStack[] personal = plugin.getPersonalKitManager()
+                .getPersonalLayout(player.getUniqueId(), kitName);
+        ItemStack[] contents = (personal != null) ? personal : kit.getContents();
+
         player.getInventory().clear();
-        player.getInventory().setContents(kit.getContents());
+        player.getInventory().setContents(contents);
         player.getInventory().setArmorContents(kit.getArmorContents());
         player.getInventory().setItemInOffHand(kit.getOffhand());
         player.updateInventory();
+        // Apply kit-default trims then overlay player personal trims
+        plugin.getTrimManager().applyTrimsForKit(player, kit.getTrims());
     }
 
     // ── Query helpers ──────────────────────────────────────────────────────

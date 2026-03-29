@@ -37,6 +37,9 @@ public class DuelManager {
     /** Saved player inventories before a duel starts: player UUID → snapshot */
     private final Map<UUID, PlayerSnapshot> inventorySnapshots = new HashMap<>();
 
+    /** Players frozen during countdown (only arenas without walls) */
+    private final Set<UUID> frozenPlayers = ConcurrentHashMap.newKeySet();
+
     public DuelManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
     }
@@ -128,6 +131,13 @@ public class DuelManager {
 
     private void startCountdown(Duel duel, World world) {
         int seconds = plugin.getConfig().getInt("duels.countdown", 5);
+        boolean noWalls = !plugin.getWallManager().hasWalls(duel.getArenaTemplate().getName());
+
+        // Freeze players during countdown only when there are no walls to contain them
+        if (noWalls) {
+            frozenPlayers.add(duel.getPlayer1());
+            frozenPlayers.add(duel.getPlayer2());
+        }
 
         int taskId = new BukkitRunnable() {
             int remaining = seconds;
@@ -138,15 +148,14 @@ public class DuelManager {
                 Player p2 = Bukkit.getPlayer(duel.getPlayer2());
 
                 if (p1 == null || p2 == null) {
+                    frozenPlayers.remove(duel.getPlayer1());
+                    frozenPlayers.remove(duel.getPlayer2());
                     cancel();
                     endDuel(duel, p1 != null ? duel.getPlayer1() : duel.getPlayer2(), "desconexión");
                     return;
                 }
 
                 if (remaining > 0) {
-                    p1.setVelocity(p1.getVelocity().zero());
-                    p2.setVelocity(p2.getVelocity().zero());
-
                     sendTitle(p1, "§e§l" + remaining, "§7¡Prepárate!");
                     sendTitle(p2, "§e§l" + remaining, "§7¡Prepárate!");
                     p1.sendMessage(plugin.prefix() + "§eLa partida empieza en §6" + remaining + "§e...");
@@ -159,6 +168,10 @@ public class DuelManager {
 
                     remaining--;
                 } else {
+                    // Unfreeze before fight starts
+                    frozenPlayers.remove(duel.getPlayer1());
+                    frozenPlayers.remove(duel.getPlayer2());
+
                     duel.setState(Duel.State.FIGHTING);
                     duel.setStartTimeMillis(System.currentTimeMillis());
                     sendTitle(p1, "§c§l¡PELEA!", "");
@@ -188,7 +201,7 @@ public class DuelManager {
 
     /** Starts a max-duration timer that ends the duel in a draw if time runs out. */
     private void startDurationTimer(Duel duel) {
-        int maxDuration = plugin.getConfig().getInt("duels.max-duration", 300);
+        int maxDuration = plugin.getConfig().getInt("duels.max-duration", 0);
         if (maxDuration <= 0) return;
 
         int taskId = new BukkitRunnable() {
@@ -229,6 +242,9 @@ public class DuelManager {
         if (duel.getCountdownTask()  != -1) Bukkit.getScheduler().cancelTask(duel.getCountdownTask());
         if (duel.getDurationTask()   != -1) Bukkit.getScheduler().cancelTask(duel.getDurationTask());
         if (duel.getScoreboardTask() != -1) Bukkit.getScheduler().cancelTask(duel.getScoreboardTask());
+        // Ensure players are never left frozen
+        frozenPlayers.remove(duel.getPlayer1());
+        frozenPlayers.remove(duel.getPlayer2());
 
         // Cerrar el muro antes de destruir el mundo
         World instanceWorld = Bukkit.getWorld(duel.getInstanceWorldName());
@@ -252,14 +268,19 @@ public class DuelManager {
                 plugin.getTierManager().recordResult(winnerUUID, loserUUID, duel.getKitName());
                 announceResultTier(p1, p2, winnerUUID, loserUUID, duel.getKitName());
             } else {
-                // ELO mode: update ELO, skip tier points
+                // ELO mode: update ELO, then sync TierManager so both systems agree
                 Player winner = Bukkit.getPlayer(winnerUUID);
                 Player loser  = Bukkit.getPlayer(loserUUID);
                 String winnerName = winner != null ? winner.getName() : winnerUUID.toString();
                 String loserName  = loser  != null ? loser.getName()  : loserUUID.toString();
                 int[] changes = plugin.getEloManager().processResult(
                         winnerUUID, winnerName, loserUUID, loserName);
-                announceResult(p1, p2, winnerUUID, changes[0], changes[1]);
+                // Sync TierManager from new ELO — keeps web page and scoreboard consistent
+                plugin.getTierManager().syncFromElo(winnerUUID, duel.getKitName(),
+                        plugin.getEloManager().getElo(winnerUUID));
+                plugin.getTierManager().syncFromElo(loserUUID, duel.getKitName(),
+                        plugin.getEloManager().getElo(loserUUID));
+                announceResult(p1, p2, winnerUUID, loserUUID, duel.getKitName(), changes[0], changes[1]);
             }
         }
 
@@ -317,20 +338,40 @@ public class DuelManager {
         Player roundWinner = Bukkit.getPlayer(roundWinnerUUID);
         String winnerName  = roundWinner != null ? roundWinner.getName() : "?";
 
-        // Round result announcement
-        String scoreStr = "§a" + w1 + "§7-§c" + w2;
+        // Stop holograms immediately
+        plugin.getHealthHologramManager().stopHolograms(duel.getId());
+
+        // Round result chat message
         String roundMsg = plugin.prefix()
                 + "§e⚔ Ronda " + round + ": §6§l" + winnerName
-                + " §egana! §8[" + scoreStr + "§8]";
-        if (p1 != null) { p1.sendMessage(roundMsg); sendTitle(p1, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]", 100); }
-        if (p2 != null) { p2.sendMessage(roundMsg); sendTitle(p2, "§6Ronda " + round, "§f" + winnerName + " gana  §8[" + w1 + "-" + w2 + "]", 100); }
+                + " §egana! §8[§a" + w1 + "§7-§c" + w2 + "§8]";
+        if (p1 != null) p1.sendMessage(roundMsg);
+        if (p2 != null) p2.sendMessage(roundMsg);
+
+        // Step 1: teleport both players to their spawns immediately
+        World worldNow = Bukkit.getWorld(duel.getInstanceWorldName());
+        if (worldNow != null) {
+            if (p1 != null) p1.teleport(duel.getArenaTemplate().getSpawn1(worldNow));
+            if (p2 != null) p2.teleport(duel.getArenaTemplate().getSpawn2(worldNow));
+        }
+
+        // Step 2: 0.2s later show the score title (X-X)
+        final int fw1 = w1, fw2 = w2;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
+            Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
+            String topLine = "§a" + fw1 + " §8▶ §c" + fw2;
+            String subLine = "§f" + winnerName + " §7gana la ronda";
+            if (rp1 != null) sendTitle(rp1, topLine, subLine, 80);
+            if (rp2 != null) sendTitle(rp2, topLine, subLine, 80);
+        }, 4L); // 4 ticks ≈ 0.2s
 
         // Check for match winner (first to 2)
         UUID matchWinner = w1 >= 2 ? duel.getPlayer1() : (w2 >= 2 ? duel.getPlayer2() : null);
         if (matchWinner != null) {
-            // Full match decided — run normal cleanup after a short pause for titles to show
+            // Full match decided — run cleanup after titles are visible
             Bukkit.getScheduler().runTaskLater(plugin, () ->
-                    endDuel(duel, matchWinner, "bo3_finished"), 40L); // 2s pause
+                    endDuel(duel, matchWinner, "bo3_finished"), 40L);
             return;
         }
 
@@ -341,20 +382,16 @@ public class DuelManager {
             duel.setDurationTask(-1);
         }
 
-        // Stop health holograms
-        plugin.getHealthHologramManager().stopHolograms(duel.getId());
-
         World world = Bukkit.getWorld(duel.getInstanceWorldName());
         if (world != null) plugin.getWallManager().animateClose(duel.getArenaTemplate().getName(), world);
 
-        // Prepare and teleport both players after 3 ticks (lets respawn packet process)
+        // Prepare and start next countdown after title has had time to display
         duel.setState(Duel.State.COUNTDOWN);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
             Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
             World w    = Bukkit.getWorld(duel.getInstanceWorldName());
             if (rp1 == null || rp2 == null || w == null) {
-                // Someone disconnected mid-round, end it
                 UUID winner = rp1 != null ? duel.getPlayer1() : (rp2 != null ? duel.getPlayer2() : null);
                 endDuel(duel, winner, "disconnect");
                 return;
@@ -367,7 +404,7 @@ public class DuelManager {
             plugin.getKitManager().applyKit(rp2, duel.getKitName());
             duel.setStartTimeMillis(System.currentTimeMillis());
             startCountdown(duel, w);
-        }, 3L);
+        }, 20L); // 1s delay lets score title display before next countdown
     }
 
     /** Ends a duel by looking up the duel from a player UUID. */
@@ -481,27 +518,39 @@ public class DuelManager {
 
     // ── Announce result ────────────────────────────────────────────────────
 
-    private void announceResult(Player p1, Player p2, UUID winnerUUID, int winGain, int lossChange) {
+    private void announceResult(Player p1, Player p2, UUID winnerUUID, UUID loserUUID,
+                                String kitName, int winGain, int lossChange) {
         Player winner = Bukkit.getPlayer(winnerUUID);
-        Player loser  = p1 != null && p1.getUniqueId().equals(winnerUUID) ? p2 : p1;
+        Player loser  = Bukkit.getPlayer(loserUUID);
 
         String winnerName = winner != null ? winner.getName() : "Unknown";
         String loserName  = loser  != null ? loser.getName()  : "Unknown";
 
+        com.pvprooms.model.Tier wTier = plugin.getTierManager().getBestTier(winnerUUID);
+        com.pvprooms.model.Tier lTier = plugin.getTierManager().getBestTier(loserUUID);
+
         if (winner != null) {
             int newElo = plugin.getEloManager().getElo(winnerUUID);
-            winner.sendMessage(plugin.prefix() + "§a§l¡GANASTE! §avs §e" + loserName
+            winner.sendMessage(plugin.prefix()
+                    + "§a§l¡GANASTE! §avs §e" + loserName
                     + "  §7(+" + winGain + " ELO → §e" + newElo + "§7)");
-            sendTitle(winner, "§a§l¡VICTORIA!", "§7+" + winGain + " ELO");
+            winner.sendMessage(plugin.prefix()
+                    + "§7Rango: " + wTier.colour + "§l" + wTier.displayName
+                    + "  §8| §7Kit: §f" + kitName);
+            sendTitle(winner, "§a§l¡VICTORIA!", wTier.colour + wTier.displayName
+                    + " §7+" + winGain + " ELO");
         }
         if (loser != null) {
-            int newElo = plugin.getEloManager().getElo(loser.getUniqueId());
-            loser.sendMessage(plugin.prefix() + "§c§lPERDISTE §cvs §e" + winnerName
+            int newElo = plugin.getEloManager().getElo(loserUUID);
+            loser.sendMessage(plugin.prefix()
+                    + "§c§lPERDISTE §cvs §e" + winnerName
                     + "  §7(-" + lossChange + " ELO → §e" + newElo + "§7)");
-            sendTitle(loser, "§c§lDERROTA", "§7-" + lossChange + " ELO");
+            loser.sendMessage(plugin.prefix()
+                    + "§7Rango: " + lTier.colour + "§l" + lTier.displayName
+                    + "  §8| §7Kit: §f" + kitName);
+            sendTitle(loser, "§c§lDERROTA", lTier.colour + lTier.displayName
+                    + " §7-" + lossChange + " ELO");
         }
-
-        // Spectator announcements handled when the duel ends and spectators are removed
     }
 
     /** Announces a TIER-mode match result using tier points instead of ELO. */
@@ -539,6 +588,11 @@ public class DuelManager {
     }
 
     // ── Query helpers ──────────────────────────────────────────────────────
+
+    /** Returns true if this player is currently frozen during a countdown. */
+    public boolean isFrozen(UUID uuid) {
+        return frozenPlayers.contains(uuid);
+    }
 
     public boolean isInDuel(UUID uuid) {
         return playerDuelMap.containsKey(uuid);

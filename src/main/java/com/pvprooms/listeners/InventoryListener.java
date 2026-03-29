@@ -69,10 +69,10 @@ public class InventoryListener implements Listener {
             if (clicked == null) return;
             String kitName = plugin.getKitGUI().extractKitName(clicked);
             if (kitName == null || !plugin.getKitManager().kitExists(kitName)) return;
-            // Right-click → open reorder GUI (admin only)
-            if (event.isRightClick() && player.hasPermission("pvprooms.admin")) {
+            // Right-click → open personal kit editor for ANY player
+            if (event.isRightClick()) {
                 player.closeInventory();
-                plugin.getKitGUI().openReorder(player, kitName);
+                plugin.getKitGUI().openPersonalReorder(player, kitName);
                 return;
             }
             player.closeInventory();
@@ -275,18 +275,26 @@ public class InventoryListener implements Listener {
         if (!(event.getInventory().getHolder() instanceof KitReorderHolder holder)) return;
         if (!(event.getPlayer() instanceof Player player)) return;
 
-        // Read the 36 reorder slots and save as the new kit contents order
+        // Read the 36 reorder slots
         ItemStack[] newContents = new ItemStack[36];
         for (int i = 0; i < 36; i++) {
             ItemStack it = event.getInventory().getItem(i);
             newContents[i] = (it != null && it.getType() != Material.AIR) ? it.clone() : null;
         }
-        boolean saved = plugin.getKitManager().setKitFromEditor(
-                holder.getKitName(), newContents,
-                plugin.getKitManager().getKit(holder.getKitName()).getArmorContents(),
-                plugin.getKitManager().getKit(holder.getKitName()).getOffhand());
-        if (saved) {
-            player.sendMessage(plugin.prefix() + "§aOrden del kit §e" + holder.getKitName() + "§a guardado.");
+
+        if (holder.getPlayerUUID() != null) {
+            // Personal save — only affects this player
+            plugin.getPersonalKitManager().setPersonalLayout(holder.getPlayerUUID(), holder.getKitName(), newContents);
+            player.sendMessage(plugin.prefix() + "§aKit personal §e" + holder.getKitName() + "§a guardado. §8(Solo tú)");
+        } else {
+            // Admin global save
+            boolean saved = plugin.getKitManager().setKitFromEditor(
+                    holder.getKitName(), newContents,
+                    plugin.getKitManager().getKit(holder.getKitName()).getArmorContents(),
+                    plugin.getKitManager().getKit(holder.getKitName()).getOffhand());
+            if (saved) {
+                player.sendMessage(plugin.prefix() + "§aOrden del kit §e" + holder.getKitName() + "§a guardado.");
+            }
         }
     }
 }

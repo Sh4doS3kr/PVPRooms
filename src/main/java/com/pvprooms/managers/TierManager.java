@@ -3,8 +3,11 @@ package com.pvprooms.managers;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Tier;
 import com.pvprooms.model.TierTitle;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
@@ -108,6 +111,7 @@ public class TierManager {
     /**
      * Registra el resultado de un match BO3 completo.
      * Ajusta puntos según diferencia de tier entre los jugadores.
+     * Si el ganador sube de rango, se le notifica con título y mensaje.
      */
     public void recordResult(UUID winnerUUID, UUID loserUUID, String kitName) {
         String kit = kitName.toLowerCase();
@@ -115,18 +119,39 @@ public class TierManager {
         int wPts = effectivePts(winnerUUID, kit);
         int lPts = effectivePts(loserUUID,  kit);
 
-        Tier wTier = Tier.fromPoints(wPts);
-        Tier lTier = Tier.fromPoints(lPts);
+        Tier wTierBefore = Tier.fromPoints(wPts);
+        Tier lTier       = Tier.fromPoints(lPts);
 
         // tierDiff > 0 → ganador tenía tier menor que perdedor (upset)
-        int tierDiff = lTier.ordinal() - wTier.ordinal();
+        int tierDiff   = lTier.ordinal() - wTierBefore.ordinal();
+        int winGain    = Math.min(WIN_BASE  + Math.max(0, tierDiff)  * TIER_DIFF_BONUS, MAX_WIN);
+        int lossDeduct = Math.max(LOSS_BASE - Math.max(0, -tierDiff) * TIER_DIFF_BONUS, MIN_LOSS);
 
-        int winGain   = Math.min(WIN_BASE  + Math.max(0, tierDiff)  * TIER_DIFF_BONUS, MAX_WIN);
-        int lossDeduct= Math.max(LOSS_BASE - Math.max(0, -tierDiff) * TIER_DIFF_BONUS, MIN_LOSS);
+        int newWPts = wPts + winGain;
+        int newLPts = Math.max(0, lPts - lossDeduct);
 
-        setPts(winnerUUID, kit, wPts + winGain);
-        setPts(loserUUID,  kit, Math.max(0, lPts - lossDeduct));
+        setPts(winnerUUID, kit, newWPts);
+        setPts(loserUUID,  kit, newLPts);
         save();
+
+        // ── Notificar subida de rango al ganador ──────────────────────────
+        Tier wTierAfter = Tier.fromPoints(newWPts);
+        if (wTierAfter.ordinal() > wTierBefore.ordinal()) {
+            Player winner = Bukkit.getPlayer(winnerUUID);
+            if (winner != null) {
+                String prefix = plugin.prefix();
+                winner.sendMessage(prefix + "§6§l▲ ¡SUBISTE DE RANGO!");
+                winner.sendMessage(prefix + "  §8" + wTierBefore.colour + wTierBefore.displayName
+                        + " §8→ §r" + wTierAfter.colour + "§l" + wTierAfter.displayName);
+                winner.sendTitle(
+                        ChatColor.translateAlternateColorCodes('&', "&6&l▲ SUBISTE DE RANGO"),
+                        ChatColor.translateAlternateColorCodes('&',
+                                wTierAfter.colour.replace("§", "&") + "&l" + wTierAfter.displayName),
+                        10, 80, 20);
+                winner.playSound(winner.getLocation(),
+                        org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            }
+        }
     }
 
     private int effectivePts(UUID uuid, String kit) {
@@ -144,6 +169,56 @@ public class TierManager {
     public Tier getTier(UUID uuid, String kitName) {
         int pts = getPoints(uuid, kitName.toLowerCase());
         return Tier.fromPoints(pts); // fromPoints(-1) → UNRANKED
+    }
+
+    /**
+     * Devuelve el tier más alto del jugador entre todos sus kits.
+     * Si no ha jugado ningún kit, devuelve UNRANKED.
+     * Usar en el scoreboard del lobby para mostrar un rango global consistente.
+     */
+    public Tier getBestTier(UUID uuid) {
+        Map<String, Integer> kits = pointsByKit.get(uuid);
+        if (kits == null || kits.isEmpty()) return Tier.UNRANKED;
+        return kits.values().stream()
+                   .map(Tier::fromPoints)
+                   .max(Comparator.comparingInt(Tier::ordinal))
+                   .orElse(Tier.UNRANKED);
+    }
+
+    /**
+     * Sincroniza los puntos del jugador para un kit basándose en su ELO.
+     * Se llama tras un duelo ELO para mantener TierManager coherente con el scoreboard.
+     * Solo sube puntos, nunca los reduce por sincronización.
+     */
+    public void syncFromElo(UUID uuid, String kitName, int elo) {
+        Tier eloTier = Tier.fromElo(elo);
+        if (eloTier == Tier.UNRANKED) return;
+        String kit   = kitName.toLowerCase();
+        int current  = effectivePts(uuid, kit);
+        int eloFloor = eloTier.minPoints; // puntos mínimos de ese tier
+        if (eloFloor > current) {
+            Tier before = Tier.fromPoints(current);
+            setPts(uuid, kit, eloFloor);
+            save();
+            // Notificar subida de rango si aplica
+            Tier after = Tier.fromPoints(eloFloor);
+            if (after.ordinal() > before.ordinal()) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+                    String prefix = plugin.prefix();
+                    player.sendMessage(prefix + "§6§l▲ ¡SUBISTE DE RANGO!");
+                    player.sendMessage(prefix + "  §8" + before.colour + before.displayName
+                            + " §8→ §r" + after.colour + "§l" + after.displayName);
+                    player.sendTitle(
+                            ChatColor.translateAlternateColorCodes('&', "&6&l▲ SUBISTE DE RANGO"),
+                            ChatColor.translateAlternateColorCodes('&',
+                                    after.colour.replace("§", "&") + "&l" + after.displayName),
+                            10, 80, 20);
+                    player.playSound(player.getLocation(),
+                            org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+                }
+            }
+        }
     }
 
     /** Puntuación total = suma de tierScore() de cada kit jugado. */
