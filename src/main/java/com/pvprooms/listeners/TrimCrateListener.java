@@ -82,10 +82,12 @@ public class TrimCrateListener implements Listener {
             player.sendMessage(plugin.prefix() + "§e§l✦ " + themedPiece.getSymbol() + " §fCrate de " + themedPiece.getDisplayName() + " §e§l✦");
             player.sendMessage(plugin.prefix() + "§7Obtuviste: " + col + cap(trim.getPattern())
                     + " §7de §r" + mc + cap(trim.getMaterial()) + " §7para " + themedPiece.getDisplayName());
+            player.sendMessage(plugin.prefix() + "§7§l🔒 Trim desbloqueado específicamente para " + themedPiece.getDisplayName());
         } else {
             player.sendMessage(plugin.prefix() + (legendary ? "§5§l✦ §dCrate Legendario §5§l✦" : "§b✦ §eCrate de Trims §b✦"));
             player.sendMessage(plugin.prefix() + "§7Obtuviste: " + col + cap(trim.getPattern())
                     + " §7de §r" + mc + cap(trim.getMaterial()));
+            player.sendMessage(plugin.prefix() + "§7§l🔒 Trim desbloqueado para una pieza aleatoria de armadura");
         }
 
         plugin.getTrimGUI().openReward(player, trim);

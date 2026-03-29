@@ -3,6 +3,7 @@ package com.pvprooms.commands;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.ArmorPiece;
 import com.pvprooms.model.PhysicalTrimCrate;
+import com.pvprooms.model.HelmetTrimBlock;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -54,6 +55,12 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // Handle "helmetblock" subcommand
+        if (type.equals("helmetblock")) {
+            giveHelmetBlock(player);
+            return true;
+        }
+
         // Need at least 2 arguments: type and piece
         if (args.length < 2) {
             sendHelp(player);
@@ -65,7 +72,7 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
 
         // Validate type
         if (!type.equals("normal") && !type.equals("themed")) {
-            player.sendMessage(plugin.prefix() + "§cTipo inválido. Usa: normal, themed");
+            player.sendMessage(plugin.prefix() + "§cTipo inválido. Usa: normal, themed, helmetblock");
             return true;
         }
 
@@ -95,6 +102,13 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(plugin.prefix() + "§aRecibiste una §6Llave de Crate§a. Úsala para abrir crates.");
     }
 
+    /** Gives a helmet trim block to the player */
+    private void giveHelmetBlock(Player player) {
+        ItemStack block = HelmetTrimBlock.createBlockItem();
+        player.getInventory().addItem(block);
+        player.sendMessage(plugin.prefix() + "§aRecibiste un §6Bloque de Trims de Casco§a. Colócalo en el mundo y úsalo con una llave.");
+    }
+
     /** Creates a crate key item */
     private ItemStack createCrateKey() {
         ItemStack key = new ItemStack(Material.TRIPWIRE_HOOK);
@@ -115,7 +129,7 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
         if (args.length == 1) {
-            return List.of("normal", "themed", "key");
+            return List.of("normal", "themed", "key", "helmetblock");
         }
         if (args.length == 2) {
             return List.of("helmet", "chestplate", "leggings", "boots");
@@ -130,10 +144,12 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         p.sendMessage("§5§m          §r §dCrates Físicas §5§m          ");
         p.sendMessage("§7/crate §f<tipo> <pieza> [legendary]");
         p.sendMessage("§7/crate §fkey §8- Da llave de crate (admin)");
+        p.sendMessage("§7/crate §fhelmetblock §8- Da bloque de trims de casco (admin)");
         p.sendMessage("");
         p.sendMessage("§7Tipos:");
         p.sendMessage("§f• §7normal §8- Crate normal (cyan)");
         p.sendMessage("§f• §7themed §8- Crate temática (amarilla)");
+        p.sendMessage("§f• §7helmetblock §8- Bloque especial de casco (oro)");
         p.sendMessage("");
         p.sendMessage("§7Piezas:");
         p.sendMessage("§f• §7helmet §8- Casco");
@@ -149,5 +165,6 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         p.sendMessage("§7/crate themed chestplate");
         p.sendMessage("§7/crate normal boots legendary");
         p.sendMessage("§7/crate key");
+        p.sendMessage("§7/crate helmetblock");
     }
 }

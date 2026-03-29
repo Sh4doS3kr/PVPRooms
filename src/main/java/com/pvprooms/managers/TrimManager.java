@@ -3,6 +3,7 @@ package com.pvprooms.managers;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.ArmorPiece;
 import com.pvprooms.model.Trim;
+import org.bukkit.Bukkit;
 import org.bukkit.Registry;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -19,8 +20,15 @@ import java.util.*;
 import java.util.logging.Level;
 
 /**
- * Manages per-player armor trims and crate reward logic.
+ * Manages per-player armor trims.
  * Persistence: plugins/PvPRoomsPro/trims.yml
+ *
+ * SISTEMA HÍBRIDO:
+ * - PATRONES: Controlados por administradores (solo admins dan acceso)
+ * - MATERIALES: Libres para todos los jugadores
+ * 
+ * ACCESO HÍBRIDO: Si tienes un patrón, puedes usarlo con CUALQUIER material.
+ * Ejemplo: Si admin te da "Vex", puedes usar Vex con Diamond, Netherite, Gold, etc.
  *
  * Priority order when applying trims:
  *   1. Player personal trims (highest — override everything)
@@ -141,6 +149,7 @@ public class TrimManager {
 
     /** Returns all unlocked trims for a player and armor piece. */
     public Set<String> getUnlockedTrims(UUID uuid, ArmorPiece piece) {
+        // SISTEMA HÍBRIDO: Patrones controlados, materiales libres
         Map<ArmorPiece, Set<String>> playerUnlocks = unlockedTrims.get(uuid);
         if (playerUnlocks == null) return Collections.emptySet();
         return Collections.unmodifiableSet(playerUnlocks.getOrDefault(piece, Collections.emptySet()));
@@ -148,6 +157,7 @@ public class TrimManager {
 
     /** Checks if a player has unlocked a specific trim pattern for a piece. */
     public boolean hasUnlockedTrim(UUID uuid, ArmorPiece piece, String pattern) {
+        // SISTEMA HÍBRIDO: Verificar si tiene el patrón desbloqueado
         return getUnlockedTrims(uuid, piece).contains(pattern.toLowerCase());
     }
 
@@ -165,6 +175,143 @@ public class TrimManager {
                 .computeIfAbsent(piece, p -> new HashSet<>());
         patterns.forEach(p -> playerSet.add(p.toLowerCase()));
         save();
+    }
+
+    // ── Administrative trim access ─────────────────────────────────────────────
+
+    /**
+     * Administrative method to give a specific trim pattern to a player.
+     * Only admins should use this method.
+     * Players can choose any material for the given pattern.
+     */
+    public void adminGiveTrim(UUID playerUuid, ArmorPiece piece, String pattern) {
+        unlockTrim(playerUuid, piece, pattern);
+        
+        Player player = Bukkit.getPlayer(playerUuid);
+        if (player != null && player.isOnline()) {
+            String patColor = patternColour(pattern);
+            player.sendMessage(plugin.prefix() + "§a§l✦ ¡Un administrador te ha dado un patrón!");
+            player.sendMessage(plugin.prefix() + "§7Patrón recibido: " + patColor + cap(pattern));
+            player.sendMessage(plugin.prefix() + "§7Pieza: " + piece.getDisplayName());
+            player.sendMessage(plugin.prefix() + "§7§l✨ ¡Puedes usarlo con CUALQUIER material!");
+            player.sendMessage(plugin.prefix() + "§eUsa §7/trim §epara equiparlo.");
+        }
+    }
+
+    /**
+     * Administrative method to give multiple trims to a player.
+     * Only admins should use this method.
+     */
+    public void adminGiveMultipleTrims(UUID playerUuid, Map<ArmorPiece, List<String>> trims) {
+        int totalGiven = 0;
+        
+        for (Map.Entry<ArmorPiece, List<String>> entry : trims.entrySet()) {
+            ArmorPiece piece = entry.getKey();
+            List<String> patterns = entry.getValue();
+            
+            if (!patterns.isEmpty()) {
+                unlockTrims(playerUuid, piece, new HashSet<>(patterns));
+                totalGiven += patterns.size();
+            }
+        }
+        
+        Player player = Bukkit.getPlayer(playerUuid);
+        if (player != null && player.isOnline()) {
+            player.sendMessage(plugin.prefix() + "§a§l✦ ¡Un administrador te ha dado " + totalGiven + " trims!");
+            player.sendMessage(plugin.prefix() + "§7Usa §7/trim §epara ver y equipar tus nuevos trims.");
+        }
+    }
+
+    /**
+     * Administrative method to give all trims to a player for a specific piece.
+     * Only admins should use this method.
+     */
+    public void adminGiveAllTrimsForPiece(UUID playerUuid, ArmorPiece piece) {
+        Set<String> allPatterns = new HashSet<>();
+        allPatterns.addAll(NORMAL_PATTERNS);
+        allPatterns.addAll(LEGENDARY_PATTERNS);
+        
+        unlockTrims(playerUuid, piece, allPatterns);
+        
+        Player player = Bukkit.getPlayer(playerUuid);
+        if (player != null && player.isOnline()) {
+            player.sendMessage(plugin.prefix() + "§a§l✦ ¡Un administrador te ha dado TODOS los trims!");
+            player.sendMessage(plugin.prefix() + "§7Pieza: " + piece.getDisplayName());
+            player.sendMessage(plugin.prefix() + "§7Trims recibidos: " + allPatterns.size() + " patrones");
+            player.sendMessage(plugin.prefix() + "§eUsa §7/trim §epara equiparlos.");
+        }
+    }
+
+    /**
+     * Administrative method to remove a trim from a player.
+     * Only admins should use this method.
+     */
+    public void adminRemoveTrim(UUID playerUuid, ArmorPiece piece, String pattern) {
+        Map<ArmorPiece, Set<String>> playerUnlocks = unlockedTrims.get(playerUuid);
+        if (playerUnlocks != null) {
+            Set<String> pieceTrims = playerUnlocks.get(piece);
+            if (pieceTrims != null) {
+                pieceTrims.remove(pattern.toLowerCase());
+                if (pieceTrims.isEmpty()) {
+                    playerUnlocks.remove(piece);
+                }
+                if (playerUnlocks.isEmpty()) {
+                    unlockedTrims.remove(playerUuid);
+                }
+                save();
+                
+                Player player = Bukkit.getPlayer(playerUuid);
+                if (player != null && player.isOnline()) {
+                    player.sendMessage(plugin.prefix() + "§c§l✦ Un administrador te ha quitado un trim.");
+                    player.sendMessage(plugin.prefix() + "§7Trim removido: " + patternColour(pattern) + cap(pattern));
+                    player.sendMessage(plugin.prefix() + "§7Pieza: " + piece.getDisplayName());
+                }
+            }
+        }
+    }
+
+    private static String cap(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    // ── Random trim generation ───────────────────────────────────────────────
+
+    /**
+     * Generates a random trim for a specific armor piece.
+     * @param piece The armor piece to generate a trim for
+     * @param legendary Whether to generate legendary patterns only
+     * @return A random Trim object
+     */
+    public Trim randomTrimForPiece(ArmorPiece piece, boolean legendary) {
+        Random random = new Random();
+        
+        // Choose pattern based on legendary flag
+        List<String> availablePatterns = legendary ? LEGENDARY_PATTERNS : NORMAL_PATTERNS;
+        String pattern = availablePatterns.get(random.nextInt(availablePatterns.size()));
+        
+        // Choose material (all materials available)
+        String material = materialKeys.get(random.nextInt(materialKeys.size()));
+        
+        return new Trim(material, pattern);
+    }
+
+    /**
+     * Generates a completely random trim.
+     * @param legendary Whether to generate legendary patterns only
+     * @return A random Trim object
+     */
+    public Trim randomTrim(boolean legendary) {
+        Random random = new Random();
+        
+        // Choose pattern based on legendary flag
+        List<String> availablePatterns = legendary ? LEGENDARY_PATTERNS : NORMAL_PATTERNS;
+        String pattern = availablePatterns.get(random.nextInt(availablePatterns.size()));
+        
+        // Choose material (all materials available)
+        String material = materialKeys.get(random.nextInt(materialKeys.size()));
+        
+        return new Trim(material, pattern);
     }
 
     // ── Applying trims ────────────────────────────────────────────────────
@@ -235,47 +382,6 @@ public class TrimManager {
         item.setItemMeta(armorMeta);
     }
 
-    // ── Random crate reward ───────────────────────────────────────────────
-
-    /**
-     * Generates a random trim.
-     *
-     * @param legendary if true selects from legendary patterns; otherwise normal
-     */
-    public Trim randomTrim(boolean legendary) {
-        List<String> pool    = legendary ? LEGENDARY_PATTERNS : NORMAL_PATTERNS;
-        List<String> matPool = materialKeys.isEmpty() ? List.of("iron") : materialKeys;
-        Random rng = new Random();
-        String pattern  = pool.get(rng.nextInt(pool.size()));
-        String material = matPool.get(rng.nextInt(matPool.size()));
-        return new Trim(material, pattern);
-    }
-
-    /**
-     * Generates a random trim optimized for a specific armor piece.
-     * Uses preferred patterns for the piece but can also use any pattern.
-     *
-     * @param piece the armor piece to optimize for
-     * @param legendary if true selects from legendary patterns; otherwise normal
-     */
-    public Trim randomTrimForPiece(ArmorPiece piece, boolean legendary) {
-        List<String> allPatterns = legendary ? LEGENDARY_PATTERNS : NORMAL_PATTERNS;
-        List<String> preferredPatterns = PIECE_PREFERRED_PATTERNS.getOrDefault(piece, allPatterns);
-        List<String> matPool = materialKeys.isEmpty() ? List.of("iron") : materialKeys;
-        Random rng = new Random();
-        
-        // 70% chance to use a preferred pattern, 30% any pattern
-        String pattern;
-        if (rng.nextDouble() < 0.7) {
-            pattern = preferredPatterns.get(rng.nextInt(preferredPatterns.size()));
-        } else {
-            pattern = allPatterns.get(rng.nextInt(allPatterns.size()));
-        }
-        
-        String material = matPool.get(rng.nextInt(matPool.size()));
-        return new Trim(material, pattern);
-    }
-
     // ── Persistence ───────────────────────────────────────────────────────
 
     public void load() {
@@ -300,7 +406,7 @@ public class TrimManager {
             }
         }
         
-        // Load unlocked trims
+        // Load unlocked trims (por pieza)
         if (cfg.contains("unlocked")) {
             for (String uuidStr : cfg.getConfigurationSection("unlocked").getKeys(false)) {
                 try {
@@ -330,7 +436,7 @@ public class TrimManager {
                     cfg.set(base + "." + piece.name().toLowerCase(), trim.toString()));
         }
         
-        // Save unlocked trims
+        // Save unlocked trims (por pieza)
         for (Map.Entry<UUID, Map<ArmorPiece, Set<String>>> entry : unlockedTrims.entrySet()) {
             String base = "unlocked." + entry.getKey();
             entry.getValue().forEach((piece, patterns) ->

@@ -5,6 +5,7 @@ import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.commands.TrimCommand;
 import com.pvprooms.commands.PhysicalCrateCommand;
 import com.pvprooms.commands.KitTrimCommand;
+import com.pvprooms.commands.TrimAdminCommand;
 import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.ArenaConfigGUI;
 import com.pvprooms.gui.KitTrimGUI;
@@ -268,6 +269,10 @@ public class PvPRoomsPro extends JavaPlugin {
         PartyCommand partyCmd = new PartyCommand(this);
         getCommand("party").setExecutor(partyCmd);
         getCommand("party").setTabCompleter(partyCmd);
+
+        TrimAdminCommand trimAdminCmd = new TrimAdminCommand(this);
+        getCommand("trimadmin").setExecutor(trimAdminCmd);
+        getCommand("trimadmin").setTabCompleter(trimAdminCmd);
 
         AdminNpcHoloCommand adminNpcHoloCmd = new AdminNpcHoloCommand(this);
         // Admin command already registered, just add NPC/Holo subcommands via the existing /admin

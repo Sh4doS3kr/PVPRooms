@@ -63,6 +63,10 @@ commands:
     description: Gestiona tus trims de armadura personales
     usage: /trim [gui|clear [piece]|give <crate|key|legendary> [player]]
     permission: pvprooms.trim
+  trimadmin:
+    description: Comando administrativo para gestionar trims de jugadores
+    usage: /trimadmin <give|giveall|remove|list|clear|info> ...
+    permission: pvprooms.admin
   kittrim:
     description: Configura los trims por defecto de un kit (admin)
     usage: /kittrim <kit> [gui]
