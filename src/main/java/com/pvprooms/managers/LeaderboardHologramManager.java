@@ -9,6 +9,10 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.scheduler.BukkitTask;
 
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.world.ChunkLoadEvent;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -17,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Manages holograms for leaderboards, stats, and information displays.
  */
-public class LeaderboardHologramManager {
+public class LeaderboardHologramManager implements Listener {
 
     public enum HoloType {
         TOP_GENERAL, TOP_KIT, TOP_ELO, TOP_WINS, TOP_STREAK, TOP_KDR,
@@ -39,8 +43,36 @@ public class LeaderboardHologramManager {
     public LeaderboardHologramManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "holograms.yml");
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         load();
         startRefreshTask();
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        // When a chunk loads, check if any holograms need to be respawned
+        int chunkX = event.getChunk().getX();
+        int chunkZ = event.getChunk().getZ();
+        
+        for (HoloData holo : holograms.values()) {
+            Location loc = holo.location();
+            if (loc == null || loc.getWorld() == null) continue;
+            if (!loc.getWorld().equals(event.getWorld())) continue;
+            
+            int holoChunkX = loc.getBlockX() >> 4;
+            int holoChunkZ = loc.getBlockZ() >> 4;
+            
+            if (holoChunkX == chunkX && holoChunkZ == chunkZ) {
+                // Remove any existing entities first (prevents duplicates)
+                removeHologramEntitiesNear(loc, 5.0);
+                
+                // Respawn the hologram
+                List<String> lines = holo.type() == HoloType.CUSTOM ? holo.customLines() : generateLines(holo.type(), holo.subtype(), holo.lines());
+                List<UUID> newEntities = spawnHologramLines(loc, lines);
+                
+                holograms.put(holo.id(), new HoloData(holo.id(), holo.type(), holo.subtype(), loc, holo.refreshSeconds(), holo.lines(), holo.customLines(), newEntities));
+            }
+        }
     }
 
     public int createHologram(HoloType type, String subtype, Location loc) {
@@ -447,20 +479,26 @@ public class LeaderboardHologramManager {
             if (holo.type() == HoloType.CUSTOM) continue;
             if (holo.refreshSeconds() <= 0) continue;
             
-            // Remove old entities by tag near location (reliable)
-            removeHologramEntitiesNear(holo.location(), 5.0);
+            Location loc = holo.location();
+            if (loc == null || loc.getWorld() == null) continue;
+            
+            // Skip if chunk is not loaded (prevents duplication on chunk reload)
+            if (!loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) continue;
+            
+            // Remove old entities by tag near location
+            removeHologramEntitiesNear(loc, 5.0);
             
             // Spawn new
             List<String> lines = generateLines(holo.type(), holo.subtype(), holo.lines());
-            List<UUID> newEntities = spawnHologramLines(holo.location(), lines);
+            List<UUID> newEntities = spawnHologramLines(loc, lines);
             
-            holograms.put(holo.id(), new HoloData(holo.id(), holo.type(), holo.subtype(), holo.location(), holo.refreshSeconds(), holo.lines(), holo.customLines(), newEntities));
+            holograms.put(holo.id(), new HoloData(holo.id(), holo.type(), holo.subtype(), loc, holo.refreshSeconds(), holo.lines(), holo.customLines(), newEntities));
         }
     }
 
     public void load() {
-        // Clean up ALL hologram entities first to prevent accumulation
-        Bukkit.getScheduler().runTaskLater(plugin, this::removeAllHologramEntities, 20L);
+        // Clean up ALL hologram entities IMMEDIATELY to prevent accumulation
+        removeAllHologramEntities();
         
         if (!dataFile.exists()) return;
         
