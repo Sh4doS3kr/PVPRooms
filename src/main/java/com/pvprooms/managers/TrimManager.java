@@ -31,7 +31,10 @@ public class TrimManager {
     private final PvPRoomsPro plugin;
     private final File trimsFile;
 
-    /** UUID → (ArmorPiece → Trim) for personal trims. */
+    /** Maps player UUID → (armor piece → unlocked trims set) */
+    private final Map<UUID, Map<ArmorPiece, Set<String>>> unlockedTrims = new HashMap<>();
+
+    /** Maps player UUID → (armor piece → currently equipped trim) */
     private final Map<UUID, Map<ArmorPiece, Trim>> playerTrims = new HashMap<>();
 
     /** Ordered list of all valid TrimMaterial keys from the Bukkit Registry. */
@@ -131,6 +134,36 @@ public class TrimManager {
     /** Removes all personal trims for a player. */
     public void clearAllTrims(UUID uuid) {
         playerTrims.remove(uuid);
+        save();
+    }
+
+    // ── Unlocked trims system ─────────────────────────────────────────────────
+
+    /** Returns all unlocked trims for a player and armor piece. */
+    public Set<String> getUnlockedTrims(UUID uuid, ArmorPiece piece) {
+        Map<ArmorPiece, Set<String>> playerUnlocks = unlockedTrims.get(uuid);
+        if (playerUnlocks == null) return Collections.emptySet();
+        return Collections.unmodifiableSet(playerUnlocks.getOrDefault(piece, Collections.emptySet()));
+    }
+
+    /** Checks if a player has unlocked a specific trim pattern for a piece. */
+    public boolean hasUnlockedTrim(UUID uuid, ArmorPiece piece, String pattern) {
+        return getUnlockedTrims(uuid, piece).contains(pattern.toLowerCase());
+    }
+
+    /** Unlocks a trim pattern for a player and armor piece. */
+    public void unlockTrim(UUID uuid, ArmorPiece piece, String pattern) {
+        unlockedTrims.computeIfAbsent(uuid, k -> new EnumMap<>(ArmorPiece.class))
+                .computeIfAbsent(piece, p -> new HashSet<>())
+                .add(pattern.toLowerCase());
+        save();
+    }
+
+    /** Unlocks multiple trim patterns at once. */
+    public void unlockTrims(UUID uuid, ArmorPiece piece, Set<String> patterns) {
+        Set<String> playerSet = unlockedTrims.computeIfAbsent(uuid, k -> new EnumMap<>(ArmorPiece.class))
+                .computeIfAbsent(piece, p -> new HashSet<>());
+        patterns.forEach(p -> playerSet.add(p.toLowerCase()));
         save();
     }
 
@@ -247,34 +280,67 @@ public class TrimManager {
 
     public void load() {
         playerTrims.clear();
+        unlockedTrims.clear();
         if (!trimsFile.exists()) return;
         FileConfiguration cfg = YamlConfiguration.loadConfiguration(trimsFile);
-        if (!cfg.contains("trims")) return;
-        for (String uuidStr : cfg.getConfigurationSection("trims").getKeys(false)) {
-            try {
-                UUID uuid = UUID.fromString(uuidStr);
-                Map<ArmorPiece, Trim> map = new EnumMap<>(ArmorPiece.class);
-                for (ArmorPiece piece : ArmorPiece.values()) {
-                    String val = cfg.getString("trims." + uuidStr + "." + piece.name().toLowerCase());
-                    Trim t = Trim.fromString(val);
-                    if (t != null) map.put(piece, t);
-                }
-                if (!map.isEmpty()) playerTrims.put(uuid, map);
-            } catch (IllegalArgumentException ignored) {}
+        
+        // Load equipped trims
+        if (cfg.contains("trims")) {
+            for (String uuidStr : cfg.getConfigurationSection("trims").getKeys(false)) {
+                try {
+                    UUID uuid = UUID.fromString(uuidStr);
+                    Map<ArmorPiece, Trim> map = new EnumMap<>(ArmorPiece.class);
+                    for (ArmorPiece piece : ArmorPiece.values()) {
+                        String val = cfg.getString("trims." + uuidStr + "." + piece.name().toLowerCase());
+                        Trim t = Trim.fromString(val);
+                        if (t != null) map.put(piece, t);
+                    }
+                    if (!map.isEmpty()) playerTrims.put(uuid, map);
+                } catch (IllegalArgumentException ignored) {}
+            }
         }
+        
+        // Load unlocked trims
+        if (cfg.contains("unlocked")) {
+            for (String uuidStr : cfg.getConfigurationSection("unlocked").getKeys(false)) {
+                try {
+                    UUID uuid = UUID.fromString(uuidStr);
+                    Map<ArmorPiece, Set<String>> unlockedMap = new EnumMap<>(ArmorPiece.class);
+                    for (ArmorPiece piece : ArmorPiece.values()) {
+                        List<String> patterns = cfg.getStringList("unlocked." + uuidStr + "." + piece.name().toLowerCase());
+                        if (!patterns.isEmpty()) {
+                            unlockedMap.put(piece, new HashSet<>(patterns));
+                        }
+                    }
+                    if (!unlockedMap.isEmpty()) unlockedTrims.put(uuid, unlockedMap);
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        
         plugin.getLogger().info("[TrimManager] Loaded trims for " + playerTrims.size() + " player(s).");
     }
 
     public void save() {
         FileConfiguration cfg = new YamlConfiguration();
+        
+        // Save equipped trims
         for (Map.Entry<UUID, Map<ArmorPiece, Trim>> entry : playerTrims.entrySet()) {
             String base = "trims." + entry.getKey();
             entry.getValue().forEach((piece, trim) ->
                     cfg.set(base + "." + piece.name().toLowerCase(), trim.toString()));
         }
-        try { cfg.save(trimsFile); }
-        catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save trims.yml", e);
+        
+        // Save unlocked trims
+        for (Map.Entry<UUID, Map<ArmorPiece, Set<String>>> entry : unlockedTrims.entrySet()) {
+            String base = "unlocked." + entry.getKey();
+            entry.getValue().forEach((piece, patterns) ->
+                    cfg.set(base + "." + piece.name().toLowerCase(), new ArrayList<>(patterns)));
+        }
+        
+        try {
+            cfg.save(trimsFile);
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "[TrimManager] Failed to save trims.yml", e);
         }
     }
 }

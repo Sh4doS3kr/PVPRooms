@@ -3,12 +3,14 @@ package com.pvprooms;
 import com.pvprooms.commands.*;
 import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.commands.TrimCommand;
+import com.pvprooms.commands.PhysicalCrateCommand;
 import com.pvprooms.commands.KitTrimCommand;
 import com.pvprooms.gui.AdminPanelGUI;
 import com.pvprooms.gui.ArenaConfigGUI;
 import com.pvprooms.gui.KitTrimGUI;
 import com.pvprooms.gui.QueueModeGUI;
 import com.pvprooms.gui.TrimGUI;
+import com.pvprooms.gui.TrimRouletteGUI;
 import com.pvprooms.managers.HealthHologramManager;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.managers.TrimManager;
@@ -19,10 +21,12 @@ import com.pvprooms.listeners.KitTrimGUIListener;
 import com.pvprooms.listeners.PlayerListener;
 import com.pvprooms.listeners.TrimCrateListener;
 import com.pvprooms.listeners.TrimGUIListener;
+import com.pvprooms.listeners.PhysicalTrimCrateListener;
 import com.pvprooms.api.TierApiServer;
 import com.pvprooms.listeners.SpearListener;
 import com.pvprooms.managers.TierManager;
 import com.pvprooms.model.TrimCrate;
+import com.pvprooms.model.PhysicalTrimCrate;
 import com.pvprooms.util.RegionDetector;
 import com.pvprooms.weapons.SpearItem;
 import com.pvprooms.managers.*;
@@ -70,6 +74,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private PersonalKitManager personalKitManager;
     private TrimManager trimManager;
     private TrimGUI trimGUI;
+    private TrimRouletteGUI trimRouletteGUI;
     private KitTrimGUI kitTrimGUI;
     private NpcManager npcManager;
     private LeaderboardHologramManager hologramManager;
@@ -106,10 +111,13 @@ public class PvPRoomsPro extends JavaPlugin {
         tierManager             = new TierManager(this);
         statsManager            = new StatsManager(this);
         trimGUI                 = new TrimGUI(this);
+        trimRouletteGUI         = new TrimRouletteGUI(this);
         kitTrimGUI              = new KitTrimGUI(this);
         npcManager              = new NpcManager(this);
         hologramManager         = new LeaderboardHologramManager(this);
         SpearItem.init(this);
+        TrimCrate.init(this);
+        PhysicalTrimCrate.init(this);
 
         // Detect server region asynchronously
         String fallback = getConfig().getString("server.region", "eu");
@@ -230,6 +238,10 @@ public class PvPRoomsPro extends JavaPlugin {
         getCommand("trim").setExecutor(trimCmd);
         getCommand("trim").setTabCompleter(trimCmd);
 
+        PhysicalCrateCommand crateCmd = new PhysicalCrateCommand(this);
+        getCommand("crate").setExecutor(crateCmd);
+        getCommand("crate").setTabCompleter(crateCmd);
+
         KitTrimCommand kitTrimCmd = new KitTrimCommand(this);
         getCommand("kittrim").setExecutor(kitTrimCmd);
         getCommand("kittrim").setTabCompleter(kitTrimCmd);
@@ -255,6 +267,7 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new TrimGUIListener(this), this);
         pm.registerEvents(new KitTrimGUIListener(this), this);
         pm.registerEvents(new TrimCrateListener(this), this);
+        pm.registerEvents(new PhysicalTrimCrateListener(this), this);
     }
 
     // ── Lobby world setup ──────────────────────────────────────────────────
@@ -320,6 +333,7 @@ public class PvPRoomsPro extends JavaPlugin {
     public PersonalKitManager    getPersonalKitManager()    { return personalKitManager; }
     public TrimManager           getTrimManager()            { return trimManager; }
     public TrimGUI               getTrimGUI()                { return trimGUI; }
+    public TrimRouletteGUI     getTrimRouletteGUI()        { return trimRouletteGUI; }
     public KitTrimGUI            getKitTrimGUI()             { return kitTrimGUI; }
     public NpcManager            getNpcManager()              { return npcManager; }
     public LeaderboardHologramManager getHologramManager()    { return hologramManager; }

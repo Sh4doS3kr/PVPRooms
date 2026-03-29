@@ -17,6 +17,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -174,6 +175,9 @@ public class TrimGUI {
 
     public void openPickPattern(Player player, String pieceKey) {
         TrimManager tm = plugin.getTrimManager();
+        ArmorPiece piece = ArmorPiece.fromName(pieceKey);
+        Set<String> unlockedPatterns = tm.getUnlockedTrims(player.getUniqueId(), piece);
+        
         TrimGUIHolder holder = new TrimGUIHolder(player.getUniqueId(),
                 TrimGUIHolder.Page.PICK_PATTERN, pieceKey, null, null);
         Inventory inv = Bukkit.createInventory(holder, 54,
@@ -183,17 +187,20 @@ public class TrimGUI {
         fillPremiumBackground(inv);
 
         // Title
-        inv.setItem(4, buildGlowItem(Material.PAPER, "§d§lPATRONES DISPONIBLES",
+        inv.setItem(4, buildGlowItem(Material.PAPER, "§d§lPATRONES DESBLOQUEADOS",
                 List.of("§7Selecciona un patrón para tu",
                         "§f" + cap(pieceKey) + "§7.",
                         "",
-                        "§5★ §d= Legendario")));
+                        "§a✦ §fDesbloqueados: " + unlockedPatterns.size(),
+                        "§7Usa crates para obtener más")));
 
         List<String> patterns = tm.getPatternKeys();
         int[] contentSlots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
         int idx = 0;
         for (String pattern : patterns) {
             if (idx >= contentSlots.length) break;
+            
+            boolean isUnlocked = unlockedPatterns.contains(pattern);
             boolean legendary = tm.getLegendaryPatternKeys().contains(pattern);
             String colour = tm.patternColour(pattern);
             Material icon = PATTERN_ICONS.getOrDefault(pattern, Material.PAPER);
@@ -201,18 +208,29 @@ public class TrimGUI {
             List<String> lore = new ArrayList<>();
             lore.add("§8━━━━━━━━━━━━━━━━━━");
             lore.add("§7Patrón: " + colour + "§l" + cap(pattern));
+            
+            if (isUnlocked) {
+                lore.add("");
+                lore.add("§a✦ §7DESBLOQUEADO");
+                lore.add("§7▸ Click para seleccionar");
+            } else {
+                lore.add("");
+                lore.add("§c✦ §7BLOQUEADO");
+                lore.add("§7▸ Usa crates para desbloquear");
+            }
+            
             if (legendary) {
                 lore.add("");
                 lore.add("§5★ §d§lLEGENDARIO §5★");
-            } else {
-                lore.add("§8Común");
             }
+            
             lore.add("§8━━━━━━━━━━━━━━━━━━");
             lore.add("");
-            lore.add("§a▸ Click para seleccionar");
             
-            ItemStack item = legendary ? buildGlowItem(icon, colour + "§l" + cap(pattern), lore)
-                                       : buildItem(icon, colour + "§l" + cap(pattern), lore);
+            ItemStack item = isUnlocked 
+                ? buildGlowItem(icon, colour + "§l" + cap(pattern), lore)
+                : buildItem(Material.BARRIER, "§c" + cap(pattern), List.of("§7Bloqueado", "§7▸ Usa crates para desbloquear"));
+            
             inv.setItem(contentSlots[idx], item);
             idx++;
         }
