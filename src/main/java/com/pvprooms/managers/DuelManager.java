@@ -274,6 +274,8 @@ public class DuelManager {
             String loserName  = loser  != null ? loser.getName()  : loserUUID.toString();
             plugin.getStatsManager().recordWin(winnerUUID, winnerName);
             plugin.getStatsManager().recordLoss(loserUUID, loserName);
+            plugin.getStatsManager().recordKill(winnerUUID, winnerName);
+            plugin.getStatsManager().recordDeath(loserUUID, loserName);
             
             if (duel.isBo3()) {
                 // TIER mode: update tier points, skip ELO
@@ -345,6 +347,13 @@ public class DuelManager {
         Player p2 = Bukkit.getPlayer(duel.getPlayer2());
         Player roundWinner = Bukkit.getPlayer(roundWinnerUUID);
         String winnerName  = roundWinner != null ? roundWinner.getName() : "?";
+
+        // Record kill/death for each round in BO3
+        UUID roundLoserUUID = roundWinnerUUID.equals(duel.getPlayer1()) ? duel.getPlayer2() : duel.getPlayer1();
+        Player roundLoser = Bukkit.getPlayer(roundLoserUUID);
+        String loserName = roundLoser != null ? roundLoser.getName() : "?";
+        plugin.getStatsManager().recordKill(roundWinnerUUID, winnerName);
+        plugin.getStatsManager().recordDeath(roundLoserUUID, loserName);
 
         // Stop holograms immediately
         plugin.getHealthHologramManager().stopHolograms(duel.getId());
