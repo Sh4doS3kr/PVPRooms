@@ -180,7 +180,6 @@ public class ScoreboardManager {
             com.pvprooms.model.TierTitle myTitle = plugin.getTierManager().getTitle(player.getUniqueId());
             tl(obj, s++, leg("&e&l» &fTier &8(" + duel.getKitName() + "&8): " + myKitTier.colour + myKitTier.displayName), 7);
             tl(obj, s++, leg("&e&l» &fPuntos: &6" + Math.max(0, myPts)), 6);
-            tl(obj, s++, leg("&e&l» &fInsignia: " + myTitle.colour + myTitle.symbol + " " + myTitle.name), 5);
             if (opponent != null) {
                 Tier opKitTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
                 tl(obj, s++, leg("&e&l» &fTier rival: &c" + opKitTier.colour + opKitTier.displayName), 4);
