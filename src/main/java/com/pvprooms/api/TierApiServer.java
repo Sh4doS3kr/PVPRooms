@@ -162,6 +162,20 @@ public class TierApiServer {
         int elo         = plugin.getEloManager().getElo(uuid);
         int eloRank     = plugin.getEloManager().getRank(uuid);
         Tier bestTier   = tm.getBestTier(uuid);
+        String country  = plugin.getEloManager().getCountry(uuid);
+
+        // Stats
+        var stats = plugin.getStatsManager().getStats(uuid);
+        int wins = stats.wins(), losses = stats.losses();
+        int kills = stats.kills(), deaths = stats.deaths();
+        int streak = stats.currentStreak(), bestStreak = stats.bestStreak();
+        double kdr = stats.getKDR();
+        double winrate = (wins + losses) > 0 ? (double) wins / (wins + losses) * 100 : 0;
+
+        // Ping (if online)
+        var player = plugin.getServer().getPlayer(uuid);
+        int ping = player != null ? player.getPing() : -1;
+        boolean online = player != null;
 
         StringBuilder kitsJson = new StringBuilder("{");
         boolean first = true;
@@ -183,8 +197,6 @@ public class TierApiServer {
         String focusTier = focusKit != null && focusPts >= 0
                 ? Tier.fromPoints(focusPts).displayName : null;
 
-        String country = plugin.getEloManager().getCountry(uuid);
-
         return "{"
                 + "\"uuid\":\""           + uuid                       + "\""
                 + ",\"nombre\":\""        + esc(name)                  + "\""
@@ -198,6 +210,16 @@ public class TierApiServer {
                 + ",\"bestTierOrdinal\":" + bestTier.ordinal()
                 + ",\"region\":\""        + esc(plugin.getServerRegion().toUpperCase()) + "\""
                 + ",\"pais\":\""          + esc(country)               + "\""
+                + ",\"wins\":"            + wins
+                + ",\"losses\":"          + losses
+                + ",\"kills\":"           + kills
+                + ",\"deaths\":"          + deaths
+                + ",\"kdr\":"             + String.format(java.util.Locale.US, "%.2f", kdr)
+                + ",\"winrate\":"         + String.format(java.util.Locale.US, "%.1f", winrate)
+                + ",\"streak\":"          + streak
+                + ",\"bestStreak\":"      + bestStreak
+                + ",\"ping\":"            + ping
+                + ",\"online\":"          + online
                 + (focusTier != null ? ",\"focusTier\":\"" + esc(focusTier) + "\",\"focusPts\":" + focusPts : "")
                 + ",\"kits\":"            + kitsJson
                 + "}";

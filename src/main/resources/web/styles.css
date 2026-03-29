@@ -4,7 +4,7 @@
 
 /* ── Reset & base ─────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:18px;scroll-behavior:smooth;}
+html{font-size:20px;scroll-behavior:smooth;}
 body{
   background:#0a0a0f;color:#e8eaf0;
   font-family:'Geist','Inter',system-ui,-apple-system,sans-serif;
@@ -210,9 +210,12 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* ═══ TABLE ════════════════════════════════════════════════ */
 .tbl-head,.tbl-row{
   display:grid;
-  grid-template-columns:58px minmax(220px,1fr) 100px 130px 90px minmax(240px,1.6fr) 90px;
-  min-width:950px;
+  grid-template-columns:58px minmax(180px,1fr) 90px 110px 70px 55px 55px minmax(200px,1.4fr) 90px;
+  min-width:1050px;
 }
+.col-wins,.col-kdr{justify-content:center;font-weight:600;font-size:.85rem;}
+.online-dot{color:#22c55e;font-size:.6rem;margin-right:.3rem;animation:pulse 2s infinite;}
+.ping-val{font-size:.65rem;color:var(--muted);margin-left:.4rem;}
 .tbl-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 
 .tbl-head{

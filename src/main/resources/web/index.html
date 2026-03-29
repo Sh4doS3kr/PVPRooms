@@ -89,6 +89,8 @@
         <div class="col-country">País</div>
         <div class="col-tier">Mejor Tier</div>
         <div class="col-elo">ELO</div>
+        <div class="col-wins">Wins</div>
+        <div class="col-kdr">KDR</div>
         <div class="col-kits">Tiers por Kit</div>
         <div class="col-pts">Puntos</div>
       </div>
@@ -338,20 +340,27 @@ function renderTable(players){
       : '<span class="muted-text">—</span>';
     const rowCls = rank===1?'row-g1':rank===2?'row-g2':rank===3?'row-g3':'';
 
+    const onlineDot = p.online ? '<span class="online-dot" title="En línea">●</span>' : '';
+    const pingTxt = p.ping >= 0 ? `<span class="ping-val">${p.ping}ms</span>` : '';
+    const winsTxt = p.wins || 0;
+    const kdrTxt = (p.kdr || 0).toFixed(2);
+
     return `<div class="tbl-row ${rowCls}" onclick="openModal('${esc(p.nombre)}')" style="animation-delay:${Math.min(i*.018,.35)}s">
       <div class="col-rank">${rkHtml}</div>
       <div class="col-player">
         <img class="row-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/36" onerror="this.style.display='none'" alt="${esc(p.nombre)}">
         <div class="row-player-info">
-          <span class="row-name">${esc(p.nombre)}</span>
+          <span class="row-name">${onlineDot}${esc(p.nombre)}</span>
           <span class="row-title" style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>
         </div>
       </div>
       <div class="col-country">`+(playerCC?flagImg(cc,18)+' <span class="country-nm">'+countryName+'</span>':'<span class="country-nm">—</span>')+`</div>
       <div class="col-tier">`+tierPill(bestTier)+`</div>
       <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
+      <div class="col-wins"><span style="color:#22c55e">${winsTxt}</span></div>
+      <div class="col-kdr"><span style="color:#06b6d4">${kdrTxt}</span></div>
       <div class="col-kits">${badgesHtml}</div>
-      <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span></div>
+      <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span>${pingTxt}</div>
     </div>`;
   }).join('');
 }
@@ -369,11 +378,26 @@ function openModal(nombre){
   document.getElementById('modalName').textContent=p.nombre;
   document.getElementById('modalTitle').innerHTML=`<span style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>`;
   document.getElementById('modalRegion').innerHTML=playerCC?flagImg(playerCC,15)+' <span>'+countryName+'</span>':'<span>—</span>';
+  const wins=p.wins||0, losses=p.losses||0, kills=p.kills||0, deaths=p.deaths||0;
+  const kdr=p.kdr||0, winrate=p.winrate||0, streak=p.streak||0, bestStreak=p.bestStreak||0;
+  const ping=p.ping>=0?p.ping+'ms':'—';
+  const onlineHtml=p.online?'<span style="color:#22c55e">● En línea</span>':'<span style="color:#6b7280">○ Desconectado</span>';
+  
   document.getElementById('modalStats').innerHTML=`
     <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mstat-l">Puntos totales</div></div>
     <div class="mstat"><div class="mstat-v" style="color:${eloC}">${elo.toLocaleString()}</div><div class="mstat-l">ELO</div></div>
     <div class="mstat"><div class="mstat-v">${eloRk}</div><div class="mstat-l">Ranking ELO</div></div>
     <div class="mstat"><div class="mstat-v" style="color:${bestC}">${esc(p.bestTier||'—')}</div><div class="mstat-l">Mejor tier</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#22c55e">${wins}</div><div class="mstat-l">Victorias</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#ef4444">${losses}</div><div class="mstat-l">Derrotas</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#3b82f6">${winrate.toFixed(1)}%</div><div class="mstat-l">Winrate</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#a855f7">${kills}</div><div class="mstat-l">Kills</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#f97316">${deaths}</div><div class="mstat-l">Muertes</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#06b6d4">${kdr.toFixed(2)}</div><div class="mstat-l">KDR</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#eab308">${streak}</div><div class="mstat-l">Racha actual</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${bestStreak}</div><div class="mstat-l">Mejor racha</div></div>
+    <div class="mstat"><div class="mstat-v">${ping}</div><div class="mstat-l">Ping</div></div>
+    <div class="mstat"><div class="mstat-v">${onlineHtml}</div><div class="mstat-l">Estado</div></div>
     <div class="mstat"><div class="mstat-v" style="color:#06b6d4">${p.kits?Object.keys(p.kits).length:0}</div><div class="mstat-l">Kits jugados</div></div>`;
   document.getElementById('modalKits').innerHTML = p.kits
     ? Object.entries(p.kits).map(([k,v])=>{
