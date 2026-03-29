@@ -286,8 +286,12 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* Rank cell */
-.rk-medal{font-size:1.15rem;line-height:1;}
-.rk-num{font-family:'Geist Mono',monospace;font-size:.8rem;font-weight:600;color:var(--muted);}
+.rk-medal{display:flex;align-items:center;justify-content:center;}
+.rk-icon{width:24px;height:24px;image-rendering:pixelated;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+.rk-1 .rk-icon{filter:drop-shadow(0 0 8px rgba(255,215,0,.5)) drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+.rk-2 .rk-icon{filter:drop-shadow(0 0 6px rgba(192,192,192,.4)) drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+.rk-3 .rk-icon{filter:drop-shadow(0 0 6px rgba(205,127,50,.4)) drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+.rk-num{font-family:'Geist Mono',monospace;font-size:.85rem;font-weight:600;color:var(--muted);}
 
 /* Player cell */
 .col-player{gap:.75rem;min-width:0;}

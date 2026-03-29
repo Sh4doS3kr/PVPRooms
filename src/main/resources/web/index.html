@@ -324,10 +324,11 @@ function renderTable(players){
 
   body.innerHTML = list.map((p,i)=>{
     const rank=i+1;
-    const rkHtml = rank===1?`<span class="rk-medal">👑</span>`:rank===2?`<span class="rk-medal">🥈</span>`:rank===3?`<span class="rk-medal">🥉</span>`:`<span class="rk-num">${rank}</span>`;
+    const rkHtml = rank===1?`<span class="rk-medal rk-1"><img src="${mcImg('gold_ingot')}" class="rk-icon"></span>`:rank===2?`<span class="rk-medal rk-2"><img src="${mcImg('iron_ingot')}" class="rk-icon"></span>`:rank===3?`<span class="rk-medal rk-3"><img src="${mcImg('copper_ingot')}" class="rk-icon"></span>`:`<span class="rk-num">${rank}</span>`;
     const titleC = tc(p.titulo);
-    const rn=(p.region||'EU').toUpperCase().substring(0,2);
-    const cc=regionCC(rn);
+    const playerCC = (p.pais||p.countryCode||'').toLowerCase();
+    const cc = playerCC || 'xx';
+    const countryName = playerCC ? (COUNTRY_NAMES[playerCC]||playerCC.toUpperCase()) : '—';
     const pts = currentKit==='overall'?p.puntosTotales:(p.kits&&p.kits[currentKit]?p.kits[currentKit].puntos:0);
     const elo = p.elo??0;
     const eloC = eloColor(elo);
@@ -346,7 +347,7 @@ function renderTable(players){
           <span class="row-title" style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>
         </div>
       </div>
-      <div class="col-country">`+flagImg(cc,18)+` <span class="country-nm">${rn}</span></div>
+      <div class="col-country">`+(playerCC?flagImg(cc,18)+' <span class="country-nm">'+countryName+'</span>':'<span class="country-nm">—</span>')+`</div>
       <div class="col-tier">`+tierPill(bestTier)+`</div>
       <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
       <div class="col-kits">${badgesHtml}</div>
