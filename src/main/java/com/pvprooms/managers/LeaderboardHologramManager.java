@@ -356,17 +356,19 @@ public class LeaderboardHologramManager {
             }
             
             case INFO_RANKS -> {
-                lines.add("&5&l★ SISTEMA DE RANGOS ★");
+                lines.add("&5&l★ SISTEMA MCTiers ★");
                 lines.add("&8&m                    ");
-                lines.add("&8◆ Sin Rango &7- 0 pts");
-                lines.add("&7◆ Hierro &7- 0+ pts");
-                lines.add("&6◆ Bronce &7- 100+ pts");
-                lines.add("&f◆ Plata &7- 300+ pts");
-                lines.add("&e◆ Oro &7- 600+ pts");
-                lines.add("&a◆ Esmeralda &7- 1000+ pts");
-                lines.add("&b◆ Diamante &7- 1400+ pts");
-                lines.add("&d◆ Maestro &7- 1900+ pts");
-                lines.add("&c◆ Leyenda &7- 2600+ pts");
+                lines.add("&7◆ Unranked &8- 0 pts");
+                lines.add("&9◆ LT5 &7- 0+ pts");
+                lines.add("&b◆ HT5 &7- 50+ pts");
+                lines.add("&a◆ LT4 &7- 150+ pts");
+                lines.add("&2◆ HT4 &7- 300+ pts");
+                lines.add("&e◆ LT3 &7- 500+ pts");
+                lines.add("&6◆ HT3 &7- 750+ pts");
+                lines.add("&c◆ LT2 &7- 1100+ pts");
+                lines.add("&4◆ HT2 &7- 1500+ pts");
+                lines.add("&d◆ LT1 &7- 2000+ pts");
+                lines.add("&c&l◆ HT1 &7- 2800+ pts");
                 lines.add("&8&m                    ");
             }
             
@@ -422,14 +424,16 @@ public class LeaderboardHologramManager {
     private String getTierColor(String tier) {
         if (tier == null) return "&7";
         return switch(tier.toLowerCase()) {
-            case "hierro" -> "&7";
-            case "bronce" -> "&6";
-            case "plata" -> "&f";
-            case "oro" -> "&e";
-            case "esmeralda" -> "&a";
-            case "diamante" -> "&b";
-            case "maestro" -> "&d";
-            case "leyenda" -> "&c";
+            case "lt5" -> "&9";
+            case "ht5" -> "&b";
+            case "lt4" -> "&a";
+            case "ht4" -> "&2";
+            case "lt3" -> "&e";
+            case "ht3" -> "&6";
+            case "lt2" -> "&c";
+            case "ht2" -> "&4";
+            case "lt1" -> "&d";
+            case "ht1" -> "&c&l";
             default -> "&7";
         };
     }

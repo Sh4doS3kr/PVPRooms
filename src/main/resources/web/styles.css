@@ -210,16 +210,9 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* ═══ TABLE ════════════════════════════════════════════════ */
 .tbl-head,.tbl-row{
   display:grid;
-  grid-template-columns:48px minmax(160px,1.2fr) 85px 95px 65px minmax(240px,1.5fr) 75px 90px;
-  min-width:950px;
+  grid-template-columns:48px minmax(170px,1.2fr) 85px 80px 65px minmax(280px,1.6fr) 80px;
+  min-width:900px;
   gap:0.6rem;
-}
-.col-official{justify-content:center;}
-.official-pill{
-  display:inline-flex;align-items:center;gap:.3rem;
-  padding:.2rem .6rem;border-radius:6px;
-  font-size:.75rem;font-weight:700;letter-spacing:.04em;
-  border:1px solid;
 }
 .online-dot{color:#22c55e;font-size:.6rem;margin-right:.3rem;animation:pulse 2s infinite;}
 .ping-val{font-size:.65rem;color:var(--muted);margin-left:.4rem;}

@@ -91,7 +91,6 @@
         <div class="col-elo">ELO</div>
         <div class="col-kits">Tiers por Kit</div>
         <div class="col-pts">Puntos</div>
-        <div class="col-official">Rango Oficial</div>
       </div>
 
       <!-- Rows -->
@@ -188,14 +187,20 @@ const MC   = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-ass
 const FLAGS = 'https://flagcdn.com/w40/';
 
 const TIER_COLS = {
-  'sin-rango':'#6b7280','hierro':'#9ca3af','bronce':'#cd7f32',
-  'plata':'#e2e8f0','oro':'#fbbf24','esmeralda':'#34d399',
-  'diamante':'#67e8f9','maestro':'#c084fc','leyenda':'#f87171'
+  'unranked':'#6b7280',
+  'lt5':'#a5d8ff','ht5':'#74c0fc',
+  'lt4':'#8ce99a','ht4':'#69db7c',
+  'lt3':'#ffe066','ht3':'#ffd43b',
+  'lt2':'#ffc078','ht2':'#ffa94d',
+  'lt1':'#ff8787','ht1':'#ff6b6b'
 };
 const TIER_ITEMS = {
-  'sin-rango':'gray_concrete','hierro':'iron_ingot','bronce':'copper_ingot',
-  'plata':'iron_block','oro':'gold_ingot','esmeralda':'emerald',
-  'diamante':'diamond','maestro':'nether_star','leyenda':'beacon'
+  'unranked':'gray_concrete',
+  'lt5':'light_blue_dye','ht5':'light_blue_concrete',
+  'lt4':'lime_dye','ht4':'lime_concrete',
+  'lt3':'yellow_dye','ht3':'orange_concrete',
+  'lt2':'orange_dye','ht2':'red_concrete',
+  'lt1':'pink_dye','ht1':'red_dye'
 };
 const KIT_ITEMS = {
   sword:'diamond_sword',espada:'diamond_sword',nodebuff:'golden_sword',
@@ -399,9 +404,6 @@ function renderTable(players){
     const winsTxt = p.wins || 0;
     const kdrTxt = (p.kdr || 0).toFixed(2);
 
-    const officialRank = p.officialRank || '—';
-    const officialRankHtml = officialRank !== '—' ? officialRankPill(officialRank) : '<span class="muted-text">—</span>';
-
     return `<div class="tbl-row ${rowCls}" onclick="openModal('${esc(p.nombre)}')" style="animation-delay:${Math.min(i*.018,.35)}s">
       <div class="col-rank">${rkHtml}</div>
       <div class="col-player">
@@ -416,7 +418,6 @@ function renderTable(players){
       <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
       <div class="col-kits">${badgesHtml}</div>
       <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span>${pingTxt}</div>
-      <div class="col-official">${officialRankHtml}</div>
     </div>`;
   }).join('');
 }
