@@ -171,7 +171,10 @@ function mcImg(name){return MC+(name||'diamond_sword')+'.png';}
 function tierImg(t){return mcImg(TIER_ITEMS[slug(t)]);}
 function kitImg(k){return mcImg(KIT_ITEMS[slug(k)]||'diamond_sword');}
 function regionCC(r){return REGION_CC[(r||'').toUpperCase()]||'eu';}
-function flagImg(cc,sz=18){return `<img class="flag" src="${FLAGS}${cc.toLowerCase()}.png" width="${sz}" height="${Math.round(sz*.66)}" onerror="this.style.display='none'" loading="lazy" alt="${cc}"/>`;}
+function flagImg(cc,sz=18){
+  const h = Math.round(sz*0.66);
+  return '<img class="flag" src="'+FLAGS+cc.toLowerCase()+'.png" width="'+sz+'" height="'+h+'" alt="'+cc+'">';
+}
 
 function eloColor(e){
   if(e>=2800)return'#f87171';if(e>=2400)return'#c084fc';if(e>=2100)return'#67e8f9';
@@ -184,9 +187,9 @@ function tierPill(tierName){
   const c = tc(tierName);
   const sk = slug(tierName);
   const img = tierImg(tierName);
-  return `<span class="tier-pill tier-${sk}" style="color:${c};border-color:${c}22;background:${c}12">` +
-    `<img src="${img}" class="tier-pill-img" onerror="this.style.display='none'" loading="lazy" alt=""/>` +
-    `${esc(tierName)}</span>`;
+  return '<span class="tier-pill tier-'+sk+'" style="color:'+c+';border-color:'+c+'22;background:'+c+'12">' +
+    '<img src="'+img+'" class="tier-pill-img">' +
+    esc(tierName)+'</span>';
 }
 
 /* Kit badge for the kits column — icon + kit name + tier */
@@ -194,15 +197,14 @@ function kitBadge(kitName, tierName, pts, highlight){
   const c  = tc(tierName);
   const sk = slug(tierName);
   const ki = kitImg(kitName);
-  const ti = tierImg(tierName);
   const hl = highlight === kitName ? ' kit-badge-hl' : '';
-  return `<div class="kit-badge${hl}" data-tier="${sk}" title="${esc(cap(kitName))}: ${esc(tierName)} · ${pts} pts">` +
-    `<img class="kb-kit-img" src="${ki}" onerror="this.src='${ti}'" loading="lazy" alt="${esc(kitName)}"/>` +
-    `<div class="kb-text">` +
-      `<span class="kb-kit">${esc(cap(kitName))}</span>` +
-      `<span class="kb-tier" style="color:${c}">${esc(tierName)}</span>` +
-    `</div>` +
-  `</div>`;
+  return '<div class="kit-badge'+hl+'" data-tier="'+sk+'">' +
+    '<img class="kb-kit-img" src="'+ki+'">' +
+    '<div class="kb-text">' +
+      '<span class="kb-kit">'+esc(cap(kitName))+'</span>' +
+      '<span class="kb-tier" style="color:'+c+'">'+esc(tierName)+'</span>' +
+    '</div>' +
+  '</div>';
 }
 
 /* ── Region detection ──────────────────────────────────────────── */
@@ -212,13 +214,13 @@ async function detectRegion(){
     const r = await fetch('http://ip-api.com/json/?fields=country,countryCode',{signal:AbortSignal.timeout(6000)});
     const d = await r.json();
     const cc = (d.countryCode||'eu').toLowerCase();
-    el.innerHTML = `${flagImg(cc,16)} ${esc(d.country||cc.toUpperCase())}`;
+    el.innerHTML = flagImg(cc,16) + ' ' + esc(d.country||cc.toUpperCase());
   }catch{
     try{
       const r2 = await fetch('https://ipinfo.io/json',{signal:AbortSignal.timeout(5000)});
       const d2 = await r2.json();
       const cc = (d2.country||'eu').toLowerCase();
-      el.innerHTML = `${flagImg(cc,16)} ${esc(d2.country||'—')}`;
+      el.innerHTML = flagImg(cc,16) + ' ' + esc(d2.country||'—');
     }catch{ el.textContent='—'; }
   }
 }
@@ -243,7 +245,7 @@ async function fetchStats(){
     document.getElementById('sQueue').textContent  = d.en_cola??'—';
     document.getElementById('sTotal').textContent  = d.total_jugadores??'—';
     const reg=(d.region||'EU').toUpperCase(), cc=regionCC(reg);
-    document.getElementById('sRegion').innerHTML = `${flagImg(cc,16)} ${reg}`;
+    document.getElementById('sRegion').innerHTML = flagImg(cc,16) + ' ' + reg;
     document.getElementById('srvStatus').textContent = `Online · ${d.online??'?'} players`;
     document.getElementById('srvDot').classList.remove('off');
   }catch{
@@ -316,14 +318,14 @@ function renderTable(players){
     return `<div class="tbl-row ${rowCls}" onclick="openModal('${esc(p.nombre)}')" style="animation-delay:${Math.min(i*.018,.35)}s">
       <div class="col-rank">${rkHtml}</div>
       <div class="col-player">
-        <img class="row-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/36" onerror="this.outerHTML='<div class=\\"av-fb\\">${esc((p.nombre||'?')[0].toUpperCase())}</div>'" loading="lazy" alt=""/>
+        <img class="row-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/36" onerror="this.style.display='none'" alt="${esc(p.nombre)}">
         <div class="row-player-info">
           <span class="row-name">${esc(p.nombre)}</span>
           <span class="row-title" style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>
         </div>
       </div>
-      <div class="col-country">${flagImg(cc,18)} <span class="country-nm">${rn}</span></div>
-      <div class="col-tier">${tierPill(bestTier)}</div>
+      <div class="col-country">`+flagImg(cc,18)+` <span class="country-nm">${rn}</span></div>
+      <div class="col-tier">`+tierPill(bestTier)+`</div>
       <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
       <div class="col-kits">${badgesHtml}</div>
       <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span></div>
@@ -342,7 +344,7 @@ function openModal(nombre){
   document.getElementById('modalAv').src=`https://mc-heads.net/avatar/${encodeURIComponent(nombre)}/90`;
   document.getElementById('modalName').textContent=p.nombre;
   document.getElementById('modalTitle').innerHTML=`<span style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>`;
-  document.getElementById('modalRegion').innerHTML=`${flagImg(cc,15)} <span>${rn}</span>`;
+  document.getElementById('modalRegion').innerHTML=flagImg(cc,15)+' <span>'+rn+'</span>';
   document.getElementById('modalStats').innerHTML=`
     <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mstat-l">Total pts</div></div>
     <div class="mstat"><div class="mstat-v" style="color:${eloC}">${elo.toLocaleString()}</div><div class="mstat-l">ELO</div></div>
@@ -352,17 +354,17 @@ function openModal(nombre){
   document.getElementById('modalKits').innerHTML = p.kits
     ? Object.entries(p.kits).map(([k,v])=>{
         const kc=tc(v.tier);
-        return `<div class="mk-row">
-          <img class="mk-kit-img" src="${kitImg(k)}" onerror="this.src='${tierImg(v.tier)}'" loading="lazy" alt="${esc(k)}"/>
-          <div class="mk-info">
-            <span class="mk-name">${esc(cap(k))}</span>
-            <span class="mk-tier" style="color:${kc}">${esc(v.tier)}</span>
-          </div>
-          <div class="mk-right">
-            <img class="mk-tier-img" src="${tierImg(v.tier)}" onerror="this.style.display='none'" loading="lazy" alt=""/>
-            <span class="mk-pts">${v.puntos} pts</span>
-          </div>
-        </div>`;
+        return '<div class="mk-row">'+
+          '<img class="mk-kit-img" src="'+kitImg(k)+'">'+
+          '<div class="mk-info">'+
+            '<span class="mk-name">'+esc(cap(k))+'</span>'+
+            '<span class="mk-tier" style="color:'+kc+'">'+esc(v.tier)+'</span>'+
+          '</div>'+
+          '<div class="mk-right">'+
+            '<img class="mk-tier-img" src="'+tierImg(v.tier)+'">'+
+            '<span class="mk-pts">'+v.puntos+' pts</span>'+
+          '</div>'+
+        '</div>';
       }).join('')
     : '<div class="empty-state" style="padding:1rem">No kit data.</div>';
 
