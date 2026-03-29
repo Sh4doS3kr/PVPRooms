@@ -240,9 +240,9 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
   position:relative;overflow:hidden;
 }
 .row-g1::before{
-  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
-  animation:shimmer 4s ease-in-out infinite;
+  content:'';position:absolute;top:-50%;left:-100%;width:30%;height:200%;
+  background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);
+  animation:shimmer 10s ease-in-out infinite;
 }
 .row-g1:hover{background:linear-gradient(90deg,rgba(255,215,0,.14),rgba(255,180,0,.06) 50%,transparent 80%);box-shadow:inset 0 0 30px rgba(255,215,0,.1);}
 
@@ -253,10 +253,10 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
   position:relative;overflow:hidden;
 }
 .row-g2::before{
-  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);
-  animation:shimmer 4s ease-in-out infinite;
-  animation-delay:.5s;
+  content:'';position:absolute;top:-50%;left:-100%;width:30%;height:200%;
+  background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.14) 50%,transparent 60%);
+  animation:shimmer 10s ease-in-out infinite;
+  animation-delay:1.5s;
 }
 .row-g2:hover{background:linear-gradient(90deg,rgba(192,192,192,.12),rgba(160,160,160,.05) 50%,transparent 80%);box-shadow:inset 0 0 25px rgba(192,192,192,.08);}
 
@@ -267,19 +267,19 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
   position:relative;overflow:hidden;
 }
 .row-g3::before{
-  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
-  animation:shimmer 4s ease-in-out infinite;
-  animation-delay:1s;
+  content:'';position:absolute;top:-50%;left:-100%;width:30%;height:200%;
+  background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%);
+  animation:shimmer 10s ease-in-out infinite;
+  animation-delay:3s;
 }
 .row-g3:hover{background:linear-gradient(90deg,rgba(205,127,50,.13),rgba(180,100,40,.05) 50%,transparent 80%);box-shadow:inset 0 0 25px rgba(205,127,50,.08);}
 
-/* Shimmer animation */
+/* Shimmer animation - diagonal sweep */
 @keyframes shimmer{
-  0%{left:-100%;opacity:0;}
-  10%{opacity:1;}
-  50%{left:150%;opacity:1;}
-  60%{opacity:0;}
+  0%{left:-50%;opacity:0;}
+  5%{opacity:1;}
+  35%{left:150%;opacity:1;}
+  40%{opacity:0;}
   100%{left:150%;opacity:0;}
 }
 
