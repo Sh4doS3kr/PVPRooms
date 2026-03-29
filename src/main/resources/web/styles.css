@@ -210,9 +210,9 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* ═══ TABLE ════════════════════════════════════════════════ */
 .tbl-head,.tbl-row{
   display:grid;
-  grid-template-columns:45px minmax(140px,1fr) 75px 90px 60px minmax(160px,1.1fr) 70px 85px;
-  min-width:850px;
-  gap:0.3rem;
+  grid-template-columns:42px minmax(130px,1fr) 70px 85px 55px minmax(220px,1.4fr) 65px 80px;
+  min-width:880px;
+  gap:0.2rem;
 }
 .col-official{justify-content:center;}
 .official-pill{
@@ -324,8 +324,8 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 .row-title{font-size:.72rem;font-weight:600;opacity:.75;white-space:nowrap;}
 
 /* Country */
-.col-country{gap:.5rem;font-size:.85rem;color:var(--sub);}
-.country-nm{font-size:.78rem;color:var(--muted);}
+.col-country{gap:.4rem;font-size:.8rem;color:var(--text);}
+.country-nm{font-size:.8rem;color:var(--text);font-weight:500;}
 
 /* Tier pill — compact colored badge (mctiers style) */
 .tier-pill{
