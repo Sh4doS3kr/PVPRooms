@@ -334,7 +334,7 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 .col-elo{flex-direction:column;gap:1px;justify-content:center;}
 
 /* Kits column — kit badges */
-.col-kits{flex-wrap:wrap;gap:4px;padding:.08rem 0;}
+.col-kits{flex-wrap:wrap;gap:4px;padding:.08rem 0;padding-left:1.5rem;}
 
 /* Kit badge — icon + tier only (centered) */
 .kit-badge{
