@@ -283,13 +283,16 @@ public class ScoreboardManager {
             }
         }
 
+        // Remove BELOW_NAME health from main scoreboard first (prevents duplicate health bars)
+        Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
+        Objective mainHealthObj = mainBoard.getObjective(DisplaySlot.BELOW_NAME);
+        if (mainHealthObj != null) {
+            try { mainHealthObj.unregister(); } catch (Exception ignored) {}
+        }
+
         board = Bukkit.getScoreboardManager().getNewScoreboard();
         Objective obj = board.registerNewObjective(objName, Criteria.DUMMY, comp(title));
         obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-
-        // Remove any health below name display (prevents duplicate health bars)
-        Objective healthObj = board.getObjective(DisplaySlot.BELOW_NAME);
-        if (healthObj != null) healthObj.unregister();
 
         for (int i = 0; i < SLOTS.length; i++) {
             Team t = board.registerNewTeam("t" + i);
