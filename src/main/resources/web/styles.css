@@ -4,7 +4,7 @@
 
 /* ── Reset & base ─────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:16px;scroll-behavior:smooth;}
+html{font-size:17px;scroll-behavior:smooth;}
 body{
   background:#0a0a0f;color:#e8eaf0;
   font-family:'Geist','Inter',system-ui,-apple-system,sans-serif;
@@ -210,9 +210,9 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* ═══ TABLE ════════════════════════════════════════════════ */
 .tbl-head,.tbl-row{
   display:grid;
-  grid-template-columns:42px minmax(130px,1fr) 70px 85px 55px minmax(220px,1.4fr) 65px 80px;
-  min-width:880px;
-  gap:0.2rem;
+  grid-template-columns:48px minmax(160px,1.2fr) 85px 95px 65px minmax(240px,1.5fr) 75px 90px;
+  min-width:950px;
+  gap:0.6rem;
 }
 .col-official{justify-content:center;}
 .official-pill{
