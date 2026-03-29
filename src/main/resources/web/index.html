@@ -103,8 +103,8 @@
     <!-- Ranks Info Section -->
     <div class="info-section">
       <div class="info-card">
-        <h2 class="info-title">🏆 Sistema de Rangos Oficiales</h2>
-        <p class="info-desc">Sistema de rangos competitivo oficial. Los rangos se obtienen mediante evaluación por parte del staff.</p>
+        <h2 class="info-title">🏆 Sistema de Rangos Competitivo</h2>
+        <p class="info-desc">Sistema de rangos automático y avanzado. Tu tier se calcula en tiempo real basándose en múltiples factores de rendimiento.</p>
         
         <div class="rank-grid">
           <div class="rank-item rank-ht1"><span class="rank-name">HT1</span><span class="rank-desc">Élite Mundial</span></div>
@@ -113,32 +113,87 @@
           <div class="rank-item rank-lt2"><span class="rank-name">LT2</span><span class="rank-desc">Semi-Pro</span></div>
           <div class="rank-item rank-ht3"><span class="rank-name">HT3</span><span class="rank-desc">Muy Bueno</span></div>
           <div class="rank-item rank-lt3"><span class="rank-name">LT3</span><span class="rank-desc">Bueno</span></div>
-          <div class="rank-item rank-ht4"><span class="rank-name">HT4</span><span class="rank-desc">Encima del promedio</span></div>
-          <div class="rank-item rank-lt4"><span class="rank-name">LT4</span><span class="rank-desc">Promedio alto</span></div>
-          <div class="rank-item rank-ht5"><span class="rank-name">HT5</span><span class="rank-desc">Promedio</span></div>
-          <div class="rank-item rank-lt5"><span class="rank-name">LT5</span><span class="rank-desc">Principiante</span></div>
+          <div class="rank-item rank-ht4"><span class="rank-name">HT4</span><span class="rank-desc">Intermedio+</span></div>
+          <div class="rank-item rank-lt4"><span class="rank-name">LT4</span><span class="rank-desc">Intermedio</span></div>
+          <div class="rank-item rank-ht5"><span class="rank-name">HT5</span><span class="rank-desc">Novato+</span></div>
+          <div class="rank-item rank-lt5"><span class="rank-name">LT5</span><span class="rank-desc">Novato</span></div>
         </div>
 
-        <h3 class="info-subtitle">📋 ¿Cómo obtener tu rango oficial?</h3>
-        <ol class="info-steps">
-          <li><strong>Abre un ticket en nuestro Discord</strong> — Solicita una "Prueba de Tier" y escoge una fecha disponible.</li>
-          <li><strong>Te asignamos un tester</strong> — Un evaluador oficial (normalmente HT3/LT3) te contactará para coordinar la prueba.</li>
-          <li><strong>Combate 1v1 en vivo</strong> — Jugarás varias rondas contra el tester en el modo que elijas (Sword, Axe, Crystal, Pot, UHC, SMP, etc.).</li>
-          <li><strong>Recibe tu rango</strong> — Según tu rendimiento en las rondas, el tester determina tu tier oficial.</li>
-        </ol>
+        <h3 class="info-subtitle">� Sistema de Puntuación Compuesto</h3>
+        <p class="info-desc">Tu tier se calcula usando una fórmula avanzada que combina múltiples métricas:</p>
+        
+        <div class="formula-grid">
+          <div class="formula-item">
+            <span class="formula-icon">⚔️</span>
+            <div class="formula-info">
+              <span class="formula-name">Puntos de Victoria</span>
+              <span class="formula-desc">+25 pts por victoria, -15 pts por derrota</span>
+            </div>
+          </div>
+          <div class="formula-item">
+            <span class="formula-icon">🎯</span>
+            <div class="formula-info">
+              <span class="formula-name">Multiplicador ELO</span>
+              <span class="formula-desc">Bonus ×1.5 si tu ELO > 1500, ×2.0 si > 2000</span>
+            </div>
+          </div>
+          <div class="formula-item">
+            <span class="formula-icon">🔥</span>
+            <div class="formula-info">
+              <span class="formula-name">Bonus Racha</span>
+              <span class="formula-desc">+5 pts extra por cada victoria consecutiva (máx +50)</span>
+            </div>
+          </div>
+          <div class="formula-item">
+            <span class="formula-icon">💀</span>
+            <div class="formula-info">
+              <span class="formula-name">Factor KDR</span>
+              <span class="formula-desc">KDR > 2.0 = ×1.3 bonus, KDR < 0.5 = ×0.7 penalización</span>
+            </div>
+          </div>
+          <div class="formula-item">
+            <span class="formula-icon">📈</span>
+            <div class="formula-info">
+              <span class="formula-name">Consistencia</span>
+              <span class="formula-desc">Winrate > 60% = bonus, < 40% = reducción de puntos</span>
+            </div>
+          </div>
+          <div class="formula-item">
+            <span class="formula-icon">🏅</span>
+            <div class="formula-info">
+              <span class="formula-name">Rival Tier Bonus</span>
+              <span class="formula-desc">+50% pts si ganas a alguien de tier superior</span>
+            </div>
+          </div>
+        </div>
 
         <div class="info-box">
-          <h4>⚔️ ¿Cómo funciona la evaluación?</h4>
+          <h4>📋 Requisitos por Tier</h4>
+          <div class="tier-reqs">
+            <div class="tier-req"><span class="req-tier lt5">LT5</span><span class="req-text">0+ pts · Sin requisitos</span></div>
+            <div class="tier-req"><span class="req-tier ht5">HT5</span><span class="req-text">50+ pts · Mínimo 10 partidas</span></div>
+            <div class="tier-req"><span class="req-tier lt4">LT4</span><span class="req-text">150+ pts · Winrate > 45%</span></div>
+            <div class="tier-req"><span class="req-tier ht4">HT4</span><span class="req-text">300+ pts · Winrate > 50% · KDR > 1.0</span></div>
+            <div class="tier-req"><span class="req-tier lt3">LT3</span><span class="req-text">500+ pts · Winrate > 52% · ELO > 1100</span></div>
+            <div class="tier-req"><span class="req-tier ht3">HT3</span><span class="req-text">750+ pts · Winrate > 55% · ELO > 1300 · KDR > 1.5</span></div>
+            <div class="tier-req"><span class="req-tier lt2">LT2</span><span class="req-text">1100+ pts · Winrate > 58% · ELO > 1500 · 3+ kits en HT4+</span></div>
+            <div class="tier-req"><span class="req-tier ht2">HT2</span><span class="req-text">1500+ pts · Winrate > 62% · ELO > 1800 · KDR > 2.0</span></div>
+            <div class="tier-req"><span class="req-tier lt1">LT1</span><span class="req-text">2000+ pts · Winrate > 65% · ELO > 2100 · 5+ kits en HT3+</span></div>
+            <div class="tier-req"><span class="req-tier ht1">HT1</span><span class="req-text">2800+ pts · Winrate > 70% · ELO > 2400 · KDR > 2.5 · Top 10 servidor</span></div>
+          </div>
+        </div>
+
+        <div class="info-box warning">
+          <h4>⚠️ Sistema de Decay (Pérdida de puntos)</h4>
           <ul class="info-list">
-            <li>Si <strong>ganas</strong> al tester HT3 (Bo3) → Recibes <strong>HT3</strong> (máximo en primera prueba)</li>
-            <li>Si pierdes por poco (ej: 2-1) → Recibes <strong>LT3</strong></li>
-            <li>Si pierdes claramente pero luchas bien → Recibes <strong>HT4 o LT4</strong></li>
-            <li>Para subir a <strong>LT2+</strong> debes vencer a múltiples testers HT3 primero</li>
+            <li><strong>Inactividad 7 días:</strong> -5% de puntos por semana</li>
+            <li><strong>Racha de derrotas (5+):</strong> Penalización temporal de ×0.8</li>
+            <li><strong>Abandono de partida:</strong> -50 pts y ban temporal de cola</li>
           </ul>
         </div>
 
         <div class="info-note">
-          <strong>💡 Tip:</strong> Los testers evalúan tu precisión de clicks, strafing, manejo de combos, spacing y conocimiento del modo. ¡Practica antes de tu prueba!
+          <strong>💡 Tip:</strong> Para subir rápido, mantén rachas de victorias, mejora tu KDR y juega contra rivales de tier superior. ¡El sistema recompensa la consistencia!
         </div>
       </div>
     </div>
@@ -438,7 +493,7 @@ function openModal(nombre){
   const wins=p.wins||0, losses=p.losses||0, kills=p.kills||0, deaths=p.deaths||0;
   const kdr=p.kdr||0, winrate=p.winrate||0, streak=p.streak||0, bestStreak=p.bestStreak||0;
   const ping=p.ping>=0?p.ping+'ms':'—';
-  const onlineHtml=p.online?'<span style="color:#22c55e">● En línea</span>':'<span style="color:#6b7280">○ Desconectado</span>';
+  const onlineHtml=p.online?'<span class="status-online">● En línea</span>':'<span class="status-offline">● Offline</span>';
   
   document.getElementById('modalStats').innerHTML=`
     <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mstat-l">Puntos totales</div></div>
