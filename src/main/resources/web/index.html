@@ -1,550 +1,384 @@
-<!DOCTYPE html>
-<html lang="es">
+﻿<!DOCTYPE html>
+<html class="dark" lang="es">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>PvP·Tiers — Clasificación Competitiva</title>
-<meta name="description" content="Clasificación competitiva de PvP — Tiers, ELO y estadísticas en tiempo real"/>
+<title>PvP·Tiers — Rankings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
 
-<!-- Ambient background particles -->
-<canvas id="bgCanvas"></canvas>
-
-<!-- ═══ HEADER ════════════════════════════════════════════════════════ -->
-<header id="hdr">
-  <div class="nav-inner">
-    <a class="logo" href="/">
-      <div class="logo-sword">⚔</div>
-      <span>PVP<em>·</em>TIERS</span>
-    </a>
-    <nav class="nav-links">
-      <a class="nav-a active" href="#lb">Clasificación</a>
-      <a class="nav-a" href="#statsSection">Estadísticas</a>
-      <a class="nav-a" href="#kitsSection">Kits</a>
-    </nav>
-    <div class="nav-right">
-      <div class="search-wrap">
-        <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="searchInput" type="text" placeholder="Buscar jugador…" autocomplete="off" spellcheck="false"/>
+<!-- HEADER -->
+<header>
+  <nav>
+    <div class="nav-logo-wrap">
+      <a class="nav-logo" href="/">
+        <img class="nav-logo-img" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt="" onerror="this.style.display='none'"/>
+        PvP<span class="nav-dot">·</span>Tiers
+      </a>
+    </div>
+    <ul class="nav-links">
+      <li><a class="nav-a" href="#main">Rankings</a></li>
+      <li><a class="nav-a" href="#stats">Stats</a></li>
+      <li><a class="nav-a" href="https://mctiers.com/docs/v2" target="_blank">API Docs</a></li>
+    </ul>
+    <div class="nav-search-wrap">
+      <div class="nav-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="searchInput" placeholder="Search player..." autocomplete="off" spellcheck="false"/>
+        <kbd>/</kbd>
       </div>
-      <div class="srv-pill" id="srvPill">
+      <div class="srv-pill">
         <span class="srv-dot" id="srvDot"></span>
-        <span id="srvStatus">Conectando…</span>
+        <span id="srvStatus">Connecting…</span>
       </div>
     </div>
-  </div>
+  </nav>
 </header>
 
-<!-- ═══ STATS BAR ═════════════════════════════════════════════════════ -->
-<section class="stats-bar" id="statsSection">
+<!-- STATS BAR -->
+<div class="stats-bar" id="stats">
   <div class="stats-inner">
-    <div class="s-card" id="sc-online">
-      <div class="s-icon s-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div><div class="s-val" id="sOnline">—</div><div class="s-lbl">Online ahora</div></div>
-    </div>
-    <div class="s-card" id="sc-duels">
-      <div class="s-icon s-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 17.5-5-5 5-5"/><path d="m9.5 17.5 5-5-5-5"/></svg></div>
-      <div><div class="s-val" id="sDuels">—</div><div class="s-lbl">Duelos activos</div></div>
-    </div>
-    <div class="s-card" id="sc-queue">
-      <div class="s-icon s-yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-      <div><div class="s-val" id="sQueue">—</div><div class="s-lbl">En cola</div></div>
-    </div>
-    <div class="s-card" id="sc-total">
-      <div class="s-icon s-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-      <div><div class="s-val" id="sTotal">—</div><div class="s-lbl">Registrados</div></div>
-    </div>
-    <div class="s-card" id="sc-region">
-      <div class="s-icon s-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-      <div><div class="s-val" id="sRegion">—</div><div class="s-lbl">Servidor</div></div>
-    </div>
-    <div class="s-card" id="sc-you">
-      <div class="s-icon s-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-      <div><div class="s-val" id="sUserReg">—</div><div class="s-lbl">Tu ubicación</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ TABS ═══════════════════════════════════════════════════════════ -->
-<div class="tabs-bar" id="kitsSection">
-  <div class="tabs-inner">
-    <div class="tabs" id="tabsContainer">
-      <button class="tab-btn active" data-kit="overall">
-        <img class="tab-ico" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" onerror="this.style.display='none'" alt=""/>
-        <span>General</span>
-      </button>
-    </div>
+    <div class="stat-item"><span class="stat-val" id="sOnline">—</span><span class="stat-lbl">Online</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-val" id="sDuels">—</span><span class="stat-lbl">Active duels</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-val" id="sQueue">—</span><span class="stat-lbl">In queue</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-val" id="sTotal">—</span><span class="stat-lbl">Registered</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-val" id="sRegion">—</span><span class="stat-lbl">Server region</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-val" id="sYou">—</span><span class="stat-lbl">Your location</span></div>
   </div>
 </div>
 
-<!-- ═══ MAIN LEADERBOARD ═══════════════════════════════════════════════ -->
-<main id="lb">
-  <div class="lb-outer">
+<!-- MAIN -->
+<main id="main">
+  <div class="main-inner">
 
-    <!-- Podium top 3 -->
-    <div class="podium-wrap" id="podiumWrap" style="display:none">
-      <div class="podium" id="podium"></div>
+    <!-- Folder tabs (above card, mctiers style) -->
+    <div class="folder-tabs" id="folderTabs">
+      <a class="folder-tab active" data-kit="overall" href="#">
+        <img class="ftab-ico" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" onerror="this.style.display='none'" alt=""/>
+        <strong>Overall</strong>
+      </a>
     </div>
 
-    <!-- Table card -->
-    <div class="lb-card">
-      <div class="lb-head">
-        <div>
-          <h2 class="lb-title" id="lbTitle">🏆 Clasificación General</h2>
-          <div class="lb-sub" id="lbCnt">Cargando…</div>
+    <!-- Main card -->
+    <div class="main-card" id="mainCard">
+
+      <!-- Card header -->
+      <div class="card-head">
+        <div class="card-head-left">
+          <h1 class="card-title" id="cardTitle">Overall Rankings</h1>
+          <span class="card-sub" id="cardSub"></span>
         </div>
-        <div class="lb-meta">
-          <div class="upd-badge" id="updBadge">
-            <span class="upd-dot pulse"></span>
-            <span id="lastUpd">En vivo</span>
-          </div>
+        <div class="card-head-right">
+          <div class="live-badge"><span class="live-dot"></span><span id="liveUpd">Live</span></div>
         </div>
       </div>
 
-      <div class="tbl-scroll">
-        <div class="th-row">
-          <div class="th-c th-rank">#</div>
-          <div class="th-c th-player">Jugador</div>
-          <div class="th-c th-country">País</div>
-          <div class="th-c th-elo">ELO</div>
-          <div class="th-c th-kits">Tiers por Kit</div>
-          <div class="th-c th-pts">Puntos</div>
-        </div>
-        <div id="tableBody">
-          <div class="state-msg"><div class="spinner"></div><span>Cargando clasificación…</span></div>
-        </div>
+      <!-- Table header -->
+      <div class="tbl-head">
+        <div class="col-rank">#</div>
+        <div class="col-player">Player</div>
+        <div class="col-country">Country</div>
+        <div class="col-tier">Best Tier</div>
+        <div class="col-elo">ELO</div>
+        <div class="col-kits">Tiers by Kit</div>
+        <div class="col-pts">Points</div>
       </div>
-    </div>
 
+      <!-- Rows -->
+      <div id="tableBody">
+        <div class="empty-state"><div class="spinner"></div><span>Loading rankings…</span></div>
+      </div>
+
+    </div>
   </div>
 </main>
 
-<!-- ═══ FOOTER ════════════════════════════════════════════════════════ -->
-<footer>
-  <div class="ft-inner">
-    <span class="ft-logo">PVP<em>·</em>TIERS</span>
-    <span class="ft-sep">·</span>
-    <span>Actualizado <em id="ftUpd">ahora</em></span>
-    <span class="ft-sep">·</span>
-    <span>Estadísticas en tiempo real</span>
-    <span class="ft-sep">·</span>
-    <span class="ft-ip">198.27.75.84:27090</span>
-  </div>
-</footer>
-
-<!-- ═══ MODAL ════════════════════════════════════════════════════════ -->
-<div class="mo-ov" id="moOv">
-  <div class="mo-card">
-    <button class="mo-close" id="moClose" aria-label="Cerrar">
+<!-- PLAYER MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
-
-    <!-- Hero -->
-    <div class="mo-hero">
-      <div class="mo-av-wrap">
-        <img class="mo-av" id="moAv" src="" alt=""/>
-        <div class="mo-av-ring" id="moRing"></div>
+    <div class="modal-hero">
+      <div class="modal-av-wrap">
+        <img class="modal-av" id="modalAv" src="" alt=""/>
       </div>
-      <div class="mo-info">
-        <div class="mo-name" id="moNm"></div>
-        <div class="mo-badge" id="moBadge"></div>
-        <div class="mo-region" id="moRegion"></div>
+      <div class="modal-hero-info">
+        <div class="modal-name" id="modalName"></div>
+        <div class="modal-title" id="modalTitle"></div>
+        <div class="modal-region" id="modalRegion"></div>
       </div>
     </div>
-
-    <!-- Stats grid -->
-    <div class="mo-stats" id="moStats"></div>
-
-    <!-- Kits breakdown -->
-    <div class="mo-section">
-      <div class="mo-sec-hd">⚔ Tiers por Kit</div>
-      <div class="mo-kits" id="moKits"></div>
+    <div class="modal-stats" id="modalStats"></div>
+    <div class="modal-kits-wrap">
+      <div class="modal-kits-hd">⚔ Tiers by Kit</div>
+      <div class="modal-kits" id="modalKits"></div>
     </div>
   </div>
 </div>
 
-<!-- ═══ SCRIPTS ═══════════════════════════════════════════════════════ -->
+<!-- FOOTER -->
+<footer>
+  <span class="ft-brand">PvP<span class="nav-dot">·</span>Tiers</span>
+  <span class="ft-sep">·</span>
+  <span>Real-time competitive rankings</span>
+  <span class="ft-sep">·</span>
+  <span class="ft-ip">198.27.75.84:27090</span>
+</footer>
+
 <script>
 const API = window.location.origin;
 let allPlayers = [], currentKit = 'overall', kits = [], lastUpdMs = Date.now();
 
-/* ═══ Constants ══════════════════════════════════════════════════════ */
-const MC  = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/';
-const GH_FLAGS = 'https://raw.githubusercontent.com/hampusborgos/country-flags/main/png100px/';
+const MC   = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/';
+const FLAGS = 'https://raw.githubusercontent.com/hampusborgos/country-flags/main/png100px/';
 
-const TIER_ITEMS = {
-  'sin-rango':'gray_concrete','hierro':'iron_ingot','bronce':'copper_ingot',
-  'plata':'iron_block','oro':'gold_ingot','esmeralda':'emerald',
-  'diamante':'diamond','maestro':'nether_star','leyenda':'beacon'
-};
 const TIER_COLS = {
   'sin-rango':'#6b7280','hierro':'#9ca3af','bronce':'#cd7f32',
   'plata':'#e2e8f0','oro':'#fbbf24','esmeralda':'#34d399',
   'diamante':'#67e8f9','maestro':'#c084fc','leyenda':'#f87171'
 };
-const TIER_GLOW = {
-  'oro':'rgba(251,191,36,.35)','esmeralda':'rgba(52,211,153,.35)',
-  'diamante':'rgba(103,232,249,.35)','maestro':'rgba(192,132,252,.38)',
-  'leyenda':'rgba(248,113,113,.42)'
+const TIER_ITEMS = {
+  'sin-rango':'gray_concrete','hierro':'iron_ingot','bronce':'copper_ingot',
+  'plata':'iron_block','oro':'gold_ingot','esmeralda':'emerald',
+  'diamante':'diamond','maestro':'nether_star','leyenda':'beacon'
 };
 const KIT_ITEMS = {
   sword:'diamond_sword',espada:'diamond_sword',nodebuff:'golden_sword',
-  combo:'stick',axe:'iron_axe',battleaxe:'iron_axe',
+  vanilla:'diamond_sword',combo:'stick',axe:'iron_axe',battleaxe:'iron_axe',
   uhc:'golden_apple',meetup:'golden_apple',gapple:'enchanted_golden_apple',
   soup:'mushroom_stew',pot:'splash_potion',potion:'splash_potion',
   sumo:'feather',boxing:'leather_chestplate',bridge:'stone_bricks',
   crystal:'amethyst_shard',bedfight:'white_bed',bedwars:'white_bed',
-  skywars:'firework_rocket',build:'bricks',vanilla:'diamond_sword',
+  skywars:'firework_rocket',build:'bricks'
 };
-const REGION_FLAGS = {EU:'eu',NA:'us',AS:'jp',SA:'br',OC:'au',AF:'za'};
-const REGION_LABEL = {EU:'Europa',NA:'América',AS:'Asia',SA:'S. América',OC:'Oceanía',AF:'África'};
+const REGION_CC = {EU:'eu',NA:'us',AS:'jp',SA:'br',OC:'au',AF:'za'};
 
-/* ═══ Helpers ════════════════════════════════════════════════════════ */
 function slug(n){return(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-');}
 function cap(s){return s?s[0].toUpperCase()+s.slice(1):'';}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function tierCol(t){return TIER_COLS[slug(t)]||'#8899bb';}
-function tierGlowVal(t){return TIER_GLOW[slug(t)]||null;}
-function mcItem(name){return MC+(name||'diamond_sword')+'.png';}
-function tierImgUrl(t){return mcItem(TIER_ITEMS[slug(t)]);}
-function kitImgUrl(k){return mcItem(KIT_ITEMS[slug(k)]||'diamond_sword');}
-function ghFlag(cc){return cc?GH_FLAGS+cc.toLowerCase()+'.png':null;}
-function regionCC(r){return REGION_FLAGS[(r||'').toUpperCase()]||'eu';}
+function tc(t){return TIER_COLS[slug(t)]||'#8899bb';}
+function mcImg(name){return MC+(name||'diamond_sword')+'.png';}
+function tierImg(t){return mcImg(TIER_ITEMS[slug(t)]);}
+function kitImg(k){return mcImg(KIT_ITEMS[slug(k)]||'diamond_sword');}
+function regionCC(r){return REGION_CC[(r||'').toUpperCase()]||'eu';}
+function flagImg(cc,sz=18){return `<img class="flag" src="${FLAGS}${cc.toLowerCase()}.png" width="${sz}" height="${Math.round(sz*.66)}" onerror="this.style.display='none'" loading="lazy" alt="${cc}"/>`;}
 
-function titleColor(t){
-  const map={'leyenda':'#f87171','maestro':'#c084fc','diamante':'#67e8f9',
-    'esmeralda':'#34d399','oro':'#fbbf24','plata':'#e2e8f0','bronce':'#cd7f32',
-    'hierro':'#9ca3af','sin rango':'#6b7280'};
-  return map[(t||'').toLowerCase()]||'#8899bb';
+function eloColor(e){
+  if(e>=2800)return'#f87171';if(e>=2400)return'#c084fc';if(e>=2100)return'#67e8f9';
+  if(e>=1800)return'#34d399';if(e>=1500)return'#fbbf24';if(e>=1200)return'#cd7f32';
+  if(e>=1000)return'#e2e8f0';if(e>=800)return'#9ca3af';return'#6b7280';
 }
 
-/* Kit badge — shows BOTH kit name and tier */
-function mkBadge(kitName, tierName, pts, focusKit) {
-  const sk = slug(tierName), sc = tierCol(tierName), gl = tierGlowVal(tierName);
-  const isActive = focusKit === kitName;
-  const glowStyle = gl ? `box-shadow:0 0 14px ${gl};` : '';
-  const activeRing = isActive ? 'badge-active' : '';
-  const kitImg  = kitImgUrl(kitName);
-  const tierImg = tierImgUrl(tierName);
-  return `<div class="badge ${activeRing}" data-tier="${sk}" title="${esc(cap(kitName))}: ${esc(tierName)} · ${pts} pts">
-    <div class="badge-inner" style="${glowStyle}">
-      <div class="badge-imgs">
-        <img class="badge-kit" src="${kitImg}" onerror="this.src='${tierImg}'" loading="lazy" alt="${esc(kitName)}"/>
-        <img class="badge-tier-img" src="${tierImg}" onerror="this.style.display='none'" loading="lazy" alt="${esc(tierName)}"/>
-      </div>
-      <div class="badge-kit-nm">${esc(cap(kitName))}</div>
-      <div class="badge-tier-nm" style="color:${sc}">${esc(tierName.toUpperCase())}</div>
-    </div>
-  </div>`;
+/* Tier badge — compact pill like mctiers */
+function tierPill(tierName){
+  const c = tc(tierName);
+  const sk = slug(tierName);
+  const img = tierImg(tierName);
+  return `<span class="tier-pill tier-${sk}" style="color:${c};border-color:${c}22;background:${c}12">` +
+    `<img src="${img}" class="tier-pill-img" onerror="this.style.display='none'" loading="lazy" alt=""/>` +
+    `${esc(tierName)}</span>`;
 }
 
-/* Flag img tag using GitHub CDN */
-function flagImg(cc, size=18) {
-  const url = ghFlag(cc);
-  if (!url) return '';
-  return `<img class="flag-img" src="${url}" width="${size}" height="${Math.round(size*.67)}" onerror="this.style.display='none'" loading="lazy" alt="${cc}"/>`;
+/* Kit badge for the kits column — icon + kit name + tier */
+function kitBadge(kitName, tierName, pts, highlight){
+  const c  = tc(tierName);
+  const sk = slug(tierName);
+  const ki = kitImg(kitName);
+  const ti = tierImg(tierName);
+  const hl = highlight === kitName ? ' kit-badge-hl' : '';
+  return `<div class="kit-badge${hl}" data-tier="${sk}" title="${esc(cap(kitName))}: ${esc(tierName)} · ${pts} pts">` +
+    `<img class="kb-kit-img" src="${ki}" onerror="this.src='${ti}'" loading="lazy" alt="${esc(kitName)}"/>` +
+    `<div class="kb-text">` +
+      `<span class="kb-kit">${esc(cap(kitName))}</span>` +
+      `<span class="kb-tier" style="color:${c}">${esc(tierName)}</span>` +
+    `</div>` +
+  `</div>`;
 }
 
-/* Region pill */
-function regionPill(r) {
-  const cc = regionCC(r), lbl = REGION_LABEL[r.toUpperCase()] || r;
-  return `<span class="re-pill">${flagImg(cc,16)} ${lbl}</span>`;
-}
-
-/* ELO bar colour */
-function eloColor(elo) {
-  if (elo >= 2800) return '#f87171';
-  if (elo >= 2400) return '#c084fc';
-  if (elo >= 2100) return '#67e8f9';
-  if (elo >= 1800) return '#34d399';
-  if (elo >= 1500) return '#fbbf24';
-  if (elo >= 1200) return '#cd7f32';
-  if (elo >= 1000) return '#e2e8f0';
-  if (elo >=  800) return '#9ca3af';
-  return '#6b7280';
-}
-
-/* ═══ Region detection (ip-api.com — most accurate, free) ═══════════ */
-async function detectUserRegion() {
-  const el = document.getElementById('sUserReg');
-  try {
-    /* ip-api.com returns correct geolocation; ipapi.co has accuracy issues */
-    const r = await fetch('http://ip-api.com/json/?fields=country,countryCode,continentCode', {signal: AbortSignal.timeout(6000)});
+/* ── Region detection ──────────────────────────────────────────── */
+async function detectRegion(){
+  const el = document.getElementById('sYou');
+  try{
+    const r = await fetch('http://ip-api.com/json/?fields=country,countryCode',{signal:AbortSignal.timeout(6000)});
     const d = await r.json();
-    const cc = (d.countryCode || 'EU').toLowerCase();
-    const country = d.country || 'Desconocido';
-    el.innerHTML = `${flagImg(cc,18)} <span>${esc(country)}</span>`;
-  } catch {
-    /* fallback: ipinfo */
-    try {
-      const r2 = await fetch('https://ipinfo.io/json', {signal: AbortSignal.timeout(5000)});
+    const cc = (d.countryCode||'eu').toLowerCase();
+    el.innerHTML = `${flagImg(cc,16)} ${esc(d.country||cc.toUpperCase())}`;
+  }catch{
+    try{
+      const r2 = await fetch('https://ipinfo.io/json',{signal:AbortSignal.timeout(5000)});
       const d2 = await r2.json();
-      const cc = (d2.country || 'EU').toLowerCase();
-      el.innerHTML = `${flagImg(cc,18)} <span>${esc(d2.country||'—')}</span>`;
-    } catch {
-      el.textContent = '—';
-    }
+      const cc = (d2.country||'eu').toLowerCase();
+      el.innerHTML = `${flagImg(cc,16)} ${esc(d2.country||'—')}`;
+    }catch{ el.textContent='—'; }
   }
 }
 
-/* ═══ Bootstrap ══════════════════════════════════════════════════════ */
-async function init() {
-  initCanvas();
-  detectUserRegion();
+/* ── Init ──────────────────────────────────────────────────────── */
+async function init(){
+  detectRegion();
   await Promise.all([fetchStats(), fetchKits()]);
   await fetchTop('overall');
   setInterval(fetchStats, 12000);
-  setInterval(tickUpd, 1000);
+  setInterval(()=>{
+    const s = Math.round((Date.now()-lastUpdMs)/1000);
+    document.getElementById('liveUpd').textContent = s<5?'Live':`${s}s ago`;
+  }, 1000);
 }
 
-function tickUpd() {
-  const s = Math.round((Date.now() - lastUpdMs) / 1000);
-  const txt = s < 5 ? 'En vivo' : `hace ${s}s`;
-  document.getElementById('lastUpd').textContent = txt;
-  document.getElementById('ftUpd').textContent   = txt;
-}
-
-async function fetchStats() {
-  try {
-    const d = await (await fetch(`${API}/api/stats`)).json();
-    document.getElementById('sOnline').textContent = d.online   ?? '—';
-    document.getElementById('sDuels').textContent  = d.duelos   ?? '—';
-    document.getElementById('sQueue').textContent  = d.en_cola  ?? '—';
-    document.getElementById('sTotal').textContent  = d.total_jugadores ?? '—';
-    const reg = (d.region || 'EU').toUpperCase();
-    const cc  = regionCC(reg);
-    document.getElementById('sRegion').innerHTML = `${flagImg(cc,18)} <span>${REGION_LABEL[reg]||reg}</span>`;
-    document.getElementById('srvStatus').textContent = `En línea · ${d.online ?? '?'} jugadores`;
+async function fetchStats(){
+  try{
+    const d = await(await fetch(`${API}/api/stats`)).json();
+    document.getElementById('sOnline').textContent = d.online??'—';
+    document.getElementById('sDuels').textContent  = d.duelos??'—';
+    document.getElementById('sQueue').textContent  = d.en_cola??'—';
+    document.getElementById('sTotal').textContent  = d.total_jugadores??'—';
+    const reg=(d.region||'EU').toUpperCase(), cc=regionCC(reg);
+    document.getElementById('sRegion').innerHTML = `${flagImg(cc,16)} ${reg}`;
+    document.getElementById('srvStatus').textContent = `Online · ${d.online??'?'} players`;
     document.getElementById('srvDot').classList.remove('off');
-  } catch {
-    document.getElementById('srvStatus').textContent = 'Sin conexión';
+  }catch{
+    document.getElementById('srvStatus').textContent='Offline';
     document.getElementById('srvDot').classList.add('off');
   }
 }
 
-async function fetchKits() {
-  try { kits = await (await fetch(`${API}/api/kits`)).json(); buildTabs(); } catch {}
+async function fetchKits(){
+  try{ kits=await(await fetch(`${API}/api/kits`)).json(); buildTabs(); }catch{}
 }
 
-async function fetchTop(kit) {
+async function fetchTop(kit){
   currentKit = kit;
-  document.getElementById('tableBody').innerHTML = '<div class="state-msg"><div class="spinner"></div><span>Cargando…</span></div>';
-  const isOverall = kit === 'overall';
-  document.getElementById('lbTitle').textContent = isOverall ? '🏆 Clasificación General' : '⚔ ' + cap(kit);
-  try {
-    const url = isOverall ? `${API}/api/top` : `${API}/api/top/${encodeURIComponent(kit)}`;
-    allPlayers = await (await fetch(url)).json();
-    lastUpdMs  = Date.now();
-    document.getElementById('lbCnt').textContent = allPlayers.length + ' jugadores registrados';
-    renderPodium(allPlayers);
+  document.getElementById('tableBody').innerHTML='<div class="empty-state"><div class="spinner"></div><span>Loading…</span></div>';
+  const isAll = kit==='overall';
+  document.getElementById('cardTitle').textContent = isAll?'Overall Rankings': cap(kit)+' Rankings';
+  try{
+    const url = isAll?`${API}/api/top`:`${API}/api/top/${encodeURIComponent(kit)}`;
+    allPlayers = await(await fetch(url)).json();
+    lastUpdMs = Date.now();
+    document.getElementById('cardSub').textContent = allPlayers.length+' players';
     renderTable(allPlayers);
-  } catch {
-    document.getElementById('tableBody').innerHTML = '<div class="state-msg">⚠ Error de conexión. Reintenta en un momento.</div>';
+  }catch{
+    document.getElementById('tableBody').innerHTML='<div class="empty-state">⚠ Connection error. Retry in a moment.</div>';
   }
 }
 
-/* ═══ Tabs ═══════════════════════════════════════════════════════════ */
-function buildTabs() {
-  const c = document.getElementById('tabsContainer');
-  kits.forEach(k => {
-    const b = document.createElement('button');
-    b.className = 'tab-btn'; b.dataset.kit = k;
-    const img = kitImgUrl(k);
-    b.innerHTML = `<img class="tab-ico" src="${img}" onerror="this.style.display='none'" loading="lazy" alt=""/><span>${cap(k)}</span>`;
-    c.appendChild(b);
+/* ── Build folder tabs ─────────────────────────────────────────── */
+function buildTabs(){
+  const c = document.getElementById('folderTabs');
+  kits.forEach(k=>{
+    const a = document.createElement('a');
+    a.className='folder-tab'; a.dataset.kit=k; a.href='#';
+    const img = kitImg(k);
+    a.innerHTML=`<img class="ftab-ico" src="${img}" onerror="this.style.display='none'" loading="lazy" alt=""/><strong>${cap(k)}</strong>`;
+    c.appendChild(a);
   });
 }
-document.getElementById('tabsContainer').addEventListener('click', e => {
-  const btn = e.target.closest('.tab-btn');
-  if (!btn) return;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
-  fetchTop(btn.dataset.kit);
+document.getElementById('folderTabs').addEventListener('click', e=>{
+  const tab = e.target.closest('.folder-tab');
+  if(!tab){ return; }
+  e.preventDefault();
+  document.querySelectorAll('.folder-tab').forEach(t=>t.classList.toggle('active',t===tab));
+  fetchTop(tab.dataset.kit);
 });
 
-/* ═══ Podium ════════════════════════════════════════════════════════ */
-function renderPodium(players) {
-  const wrap = document.getElementById('podiumWrap');
-  const pod  = document.getElementById('podium');
-  if (!players || players.length < 3) { wrap.style.display = 'none'; return; }
-  wrap.style.display = '';
-  const top3 = players.slice(0, 3);
-  const order = [top3[1], top3[0], top3[2]]; // 2nd, 1st, 3rd
-  const medals = ['🥈','👑','🥉'];
-  const heights = ['75%','100%','60%'];
-  const podH   = ['2nd','1st','3rd'];
-  pod.innerHTML = order.map((p, i) => {
-    if (!p) return '';
-    const color = tierCol(p.bestTier || '');
-    const pts = currentKit==='overall' ? p.puntosTotales : (p.kits&&p.kits[currentKit]?p.kits[currentKit].puntos:0);
-    const elo = p.elo || 0;
-    return `<div class="pod-slot ${podH[i]}" style="height:${heights[i]}">
-      <div class="pod-inner" style="border-color:${color}40">
-        <div class="pod-medal">${medals[i]}</div>
-        <img class="pod-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/56" onerror="this.src='https://mc-heads.net/avatar/Steve/56'" alt="${esc(p.nombre)}"/>
-        <div class="pod-name">${esc(p.nombre)}</div>
-        <div class="pod-tier" style="color:${color}">${esc(p.bestTier||'—')}</div>
-        <div class="pod-pts">${pts.toLocaleString()} pts</div>
-        <div class="pod-elo" style="color:${eloColor(elo)}">${elo} ELO</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-/* ═══ Table ══════════════════════════════════════════════════════════ */
-function renderTable(players) {
-  const q    = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-  const list = q ? players.filter(p => p.nombre.toLowerCase().includes(q)) : players;
+/* ── Render table ──────────────────────────────────────────────── */
+function renderTable(players){
+  const q = (document.getElementById('searchInput').value||'').toLowerCase().trim();
+  const list = q ? players.filter(p=>p.nombre.toLowerCase().includes(q)) : players;
   const body = document.getElementById('tableBody');
-  if (!list.length) { body.innerHTML = '<div class="state-msg">No se encontraron jugadores.</div>'; return; }
+  if(!list.length){ body.innerHTML='<div class="empty-state">No players found.</div>'; return; }
 
-  body.innerHTML = list.map((p, i) => {
-    const rank = i + 1;
-    const gc   = rank === 1 ? 'row-g1' : rank === 2 ? 'row-g2' : rank === 3 ? 'row-g3' : '';
-    const rkHtml = rank === 1 ? `<span class="rk-ico">👑</span>`
-                 : rank === 2 ? `<span class="rk-ico">🥈</span>`
-                 : rank === 3 ? `<span class="rk-ico">🥉</span>`
-                 : `<span class="rk-num">${rank}</span>`;
+  body.innerHTML = list.map((p,i)=>{
+    const rank=i+1;
+    const rkHtml = rank===1?`<span class="rk-medal">👑</span>`:rank===2?`<span class="rk-medal">🥈</span>`:rank===3?`<span class="rk-medal">🥉</span>`:`<span class="rk-num">${rank}</span>`;
+    const titleC = tc(p.titulo);
+    const rn=(p.region||'EU').toUpperCase().substring(0,2);
+    const cc=regionCC(rn);
+    const pts = currentKit==='overall'?p.puntosTotales:(p.kits&&p.kits[currentKit]?p.kits[currentKit].puntos:0);
+    const elo = p.elo??0;
+    const eloC = eloColor(elo);
+    const bestTier = p.bestTier||'Sin Rango';
+    const badgesHtml = p.kits
+      ? Object.entries(p.kits).map(([k,v])=>kitBadge(k,v.tier,v.puntos,currentKit)).join('')
+      : '<span class="muted-text">—</span>';
+    const rowCls = rank===1?'row-g1':rank===2?'row-g2':rank===3?'row-g3':'';
 
-    const color  = titleColor(p.titulo);
-    const rn     = (p.region || 'EU').toUpperCase().substring(0, 2);
-    const cc     = regionCC(rn);
-    const pts    = currentKit === 'overall'
-                   ? p.puntosTotales
-                   : (p.kits && p.kits[currentKit] ? p.kits[currentKit].puntos : 0);
-    const elo    = p.elo ?? '—';
-    const badges = p.kits
-                   ? Object.entries(p.kits).map(([k,v]) => mkBadge(k, v.tier, v.puntos, currentKit)).join('')
-                   : '<span style="color:var(--dim)">—</span>';
-    const eloC   = typeof elo === 'number' ? eloColor(elo) : '#6b7280';
-
-    return `<div class="lb-row ${gc}" onclick="openModal('${esc(p.nombre)}')" style="animation-delay:${Math.min(i*.02,.4)}s">
-      <div class="c-rank">${rkHtml}</div>
-      <div class="c-player">
-        <img class="row-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/40" onerror="this.outerHTML='<div class=\\"av-fb\\">${esc((p.nombre||'?')[0]).toUpperCase()}</div>'" loading="lazy" alt="${esc(p.nombre)}"/>
-        <div class="row-info">
-          <div class="row-name">${esc(p.nombre)}</div>
-          <div class="row-title" style="color:${color}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</div>
+    return `<div class="tbl-row ${rowCls}" onclick="openModal('${esc(p.nombre)}')" style="animation-delay:${Math.min(i*.018,.35)}s">
+      <div class="col-rank">${rkHtml}</div>
+      <div class="col-player">
+        <img class="row-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/36" onerror="this.outerHTML='<div class=\\"av-fb\\">${esc((p.nombre||'?')[0].toUpperCase())}</div>'" loading="lazy" alt=""/>
+        <div class="row-player-info">
+          <span class="row-name">${esc(p.nombre)}</span>
+          <span class="row-title" style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>
         </div>
       </div>
-      <div class="c-country">${flagImg(cc,20)} <span class="country-lbl">${REGION_LABEL[rn]||rn}</span></div>
-      <div class="c-elo">
-        <span class="elo-val" style="color:${eloC}">${typeof elo==='number'?elo.toLocaleString():elo}</span>
-        <span class="elo-lbl">ELO</span>
-      </div>
-      <div class="c-kits">${badges}</div>
-      <div class="c-pts">
-        <span class="pts-val">${pts.toLocaleString()}</span>
-        <span class="pts-lbl">PTS</span>
-      </div>
+      <div class="col-country">${flagImg(cc,18)} <span class="country-nm">${rn}</span></div>
+      <div class="col-tier">${tierPill(bestTier)}</div>
+      <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
+      <div class="col-kits">${badgesHtml}</div>
+      <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span></div>
     </div>`;
   }).join('');
 }
 
-/* ═══ Modal ══════════════════════════════════════════════════════════ */
-function openModal(nombre) {
-  const p = allPlayers.find(x => x.nombre === nombre); if (!p) return;
-  const color = tierCol(p.bestTier || '');
-  const tc    = titleColor(p.titulo);
-  const elo   = p.elo ?? 0;
-  const eloC  = eloColor(elo);
-  const rn    = (p.region || 'EU').toUpperCase();
-  const cc    = regionCC(rn);
-  const kitCount = p.kits ? Object.keys(p.kits).length : 0;
-  const eloRk    = p.eloRank > 0 ? `#${p.eloRank}` : '—';
+/* ── Modal ─────────────────────────────────────────────────────── */
+function openModal(nombre){
+  const p=allPlayers.find(x=>x.nombre===nombre); if(!p) return;
+  const titleC=tc(p.titulo), bestC=tc(p.bestTier||'');
+  const elo=p.elo??0, eloC=eloColor(elo);
+  const rn=(p.region||'EU').toUpperCase(), cc=regionCC(rn);
+  const eloRk = p.eloRank>0?`#${p.eloRank}`:'—';
 
-  document.getElementById('moAv').src = `https://mc-heads.net/avatar/${encodeURIComponent(nombre)}/100`;
-  document.getElementById('moNm').textContent = p.nombre;
-  document.getElementById('moRing').style.borderColor = color;
-  document.getElementById('moBadge').innerHTML =
-    `<span class="mo-title-pill" style="color:${tc}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>`;
-  document.getElementById('moRegion').innerHTML =
-    `${flagImg(cc,16)} <span style="color:var(--dim);font-size:.8rem">${REGION_LABEL[rn]||rn}</span>`;
-
-  document.getElementById('moStats').innerHTML = `
-    <div class="mo-st"><div class="mo-sv" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mo-sl">Puntos totales</div></div>
-    <div class="mo-st"><div class="mo-sv" style="color:${eloC}">${elo.toLocaleString()}</div><div class="mo-sl">ELO</div></div>
-    <div class="mo-st"><div class="mo-sv" style="color:#e2e8f0">${eloRk}</div><div class="mo-sl">Posición ELO</div></div>
-    <div class="mo-st"><div class="mo-sv" style="color:#06b6d4">${kitCount}</div><div class="mo-sl">Kits jugados</div></div>
-    <div class="mo-st"><div class="mo-sv" style="color:${color}">${esc(p.bestTier||'—')}</div><div class="mo-sl">Mejor rango</div></div>`;
-
-  document.getElementById('moKits').innerHTML = p.kits
-    ? Object.entries(p.kits).map(([k, v]) => {
-        const kc = tierCol(v.tier);
-        const gl = tierGlowVal(v.tier);
-        return `<div class="mo-kit-row">
-          <img class="mo-kit-img" src="${kitImgUrl(k)}" onerror="this.src='${tierImgUrl(v.tier)}'" loading="lazy" alt="${esc(k)}"/>
-          <div class="mo-kit-info">
-            <div class="mo-kit-name">${esc(cap(k))}</div>
-            <div class="mo-kit-tier" style="color:${kc}">${esc(v.tier)}</div>
+  document.getElementById('modalAv').src=`https://mc-heads.net/avatar/${encodeURIComponent(nombre)}/90`;
+  document.getElementById('modalName').textContent=p.nombre;
+  document.getElementById('modalTitle').innerHTML=`<span style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>`;
+  document.getElementById('modalRegion').innerHTML=`${flagImg(cc,15)} <span>${rn}</span>`;
+  document.getElementById('modalStats').innerHTML=`
+    <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mstat-l">Total pts</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:${eloC}">${elo.toLocaleString()}</div><div class="mstat-l">ELO</div></div>
+    <div class="mstat"><div class="mstat-v">${eloRk}</div><div class="mstat-l">ELO rank</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:${bestC}">${esc(p.bestTier||'—')}</div><div class="mstat-l">Best tier</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#06b6d4">${p.kits?Object.keys(p.kits).length:0}</div><div class="mstat-l">Kits played</div></div>`;
+  document.getElementById('modalKits').innerHTML = p.kits
+    ? Object.entries(p.kits).map(([k,v])=>{
+        const kc=tc(v.tier);
+        return `<div class="mk-row">
+          <img class="mk-kit-img" src="${kitImg(k)}" onerror="this.src='${tierImg(v.tier)}'" loading="lazy" alt="${esc(k)}"/>
+          <div class="mk-info">
+            <span class="mk-name">${esc(cap(k))}</span>
+            <span class="mk-tier" style="color:${kc}">${esc(v.tier)}</span>
           </div>
-          <div class="mo-kit-pts">
-            <img class="mo-kit-tier-img" src="${tierImgUrl(v.tier)}" onerror="this.style.display='none'" loading="lazy" alt=""/>
-            <span>${v.puntos} pts</span>
+          <div class="mk-right">
+            <img class="mk-tier-img" src="${tierImg(v.tier)}" onerror="this.style.display='none'" loading="lazy" alt=""/>
+            <span class="mk-pts">${v.puntos} pts</span>
           </div>
         </div>`;
       }).join('')
-    : '<div class="state-msg" style="padding:1.2rem">Sin datos de kit.</div>';
+    : '<div class="empty-state" style="padding:1rem">No kit data.</div>';
 
-  document.getElementById('moOv').classList.add('open');
+  document.getElementById('modalOverlay').classList.add('open');
 }
+const overlay=document.getElementById('modalOverlay');
+document.getElementById('modalClose').addEventListener('click',()=>overlay.classList.remove('open'));
+overlay.addEventListener('click',e=>{ if(e.target===overlay)overlay.classList.remove('open'); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')overlay.classList.remove('open'); });
 
-document.getElementById('moClose').addEventListener('click', () => document.getElementById('moOv').classList.remove('open'));
-document.getElementById('moOv').addEventListener('click', e => { if (e.target === document.getElementById('moOv')) document.getElementById('moOv').classList.remove('open'); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('moOv').classList.remove('open'); });
-
-/* ═══ Search ════════════════════════════════════════════════════════ */
-document.getElementById('searchInput').addEventListener('input', () => renderTable(allPlayers));
-
-/* Ctrl+K / Cmd+K to focus search */
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault();
-    document.getElementById('searchInput').focus();
-  }
+/* ── Search ────────────────────────────────────────────────────── */
+const si=document.getElementById('searchInput');
+si.addEventListener('input',()=>renderTable(allPlayers));
+document.addEventListener('keydown',e=>{
+  if(e.key==='/'&&document.activeElement!==si){e.preventDefault();si.focus();}
 });
-
-/* ═══ Ambient canvas background ════════════════════════════════════ */
-function initCanvas() {
-  const cv = document.getElementById('bgCanvas');
-  const ctx = cv.getContext('2d');
-  let W, H, particles = [];
-  function resize() {
-    W = cv.width  = window.innerWidth;
-    H = cv.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  const COLS = ['rgba(124,58,237,.55)','rgba(6,182,212,.45)','rgba(168,85,247,.5)','rgba(34,211,153,.35)'];
-  for (let i = 0; i < 55; i++) {
-    particles.push({
-      x: Math.random()*1000, y: Math.random()*800,
-      vx: (Math.random()-.5)*.25, vy: (Math.random()-.5)*.25,
-      r: Math.random()*1.8+.4,
-      c: COLS[Math.floor(Math.random()*COLS.length)],
-      a: Math.random()*Math.PI*2
-    });
-  }
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    particles.forEach(p => {
-      p.x += p.vx; p.y += p.vy; p.a += .008;
-      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r + Math.sin(p.a)*.5, 0, Math.PI*2);
-      ctx.fillStyle = p.c;
-      ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  }
-  draw();
-}
 
 init();
 </script>
