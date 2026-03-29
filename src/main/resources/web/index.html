@@ -398,7 +398,7 @@ function renderTable(players){
       <div class="col-player">
         <img class="row-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/36" onerror="this.style.display='none'" alt="${esc(p.nombre)}">
         <div class="row-player-info">
-          <span class="row-name">${onlineDot}${esc(p.nombre)}</span>
+          <span class="row-name">${onlineDot}${esc(p.nombre)}${pingTxt}</span>
           <span class="row-title" style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>
         </div>
       </div>
@@ -406,7 +406,7 @@ function renderTable(players){
       <div class="col-tier">`+tierPill(bestTier)+`</div>
       <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
       <div class="col-kits">${badgesHtml}</div>
-      <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span>${pingTxt}</div>
+      <div class="col-pts"><span class="pts-val">${pts.toLocaleString()}</span></div>
     </div>`;
   }).join('');
 }
