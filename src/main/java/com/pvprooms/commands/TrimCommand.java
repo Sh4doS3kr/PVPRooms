@@ -13,7 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.List;
 
 /**
- * /trim [gui | give <crate|key|legendary> [player] | clear [piece]]
+ * /trim [gui | give <crate|key|legendary|themed <piece>> [player] | clear [piece]]
  */
 public class TrimCommand implements CommandExecutor, TabCompleter {
 
@@ -35,6 +35,12 @@ public class TrimCommand implements CommandExecutor, TabCompleter {
 
         switch (args[0].toLowerCase()) {
 
+            case "apply" -> {
+                // Apply all current trims instantly to equipped armor
+                plugin.getTrimManager().applyAllTrimsInstantly(player);
+                player.sendMessage(plugin.prefix() + "§aTrims aplicados a tu armadura actual.");
+            }
+
             case "clear" -> {
                 if (args.length >= 2) {
                     ArmorPiece piece = ArmorPiece.fromName(args[1]);
@@ -43,9 +49,11 @@ public class TrimCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
                     plugin.getTrimManager().clearPlayerTrim(player.getUniqueId(), piece);
+                    plugin.getTrimManager().applyAllTrimsInstantly(player);
                     player.sendMessage(plugin.prefix() + "§7Trim de §f" + piece.getDisplayName() + " §7eliminado.");
                 } else {
                     plugin.getTrimManager().clearAllTrims(player.getUniqueId());
+                    plugin.getTrimManager().applyAllTrimsInstantly(player);
                     player.sendMessage(plugin.prefix() + "§7Todos tus trims han sido eliminados.");
                 }
             }
@@ -62,11 +70,28 @@ public class TrimCommand implements CommandExecutor, TabCompleter {
                     player.sendMessage(plugin.prefix() + "§cJugador no encontrado.");
                     return true;
                 }
-                ItemStack item = switch (type) {
-                    case "legendary" -> TrimCrate.createLegendaryCrate();
-                    case "key"       -> TrimCrate.createKey();
-                    default          -> TrimCrate.createNormalCrate();
-                };
+                
+                ItemStack item;
+                if (type.equals("themed")) {
+                    if (args.length < 4) {
+                        player.sendMessage(plugin.prefix() + "§cUso: /trim give themed <pieza> [jugador]");
+                        player.sendMessage(plugin.prefix() + "§7Piezas: helmet, chestplate, leggings, boots");
+                        return true;
+                    }
+                    ArmorPiece piece = ArmorPiece.fromName(args[3]);
+                    if (piece == null) {
+                        player.sendMessage(plugin.prefix() + "§cPieza inválida. Usa: helmet, chestplate, leggings, boots");
+                        return true;
+                    }
+                    item = TrimCrate.createThemedCrate(piece);
+                } else {
+                    item = switch (type) {
+                        case "legendary" -> TrimCrate.createLegendaryCrate();
+                        case "key"       -> TrimCrate.createKey();
+                        default          -> TrimCrate.createNormalCrate();
+                    };
+                }
+                
                 target.getInventory().addItem(item);
                 player.sendMessage(plugin.prefix() + "§aDado §f" + type + " §aa §f" + target.getName());
             }
@@ -80,19 +105,24 @@ public class TrimCommand implements CommandExecutor, TabCompleter {
     private void sendHelp(Player p) {
         p.sendMessage("§5§m          §r §dTrims §5§m          ");
         p.sendMessage("§7/trim §fgui §8— Abre tu gestor de trims");
+        p.sendMessage("§7/trim §fapply §8— Aplica trims a tu armadura actual");
         p.sendMessage("§7/trim §fclear [pieza] §8— Elimina trim(s)");
-        p.sendMessage("§7/trim §fgive <crate|key|legendary> [player] §8— (Admin) Da item");
+        p.sendMessage("§7/trim §fgive <crate|key|legendary|themed> [player] §8— (Admin) Da item");
+        p.sendMessage("§7/trim §fgive themed <pieza> [jugador] §8— (Admin) Da caja temática");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
-        if (args.length == 1) return List.of("gui", "clear", "give");
+        if (args.length == 1) return List.of("gui", "apply", "clear", "give");
         if (args.length == 2) {
             return switch (args[0].toLowerCase()) {
                 case "clear" -> List.of("helmet", "chestplate", "leggings", "boots");
-                case "give"  -> List.of("crate", "key", "legendary");
+                case "give"  -> List.of("crate", "key", "legendary", "themed");
                 default      -> List.of();
             };
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("give") && args[1].equalsIgnoreCase("themed")) {
+            return List.of("helmet", "chestplate", "leggings", "boots");
         }
         return List.of();
     }

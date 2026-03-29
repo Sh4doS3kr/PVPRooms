@@ -46,6 +46,14 @@ public class TrimManager {
             "coast", "dune", "eye", "rib", "sentry", "snout", "tide", "ward", "wayfinder", "wild"
     );
 
+    // Patrones recomendados por pieza de armadura (basado en estética)
+    private static final Map<ArmorPiece, List<String>> PIECE_PREFERRED_PATTERNS = Map.of(
+            ArmorPiece.HELMET, List.of("eye", "ward", "snout", "sentry", "wayfinder"),
+            ArmorPiece.CHESTPLATE, List.of("rib", "spire", "shaper", "raiser", "host"),
+            ArmorPiece.LEGGINGS, List.of("coast", "tide", "flow", "wild", "dune"),
+            ArmorPiece.BOOTS, List.of("bolt", "silence", "vex", "ward", "rib")
+    );
+
     /** Maps pattern key → display colour code for GUI labels. */
     private static final Map<String, String> PATTERN_COLOURS = Map.ofEntries(
             Map.entry("bolt",      "§e"), Map.entry("coast",    "§b"),
@@ -141,6 +149,33 @@ public class TrimManager {
     }
 
     /**
+     * Applies a single trim to the player's currently equipped armor piece.
+     * This method works instantly both in lobby and during matches.
+     */
+    public void applyTrimInstantly(Player player, ArmorPiece piece, Trim trim) {
+        ItemStack[] armor = player.getInventory().getArmorContents();
+        applyTrimToSlot(armor, piece.getArmorSlot(), trim);
+        player.getInventory().setArmorContents(armor);
+        player.updateInventory();
+        
+        // Also save the trim to player's personal trims
+        setPlayerTrim(player.getUniqueId(), piece, trim);
+    }
+
+    /**
+     * Applies all player trims instantly. Works both in lobby and during matches.
+     */
+    public void applyAllTrimsInstantly(Player player) {
+        Map<ArmorPiece, Trim> trims = getPlayerTrims(player.getUniqueId());
+        if (trims.isEmpty()) return;
+        
+        ItemStack[] armor = player.getInventory().getArmorContents();
+        trims.forEach((piece, trim) -> applyTrimToSlot(armor, piece.getArmorSlot(), trim));
+        player.getInventory().setArmorContents(armor);
+        player.updateInventory();
+    }
+
+    /**
      * Applies kit-default trims first, then overlays personal trims on top.
      * Called from KitManager.applyKit() after setting armor contents.
      */
@@ -179,6 +214,31 @@ public class TrimManager {
         List<String> matPool = materialKeys.isEmpty() ? List.of("iron") : materialKeys;
         Random rng = new Random();
         String pattern  = pool.get(rng.nextInt(pool.size()));
+        String material = matPool.get(rng.nextInt(matPool.size()));
+        return new Trim(material, pattern);
+    }
+
+    /**
+     * Generates a random trim optimized for a specific armor piece.
+     * Uses preferred patterns for the piece but can also use any pattern.
+     *
+     * @param piece the armor piece to optimize for
+     * @param legendary if true selects from legendary patterns; otherwise normal
+     */
+    public Trim randomTrimForPiece(ArmorPiece piece, boolean legendary) {
+        List<String> allPatterns = legendary ? LEGENDARY_PATTERNS : NORMAL_PATTERNS;
+        List<String> preferredPatterns = PIECE_PREFERRED_PATTERNS.getOrDefault(piece, allPatterns);
+        List<String> matPool = materialKeys.isEmpty() ? List.of("iron") : materialKeys;
+        Random rng = new Random();
+        
+        // 70% chance to use a preferred pattern, 30% any pattern
+        String pattern;
+        if (rng.nextDouble() < 0.7) {
+            pattern = preferredPatterns.get(rng.nextInt(preferredPatterns.size()));
+        } else {
+            pattern = allPatterns.get(rng.nextInt(allPatterns.size()));
+        }
+        
         String material = matPool.get(rng.nextInt(matPool.size()));
         return new Trim(material, pattern);
     }

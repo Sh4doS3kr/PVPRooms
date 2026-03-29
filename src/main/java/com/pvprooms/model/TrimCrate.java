@@ -7,6 +7,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.pvprooms.model.ArmorPiece;
+
 import java.util.List;
 
 /**
@@ -15,15 +17,18 @@ import java.util.List;
  *
  *  - Normal crate  → §b cyan shulker box  (90% drop chance)
  *  - Legendary crate → §5 purple shulker box (10% drop chance)
+ *  - Themed crate  → §e themed shulker box (specific armor piece)
  *  - Crate key     → tripwire hook
  */
 public final class TrimCrate {
 
     public static final String VALUE_NORMAL    = "normal";
     public static final String VALUE_LEGENDARY = "legendary";
+    public static final String VALUE_THEMED    = "themed";
 
     private static NamespacedKey crateKey;
     private static NamespacedKey keyTag;
+    private static NamespacedKey armorPieceTag;
 
     private TrimCrate() {}
 
@@ -31,6 +36,7 @@ public final class TrimCrate {
     public static void init(JavaPlugin plugin) {
         crateKey = new NamespacedKey(plugin, "trim_crate_type");
         keyTag   = new NamespacedKey(plugin, "trim_crate_key");
+        armorPieceTag = new NamespacedKey(plugin, "trim_crate_armor_piece");
     }
 
     // ── Item factories ────────────────────────────────────────────────────
@@ -68,6 +74,24 @@ public final class TrimCrate {
         return item;
     }
 
+    public static ItemStack createThemedCrate(ArmorPiece piece) {
+        ItemStack item = new ItemStack(Material.YELLOW_SHULKER_BOX);
+        ItemMeta meta  = item.getItemMeta();
+        meta.setDisplayName("§e§l✦ " + piece.getSymbol() + " §fCrate de " + piece.getDisplayName() + " §e§l✦");
+        meta.setLore(List.of(
+                "§7Contiene un trim aleatorio para §e" + piece.getDisplayName() + "§7.",
+                "§7Patrones exclusivos para esta pieza.",
+                "",
+                "§e✦ §7Usa una §6Llave de Crate§7 para abrirlo.",
+                "§8(Trims específicos para " + piece.getDisplayName() + ")"
+        ));
+        meta.setCustomModelData(9902);
+        meta.getPersistentDataContainer().set(crateKey, PersistentDataType.STRING, VALUE_THEMED);
+        meta.getPersistentDataContainer().set(armorPieceTag, PersistentDataType.STRING, piece.name());
+        item.setItemMeta(meta);
+        return item;
+    }
+
     public static ItemStack createKey() {
         ItemStack item = new ItemStack(Material.TRIPWIRE_HOOK);
         ItemMeta meta  = item.getItemMeta();
@@ -96,6 +120,19 @@ public final class TrimCrate {
         if (!isCrate(item)) return false;
         return VALUE_LEGENDARY.equals(item.getItemMeta().getPersistentDataContainer()
                 .get(crateKey, PersistentDataType.STRING));
+    }
+
+    public static boolean isThemed(ItemStack item) {
+        if (!isCrate(item)) return false;
+        return VALUE_THEMED.equals(item.getItemMeta().getPersistentDataContainer()
+                .get(crateKey, PersistentDataType.STRING));
+    }
+
+    public static ArmorPiece getArmorPiece(ItemStack item) {
+        if (!isThemed(item)) return null;
+        String pieceName = item.getItemMeta().getPersistentDataContainer()
+                .get(armorPieceTag, PersistentDataType.STRING);
+        return pieceName != null ? ArmorPiece.valueOf(pieceName) : null;
     }
 
     public static boolean isKey(ItemStack item) {

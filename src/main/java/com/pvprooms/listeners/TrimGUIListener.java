@@ -51,6 +51,8 @@ public class TrimGUIListener implements Listener {
         if (piece != null) {
             if (shift) {
                 plugin.getTrimManager().clearPlayerTrim(player.getUniqueId(), piece);
+                // Also remove trim from current armor instantly
+                plugin.getTrimManager().applyAllTrimsInstantly(player);
                 player.sendMessage(plugin.prefix() + "§aTrim de §f" + piece.getDisplayName() + " §aeliminado.");
                 gui.openMain(player);
             } else {
@@ -62,6 +64,8 @@ public class TrimGUIListener implements Listener {
         switch (slot) {
             case 49 -> { // Clear all
                 plugin.getTrimManager().clearAllTrims(player.getUniqueId());
+                // Also remove all trims from current armor instantly
+                plugin.getTrimManager().applyAllTrimsInstantly(player);
                 player.sendMessage(plugin.prefix() + "§aTodos tus trims han sido eliminados.");
                 gui.openMain(player);
             }
@@ -79,6 +83,8 @@ public class TrimGUIListener implements Listener {
             ArmorPiece piece = ArmorPiece.fromName(h.getPieceKey());
             if (piece != null) {
                 plugin.getTrimManager().clearPlayerTrim(player.getUniqueId(), piece);
+                // Also remove trim from current armor instantly
+                plugin.getTrimManager().applyAllTrimsInstantly(player);
                 player.sendMessage(plugin.prefix() + "§aTrim de §f" + piece.getDisplayName() + " §aeliminado.");
             }
             gui.openMain(player);
@@ -109,6 +115,9 @@ public class TrimGUIListener implements Listener {
 
         Trim trim = new Trim(material, h.getPatternKey());
         plugin.getTrimManager().setPlayerTrim(player.getUniqueId(), piece, trim);
+        
+        // Apply trim instantly to current armor if player is wearing something
+        plugin.getTrimManager().applyTrimInstantly(player, piece, trim);
 
         String col = plugin.getTrimManager().patternColour(trim.getPattern());
         String mc  = plugin.getTrimManager().materialColour(material);
@@ -135,6 +144,10 @@ public class TrimGUIListener implements Listener {
         if (trim == null) { player.closeInventory(); return; }
 
         plugin.getTrimManager().setPlayerTrim(player.getUniqueId(), piece, trim);
+        
+        // Apply trim instantly to current armor if player is wearing something
+        plugin.getTrimManager().applyTrimInstantly(player, piece, trim);
+        
         String col = plugin.getTrimManager().patternColour(trim.getPattern());
         String mc  = plugin.getTrimManager().materialColour(trim.getMaterial());
         player.sendMessage(plugin.prefix() + "§a✦ §7Trim §f" + piece.getDisplayName()

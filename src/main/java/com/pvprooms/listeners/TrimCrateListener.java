@@ -1,6 +1,7 @@
 package com.pvprooms.listeners;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.model.ArmorPiece;
 import com.pvprooms.model.Trim;
 import com.pvprooms.model.TrimCrate;
 import org.bukkit.entity.Player;
@@ -51,6 +52,10 @@ public class TrimCrateListener implements Listener {
         boolean legendary = Math.random() < 0.10;
         if (TrimCrate.isLegendary(clicked)) legendary = true;
 
+        // Check if it's a themed crate and get the armor piece
+        ArmorPiece themedPiece = TrimCrate.getArmorPiece(clicked);
+        boolean isThemed = themedPiece != null;
+
         // Consume 1 crate
         if (clicked.getAmount() > 1) clicked.setAmount(clicked.getAmount() - 1);
         else event.getClickedInventory().setItem(event.getSlot(), null);
@@ -62,14 +67,26 @@ public class TrimCrateListener implements Listener {
             else player.getInventory().setItem(keySlot, null);
         }
 
-        // Generate trim and open reward GUI
-        Trim trim = plugin.getTrimManager().randomTrim(legendary);
+        // Generate trim based on crate type
+        Trim trim;
+        if (isThemed) {
+            trim = plugin.getTrimManager().randomTrimForPiece(themedPiece, legendary);
+        } else {
+            trim = plugin.getTrimManager().randomTrim(legendary);
+        }
 
         String col = plugin.getTrimManager().patternColour(trim.getPattern());
         String mc  = plugin.getTrimManager().materialColour(trim.getMaterial());
-        player.sendMessage(plugin.prefix() + (legendary ? "§5§l✦ §dCrate Legendario §5§l✦" : "§b✦ §eCrate de Trims §b✦"));
-        player.sendMessage(plugin.prefix() + "§7Obtuviste: " + col + cap(trim.getPattern())
-                + " §7de §r" + mc + cap(trim.getMaterial()));
+        
+        if (isThemed) {
+            player.sendMessage(plugin.prefix() + "§e§l✦ " + themedPiece.getSymbol() + " §fCrate de " + themedPiece.getDisplayName() + " §e§l✦");
+            player.sendMessage(plugin.prefix() + "§7Obtuviste: " + col + cap(trim.getPattern())
+                    + " §7de §r" + mc + cap(trim.getMaterial()) + " §7para " + themedPiece.getDisplayName());
+        } else {
+            player.sendMessage(plugin.prefix() + (legendary ? "§5§l✦ §dCrate Legendario §5§l✦" : "§b✦ §eCrate de Trims §b✦"));
+            player.sendMessage(plugin.prefix() + "§7Obtuviste: " + col + cap(trim.getPattern())
+                    + " §7de §r" + mc + cap(trim.getMaterial()));
+        }
 
         plugin.getTrimGUI().openReward(player, trim);
     }
