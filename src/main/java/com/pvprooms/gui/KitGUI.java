@@ -14,6 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Builds and opens the Kit Selection GUI.
@@ -45,6 +46,27 @@ public class KitGUI {
 
     /** Opens in TIER mode (shows tier info, routes to tier queue). */
     public void openTierMode(Player player) { openInternal(player, true); }
+
+    /** Opens for /duel kit selection. Stores target UUID in holder. */
+    public void openDuelKitSelection(Player player, UUID targetUUID) {
+        Collection<Kit> kits = plugin.getKitManager().getAllKits();
+        if (kits.isEmpty()) {
+            player.sendMessage(plugin.prefix() + "§cNo hay kits disponibles.");
+            return;
+        }
+        int size = calculateSize(kits.size());
+        String title = ChatColor.translateAlternateColorCodes('&', "&8Elige kit para el duelo");
+        Inventory inv = Bukkit.createInventory(new DuelKitSelectHolder(targetUUID), size, title);
+        int slot = 0;
+        for (Kit kit : kits) {
+            if (slot >= size) break;
+            inv.setItem(slot, buildDuelKitItem(kit));
+            slot++;
+        }
+        ItemStack filler = buildFiller();
+        for (int i = slot; i < size; i++) inv.setItem(i, filler);
+        player.openInventory(inv);
+    }
 
     private void openInternal(Player player, boolean tierMode) {
         Collection<Kit> kits = plugin.getKitManager().getAllKits();
@@ -100,6 +122,14 @@ public class KitGUI {
                         "§fTier " + capitalize(kit.getName()) + ": " + kitTier.formatted(),
                         "§fPuntos:        §6" + kitPts,
                         "§fInsignia:      " + myTitle.formatted()));
+    }
+
+    private ItemStack buildDuelKitItem(Kit kit) {
+        return buildItem(kit.getIconMaterial(),
+                "§a§l" + capitalize(kit.getName()),
+                List.of("§7Click para seleccionar este kit",
+                        "",
+                        "§fDuelo directo sin ELO"));
     }
 
     private ItemStack buildItem(Material mat, String name, List<String> lore) {

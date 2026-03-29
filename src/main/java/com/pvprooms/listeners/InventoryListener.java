@@ -9,6 +9,7 @@ import com.pvprooms.gui.KitEditorGUI;
 import com.pvprooms.gui.KitEditorHolder;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.gui.KitSelectHolder;
+import com.pvprooms.gui.DuelKitSelectHolder;
 import com.pvprooms.gui.KitReorderHolder;
 import com.pvprooms.gui.QueueModeGUI;
 import com.pvprooms.gui.QueueModeHolder;
@@ -59,6 +60,19 @@ public class InventoryListener implements Listener {
                 player.closeInventory();
                 plugin.getKitGUI().openTierMode(player);
             }
+            return;
+        }
+
+        // ── Duel Kit Selection GUI (/duel command) ──────────────────────────
+        if (event.getInventory().getHolder() instanceof DuelKitSelectHolder holder) {
+            event.setCancelled(true);
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || clicked.getType() == Material.BLACK_STAINED_GLASS_PANE) return;
+            String kitName = plugin.getKitGUI().extractKitName(clicked);
+            if (kitName == null || !plugin.getKitManager().kitExists(kitName)) return;
+            player.closeInventory();
+            // Start the duel with the selected kit
+            plugin.getQueueManager().startDuelFromPair(player.getUniqueId(), kitName);
             return;
         }
 

@@ -201,6 +201,10 @@ public class PvPRoomsPro extends JavaPlugin {
 
         getCommand("queue").setExecutor(new QueueCommand(this));
 
+        DuelCommand duelCmd = new DuelCommand(this);
+        getCommand("duel").setExecutor(duelCmd);
+        getCommand("duel").setTabCompleter(duelCmd);
+
         SpectateCommand spectateCmd = new SpectateCommand(this);
         getCommand("spectate").setExecutor(spectateCmd);
         getCommand("spectate").setTabCompleter(spectateCmd);

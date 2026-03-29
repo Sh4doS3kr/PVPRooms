@@ -81,7 +81,7 @@ Todos los elementos se colocan **en tu posición actual** al ejecutar el comando
 | Comando | Descripción |
 |---------|-------------|
 | `/holo create info welcome` | Mensaje de bienvenida |
-| `/holo create info rules` | Reglas del servidor |
+| ` ` | Reglas del servidor |
 | `/holo create info ranks` | Explicación de rangos/tiers |
 | `/holo create info kits` | Lista de kits disponibles |
 | `/holo create info commands` | Comandos útiles para jugadores |

@@ -143,14 +143,14 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 /* Folder tabs — the signature mctiers look */
 .folder-tabs{
   display:flex;align-items:flex-end;gap:.25rem;
-  overflow-x:auto;scrollbar-width:none;
-  padding:0 1px;margin-bottom:-1px;position:relative;z-index:2;
+  overflow-x:auto;overflow-y:visible;scrollbar-width:none;
+  padding:8px 1px 0;margin-bottom:-1px;position:relative;z-index:2;
 }
 .folder-tabs::-webkit-scrollbar{display:none;}
 
 .folder-tab{
   display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  gap:.25rem;padding:.55rem .9rem .5rem;
+  gap:.25rem;padding:.65rem .9rem .55rem;
   width:112px;flex-shrink:0;
   border:1px solid var(--border);border-bottom:none;
   border-radius:var(--r-tab) var(--r-tab) 0 0;
@@ -159,6 +159,7 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
   cursor:pointer;user-select:none;
   transition:color var(--tf),background var(--tf);
   position:relative;
+  overflow:visible;
 }
 .folder-tab:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.04);}
 .folder-tab.active{

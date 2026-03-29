@@ -64,7 +64,7 @@
     <div class="folder-tabs" id="folderTabs">
       <a class="folder-tab active" data-kit="overall" href="#">
         <img class="ftab-ico" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" onerror="this.style.display='none'" alt=""/>
-        <strong>Overall</strong>
+        <strong>General</strong>
       </a>
     </div>
 
@@ -78,7 +78,7 @@
           <span class="card-sub" id="cardSub"></span>
         </div>
         <div class="card-head-right">
-          <div class="live-badge"><span class="live-dot"></span><span id="liveUpd">Live</span></div>
+          <div class="live-badge"><span class="live-dot"></span><span id="liveUpd">En vivo</span></div>
         </div>
       </div>
 
@@ -254,7 +254,7 @@ async function init(){
   setInterval(fetchStats, 12000);
   setInterval(()=>{
     const s = Math.round((Date.now()-lastUpdMs)/1000);
-    document.getElementById('liveUpd').textContent = s<5?'Live':`${s}s ago`;
+    document.getElementById('liveUpd').textContent = s<5?'En vivo':`hace ${s}s`;
   }, 1000);
 }
 

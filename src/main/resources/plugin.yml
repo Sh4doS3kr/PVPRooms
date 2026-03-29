@@ -19,6 +19,10 @@ commands:
     description: Join the PvP queue
     usage: /queue
     permission: pvprooms.queue
+  duel:
+    description: Challenge a player to a duel
+    usage: /duel <player|accept|deny>
+    permission: pvprooms.duel
   spectate:
     description: Spectate an active duel
     usage: /spectate <player>
@@ -81,6 +85,9 @@ permissions:
     default: op
   pvprooms.queue:
     description: Join the PvP queue
+    default: true
+  pvprooms.duel:
+    description: Challenge players to duels
     default: true
   pvprooms.spectate:
     description: Spectate active duels

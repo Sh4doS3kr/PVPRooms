@@ -36,6 +36,9 @@ public class QueueManager {
     /** Cooldown tracking: player UUID → System.currentTimeMillis() of last queue join */
     private final Map<UUID, Long> cooldowns = new HashMap<>();
 
+    /** Pending duel pairs from /duel command: challenger UUID → target UUID */
+    private final Map<UUID, UUID> pendingDuelPairs = new HashMap<>();
+
     private static final long TIER_EXPAND_MS = 45_000L; // expand to ±1 tier after 45s
 
     private BukkitTask matchmakingTask;
@@ -278,6 +281,31 @@ public class QueueManager {
             try { return Tier.valueOf(parts[1]); } catch (IllegalArgumentException ignored) {}
         }
         return Tier.UNRANKED;
+    }
+
+    // ── Duel pairs (from /duel command) ────────────────────────────────────
+
+    /** Stores a pending duel pair. Called when a duel request is accepted. */
+    public void storeDuelPair(UUID challenger, UUID target) {
+        pendingDuelPairs.put(challenger, target);
+    }
+
+    /** Gets and removes the pending duel target for a challenger. */
+    public UUID consumeDuelPair(UUID challenger) {
+        return pendingDuelPairs.remove(challenger);
+    }
+
+    /** Checks if a player has a pending duel pair. */
+    public boolean hasDuelPair(UUID challenger) {
+        return pendingDuelPairs.containsKey(challenger);
+    }
+
+    /** Starts a duel from a pending pair with the selected kit. */
+    public void startDuelFromPair(UUID challenger, String kitName) {
+        UUID target = consumeDuelPair(challenger);
+        if (target != null) {
+            plugin.getDuelManager().startDuel(challenger, target, kitName);
+        }
     }
 
 }
