@@ -3,29 +3,36 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>PvP·Tiers — Clasificación</title>
+<title>PvP·Tiers — Clasificación Competitiva</title>
+<meta name="description" content="Clasificación competitiva de PvP — Tiers, ELO y estadísticas en tiempo real"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-<div class="rank-strip"></div>
 
-<header>
+<!-- Ambient background particles -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- ═══ HEADER ════════════════════════════════════════════════════════ -->
+<header id="hdr">
   <div class="nav-inner">
-    <a class="logo" href="/">PVP<em>·</em>TIERS</a>
+    <a class="logo" href="/">
+      <div class="logo-sword">⚔</div>
+      <span>PVP<em>·</em>TIERS</span>
+    </a>
     <nav class="nav-links">
-      <a href="#">Clasificación</a>
-      <a href="#">Estadísticas</a>
-      <a href="#">API</a>
+      <a class="nav-a active" href="#lb">Clasificación</a>
+      <a class="nav-a" href="#statsSection">Estadísticas</a>
+      <a class="nav-a" href="#kitsSection">Kits</a>
     </nav>
     <div class="nav-right">
-      <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" id="searchInput" placeholder="Buscar jugador…"/>
+      <div class="search-wrap">
+        <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="searchInput" type="text" placeholder="Buscar jugador…" autocomplete="off" spellcheck="false"/>
       </div>
-      <div class="srv-badge">
+      <div class="srv-pill" id="srvPill">
         <span class="srv-dot" id="srvDot"></span>
         <span id="srvStatus">Conectando…</span>
       </div>
@@ -33,362 +40,511 @@
   </div>
 </header>
 
-<div class="stats-bar">
+<!-- ═══ STATS BAR ═════════════════════════════════════════════════════ -->
+<section class="stats-bar" id="statsSection">
   <div class="stats-inner">
-    <div class="s-chip">
-      <div class="s-ico g">⚔</div>
-      <div><div class="s-lbl">Online</div><div class="s-val" id="sOnline">—</div></div>
+    <div class="s-card" id="sc-online">
+      <div class="s-icon s-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div><div class="s-val" id="sOnline">—</div><div class="s-lbl">Online ahora</div></div>
     </div>
-    <div class="s-chip">
-      <div class="s-ico p">⚡</div>
-      <div><div class="s-lbl">Duelos activos</div><div class="s-val" id="sDuels">—</div></div>
+    <div class="s-card" id="sc-duels">
+      <div class="s-icon s-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 17.5-5-5 5-5"/><path d="m9.5 17.5 5-5-5-5"/></svg></div>
+      <div><div class="s-val" id="sDuels">—</div><div class="s-lbl">Duelos activos</div></div>
     </div>
-    <div class="s-chip">
-      <div class="s-ico c">⏳</div>
-      <div><div class="s-lbl">En cola</div><div class="s-val" id="sQueue">—</div></div>
+    <div class="s-card" id="sc-queue">
+      <div class="s-icon s-yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+      <div><div class="s-val" id="sQueue">—</div><div class="s-lbl">En cola</div></div>
     </div>
-    <div class="s-chip">
-      <div class="s-ico o">🌍</div>
-      <div><div class="s-lbl">Región servidor</div><div class="s-val" id="sRegion">—</div></div>
+    <div class="s-card" id="sc-total">
+      <div class="s-icon s-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div><div class="s-val" id="sTotal">—</div><div class="s-lbl">Registrados</div></div>
     </div>
-    <div class="s-chip">
-      <div class="s-ico b">📍</div>
-      <div><div class="s-lbl">Tu región</div><div class="s-val" id="sUserReg">—</div></div>
+    <div class="s-card" id="sc-region">
+      <div class="s-icon s-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+      <div><div class="s-val" id="sRegion">—</div><div class="s-lbl">Servidor</div></div>
+    </div>
+    <div class="s-card" id="sc-you">
+      <div class="s-icon s-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+      <div><div class="s-val" id="sUserReg">—</div><div class="s-lbl">Tu ubicación</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TABS ═══════════════════════════════════════════════════════════ -->
+<div class="tabs-bar" id="kitsSection">
+  <div class="tabs-inner">
+    <div class="tabs" id="tabsContainer">
+      <button class="tab-btn active" data-kit="overall">
+        <img class="tab-ico" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" onerror="this.style.display='none'" alt=""/>
+        <span>General</span>
+      </button>
     </div>
   </div>
 </div>
 
-<div class="tabs-outer">
-  <div class="tabs" id="tabsContainer">
-    <button class="tab-btn active" data-kit="overall">
-      <span style="font-size:1.1rem">🏆</span> General
-    </button>
-  </div>
-</div>
+<!-- ═══ MAIN LEADERBOARD ═══════════════════════════════════════════════ -->
+<main id="lb">
+  <div class="lb-outer">
 
-<main>
-  <div class="lb-card">
-    <div class="lb-top">
-      <div class="lb-heading" id="lbHeading">Clasificación General</div>
-      <div class="lb-cnt" id="lbCnt"></div>
+    <!-- Podium top 3 -->
+    <div class="podium-wrap" id="podiumWrap" style="display:none">
+      <div class="podium" id="podium"></div>
     </div>
-    <div class="th">
-      <div style="text-align:center">#</div>
-      <div>Jugador</div>
-      <div>Región</div>
-      <div>Tiers por Kit</div>
-      <div style="text-align:right">Puntos</div>
+
+    <!-- Table card -->
+    <div class="lb-card">
+      <div class="lb-head">
+        <div>
+          <h2 class="lb-title" id="lbTitle">🏆 Clasificación General</h2>
+          <div class="lb-sub" id="lbCnt">Cargando…</div>
+        </div>
+        <div class="lb-meta">
+          <div class="upd-badge" id="updBadge">
+            <span class="upd-dot pulse"></span>
+            <span id="lastUpd">En vivo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tbl-scroll">
+        <div class="th-row">
+          <div class="th-c th-rank">#</div>
+          <div class="th-c th-player">Jugador</div>
+          <div class="th-c th-country">País</div>
+          <div class="th-c th-elo">ELO</div>
+          <div class="th-c th-kits">Tiers por Kit</div>
+          <div class="th-c th-pts">Puntos</div>
+        </div>
+        <div id="tableBody">
+          <div class="state-msg"><div class="spinner"></div><span>Cargando clasificación…</span></div>
+        </div>
+      </div>
     </div>
-    <div id="tableBody">
-      <div class="state-msg"><div class="spinner"></div>Cargando clasificación…</div>
-    </div>
+
   </div>
 </main>
 
+<!-- ═══ FOOTER ════════════════════════════════════════════════════════ -->
 <footer>
-  <em>PvP·Tiers</em> — Actualizado <em id="lastUpd">ahora</em> · Estadísticas en tiempo real · <em>198.27.75.84:27090</em>
+  <div class="ft-inner">
+    <span class="ft-logo">PVP<em>·</em>TIERS</span>
+    <span class="ft-sep">·</span>
+    <span>Actualizado <em id="ftUpd">ahora</em></span>
+    <span class="ft-sep">·</span>
+    <span>Estadísticas en tiempo real</span>
+    <span class="ft-sep">·</span>
+    <span class="ft-ip">198.27.75.84:27090</span>
+  </div>
 </footer>
 
+<!-- ═══ MODAL ════════════════════════════════════════════════════════ -->
 <div class="mo-ov" id="moOv">
   <div class="mo-card">
-    <button class="mo-x" id="moClose">✕</button>
-    <div class="mo-head">
-      <img class="mo-av" id="moAv" src="" alt=""/>
-      <div>
-        <div class="mo-nm" id="moNm"></div>
-        <div id="moTitleBadge" style="margin-top:.4rem"></div>
+    <button class="mo-close" id="moClose" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+
+    <!-- Hero -->
+    <div class="mo-hero">
+      <div class="mo-av-wrap">
+        <img class="mo-av" id="moAv" src="" alt=""/>
+        <div class="mo-av-ring" id="moRing"></div>
+      </div>
+      <div class="mo-info">
+        <div class="mo-name" id="moNm"></div>
+        <div class="mo-badge" id="moBadge"></div>
+        <div class="mo-region" id="moRegion"></div>
       </div>
     </div>
+
+    <!-- Stats grid -->
     <div class="mo-stats" id="moStats"></div>
-    <div class="mo-kt-h">Tiers por kit</div>
-    <div class="mo-kits" id="moKits"></div>
+
+    <!-- Kits breakdown -->
+    <div class="mo-section">
+      <div class="mo-sec-hd">⚔ Tiers por Kit</div>
+      <div class="mo-kits" id="moKits"></div>
+    </div>
   </div>
 </div>
 
+<!-- ═══ SCRIPTS ═══════════════════════════════════════════════════════ -->
 <script>
 const API = window.location.origin;
-let allPlayers=[], currentKit='overall', kits=[], lastUpd=Date.now();
+let allPlayers = [], currentKit = 'overall', kits = [], lastUpdMs = Date.now();
 
-/* ── Custom tier config ──────────────────────────────────────────── */
-/*   Ranks: Sin Rango → Hierro → Bronce → Plata → Oro               */
-/*          Esmeralda → Diamante → Maestro → Leyenda                  */
-const T_CFG = {
-  'sin-rango':  {l:'?',   c1:'#6b7280',c2:'#374151',glow:0,sh:'empty'},
-  'unranked':   {l:'?',   c1:'#6b7280',c2:'#374151',glow:0,sh:'empty'},
-  'hierro':     {l:'Fe',  c1:'#9ca3af',c2:'#4b5563',glow:0,sh:'circle'},
-  'bronce':     {l:'Br',  c1:'#cd7f32',c2:'#78350f',glow:0,sh:'badge'},
-  'plata':      {l:'Ag',  c1:'#e2e8f0',c2:'#94a3b8',glow:0,sh:'hex'},
-  'oro':        {l:'Au',  c1:'#fbbf24',c2:'#92400e',glow:1,sh:'star'},
-  'esmeralda':  {l:'Em',  c1:'#34d399',c2:'#065f46',glow:1,sh:'hex'},
-  'diamante':   {l:'Di',  c1:'#67e8f9',c2:'#164e63',glow:1,sh:'shield'},
-  'maestro':    {l:'Ma',  c1:'#c084fc',c2:'#4c1d95',glow:1,sh:'crown'},
-  'leyenda':    {l:'Le',  c1:'#f87171',c2:'#7f1d1d',glow:1,sh:'crown'},
-};
+/* ═══ Constants ══════════════════════════════════════════════════════ */
+const MC  = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/';
+const GH_FLAGS = 'https://raw.githubusercontent.com/hampusborgos/country-flags/main/png100px/';
 
-/* Minecraft item images for each tier icon (GitHub CDN) */
 const TIER_ITEMS = {
-  'hierro':    'iron_ingot',
-  'bronce':    'copper_ingot',
-  'plata':     'iron_block',
-  'oro':       'gold_ingot',
-  'esmeralda': 'emerald',
-  'diamante':  'diamond',
-  'maestro':   'nether_star',
-  'leyenda':   'beacon',
+  'sin-rango':'gray_concrete','hierro':'iron_ingot','bronce':'copper_ingot',
+  'plata':'iron_block','oro':'gold_ingot','esmeralda':'emerald',
+  'diamante':'diamond','maestro':'nether_star','leyenda':'beacon'
 };
-const MC_ASSET = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/';
-function tierItemUrl(t) {
-  const item = TIER_ITEMS[tkSlug(t)] || 'amethyst_shard';
-  return MC_ASSET + item + '.png';
+const TIER_COLS = {
+  'sin-rango':'#6b7280','hierro':'#9ca3af','bronce':'#cd7f32',
+  'plata':'#e2e8f0','oro':'#fbbf24','esmeralda':'#34d399',
+  'diamante':'#67e8f9','maestro':'#c084fc','leyenda':'#f87171'
+};
+const TIER_GLOW = {
+  'oro':'rgba(251,191,36,.35)','esmeralda':'rgba(52,211,153,.35)',
+  'diamante':'rgba(103,232,249,.35)','maestro':'rgba(192,132,252,.38)',
+  'leyenda':'rgba(248,113,113,.42)'
+};
+const KIT_ITEMS = {
+  sword:'diamond_sword',espada:'diamond_sword',nodebuff:'golden_sword',
+  combo:'stick',axe:'iron_axe',battleaxe:'iron_axe',
+  uhc:'golden_apple',meetup:'golden_apple',gapple:'enchanted_golden_apple',
+  soup:'mushroom_stew',pot:'splash_potion',potion:'splash_potion',
+  sumo:'feather',boxing:'leather_chestplate',bridge:'stone_bricks',
+  crystal:'amethyst_shard',bedfight:'white_bed',bedwars:'white_bed',
+  skywars:'firework_rocket',build:'bricks',vanilla:'diamond_sword',
+};
+const REGION_FLAGS = {EU:'eu',NA:'us',AS:'jp',SA:'br',OC:'au',AF:'za'};
+const REGION_LABEL = {EU:'Europa',NA:'América',AS:'Asia',SA:'S. América',OC:'Oceanía',AF:'África'};
+
+/* ═══ Helpers ════════════════════════════════════════════════════════ */
+function slug(n){return(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-');}
+function cap(s){return s?s[0].toUpperCase()+s.slice(1):'';}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function tierCol(t){return TIER_COLS[slug(t)]||'#8899bb';}
+function tierGlowVal(t){return TIER_GLOW[slug(t)]||null;}
+function mcItem(name){return MC+(name||'diamond_sword')+'.png';}
+function tierImgUrl(t){return mcItem(TIER_ITEMS[slug(t)]);}
+function kitImgUrl(k){return mcItem(KIT_ITEMS[slug(k)]||'diamond_sword');}
+function ghFlag(cc){return cc?GH_FLAGS+cc.toLowerCase()+'.png':null;}
+function regionCC(r){return REGION_FLAGS[(r||'').toUpperCase()]||'eu';}
+
+function titleColor(t){
+  const map={'leyenda':'#f87171','maestro':'#c084fc','diamante':'#67e8f9',
+    'esmeralda':'#34d399','oro':'#fbbf24','plata':'#e2e8f0','bronce':'#cd7f32',
+    'hierro':'#9ca3af','sin rango':'#6b7280'};
+  return map[(t||'').toLowerCase()]||'#8899bb';
 }
 
-function tkSlug(n){return(n||'').toLowerCase().replace(/\s+/g,'-').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+/* Kit badge — shows BOTH kit name and tier */
+function mkBadge(kitName, tierName, pts, focusKit) {
+  const sk = slug(tierName), sc = tierCol(tierName), gl = tierGlowVal(tierName);
+  const isActive = focusKit === kitName;
+  const glowStyle = gl ? `box-shadow:0 0 14px ${gl};` : '';
+  const activeRing = isActive ? 'badge-active' : '';
+  const kitImg  = kitImgUrl(kitName);
+  const tierImg = tierImgUrl(tierName);
+  return `<div class="badge ${activeRing}" data-tier="${sk}" title="${esc(cap(kitName))}: ${esc(tierName)} · ${pts} pts">
+    <div class="badge-inner" style="${glowStyle}">
+      <div class="badge-imgs">
+        <img class="badge-kit" src="${kitImg}" onerror="this.src='${tierImg}'" loading="lazy" alt="${esc(kitName)}"/>
+        <img class="badge-tier-img" src="${tierImg}" onerror="this.style.display='none'" loading="lazy" alt="${esc(tierName)}"/>
+      </div>
+      <div class="badge-kit-nm">${esc(cap(kitName))}</div>
+      <div class="badge-tier-nm" style="color:${sc}">${esc(tierName.toUpperCase())}</div>
+    </div>
+  </div>`;
+}
 
-function makeSVGEmb(tierName,s=34){
-  const k=tkSlug(tierName), cfg=T_CFG[k]||T_CFG['sin-rango'];
-  const h=Math.round(s*1.12), id='e'+Math.random().toString(36).slice(2,7);
-  let path='';
-  switch(cfg.sh){
-    case'crown': path=`M${s*.12},${h*.38}L${s*.12},${h*.8}Q${s*.12},${h*.9}${s*.22},${h*.92}L${s*.78},${h*.92}Q${s*.88},${h*.9}${s*.88},${h*.8}L${s*.88},${h*.38}L${s*.72},${h*.5}L${s*.5},${h*.1}L${s*.28},${h*.5}Z`; break;
-    case'star':{const cx=s*.5,cy=h*.5,R=s*.42,r=s*.19,pts=[];for(let i=0;i<10;i++){const a=Math.PI/5*i-Math.PI/2,rad=i%2?r:R;pts.push(`${cx+rad*Math.cos(a)},${cy+rad*Math.sin(a)}`);}path=`M${pts.join('L')}Z`;break;}
-    case'shield': path=`M${s*.5},${h*.06}L${s*.88},${h*.22}L${s*.88},${h*.56}Q${s*.88},${h*.82}${s*.5},${h*.94}Q${s*.12},${h*.82}${s*.12},${h*.56}L${s*.12},${h*.22}Z`; break;
-    case'hex':{const cx=s*.5,cy=h*.5,r2=s*.43,pts2=[];for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;pts2.push(`${cx+r2*Math.cos(a)},${cy+r2*Math.sin(a)}`);}path=`M${pts2.join('L')}Z`;break;}
-    case'badge': path=`M${s*.14},${h*.1}L${s*.86},${h*.1}L${s*.86},${h*.68}L${s*.5},${h*.92}L${s*.14},${h*.68}Z`; break;
-    case'circle': path=`M${s*.5},${h*.07}A${s*.43},${s*.43}0 1 1 ${s*.5-.01},${h*.07}Z`; break;
-    default: path=`M${s*.5},${h*.07}A${s*.4},${s*.4}0 1 1 ${s*.5-.01},${h*.07}Z`;
+/* Flag img tag using GitHub CDN */
+function flagImg(cc, size=18) {
+  const url = ghFlag(cc);
+  if (!url) return '';
+  return `<img class="flag-img" src="${url}" width="${size}" height="${Math.round(size*.67)}" onerror="this.style.display='none'" loading="lazy" alt="${cc}"/>`;
+}
+
+/* Region pill */
+function regionPill(r) {
+  const cc = regionCC(r), lbl = REGION_LABEL[r.toUpperCase()] || r;
+  return `<span class="re-pill">${flagImg(cc,16)} ${lbl}</span>`;
+}
+
+/* ELO bar colour */
+function eloColor(elo) {
+  if (elo >= 2800) return '#f87171';
+  if (elo >= 2400) return '#c084fc';
+  if (elo >= 2100) return '#67e8f9';
+  if (elo >= 1800) return '#34d399';
+  if (elo >= 1500) return '#fbbf24';
+  if (elo >= 1200) return '#cd7f32';
+  if (elo >= 1000) return '#e2e8f0';
+  if (elo >=  800) return '#9ca3af';
+  return '#6b7280';
+}
+
+/* ═══ Region detection (ip-api.com — most accurate, free) ═══════════ */
+async function detectUserRegion() {
+  const el = document.getElementById('sUserReg');
+  try {
+    /* ip-api.com returns correct geolocation; ipapi.co has accuracy issues */
+    const r = await fetch('http://ip-api.com/json/?fields=country,countryCode,continentCode', {signal: AbortSignal.timeout(6000)});
+    const d = await r.json();
+    const cc = (d.countryCode || 'EU').toLowerCase();
+    const country = d.country || 'Desconocido';
+    el.innerHTML = `${flagImg(cc,18)} <span>${esc(country)}</span>`;
+  } catch {
+    /* fallback: ipinfo */
+    try {
+      const r2 = await fetch('https://ipinfo.io/json', {signal: AbortSignal.timeout(5000)});
+      const d2 = await r2.json();
+      const cc = (d2.country || 'EU').toLowerCase();
+      el.innerHTML = `${flagImg(cc,18)} <span>${esc(d2.country||'—')}</span>`;
+    } catch {
+      el.textContent = '—';
+    }
   }
-  const glowF=cfg.glow?`<filter id="${id}f"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`:'';
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${h}" width="${s}" height="${h}">
-    <defs><linearGradient id="${id}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${cfg.c1}"/><stop offset="100%" stop-color="${cfg.c2}"/></linearGradient>${glowF}</defs>
-    <path d="${path}" fill="url(#${id})" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"${cfg.glow?` filter="url(#${id}f)"`:''}/> 
-    <text x="${s/2}" y="${h*.56}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,.96)" font-size="${cfg.l.length>3?7:8.5}" font-weight="900" font-family="Orbitron,monospace" letter-spacing="0.5">${cfg.l}</text>
-  </svg>`;
-  return 'data:image/svg+xml;base64,'+btoa(svg);
 }
 
-/* ── Kit item URL (Minecraft assets CDN) ────────────────────────── */
-const KIT_ITEMS={
-  crystal:'amethyst_shard',glass:'glass',
-  sword:'diamond_sword',nodebuff:'golden_sword',vanilla:'diamond_sword',combo:'stick',
-  axe:'iron_axe',battleaxe:'iron_axe',
-  uhc:'golden_apple',uhcmeetup:'golden_apple',meetup:'golden_apple',
-  gapple:'enchanted_golden_apple',godapple:'enchanted_golden_apple',
-  soup:'mushroom_stew',mushroomsoup:'mushroom_stew',
-  pot:'splash_potion',potion:'splash_potion',debuff:'splash_potion',
-  sumo:'feather',boxing:'leather_chestplate',
-  bridge:'stone_bricks',builduhc:'bricks',
-  bedfight:'white_bed',bedwars:'white_bed',
-  skywars:'firework_rocket',eggwars:'egg',
-  build:'bricks',
-};
-function kitItemUrl(k){
-  const item=KIT_ITEMS[(k||'').toLowerCase()]||'diamond_sword';
-  return MC_ASSET+item+'.png';
-}
-
-/* Per-tier accent colour */
-const TIER_COLOURS = {
-  'hierro':    '#9ca3af',
-  'bronce':    '#cd7f32',
-  'plata':     '#e2e8f0',
-  'oro':       '#fbbf24',
-  'esmeralda': '#34d399',
-  'diamante':  '#67e8f9',
-  'maestro':   '#c084fc',
-  'leyenda':   '#f87171',
-  'sin-rango': '#6b7280',
-  'unranked':  '#6b7280',
-};
-
-function tierBorderCol(t){
-  const clr = TIER_COLOURS[tkSlug(t)];
-  if(!clr) return 'rgba(255,255,255,.08)';
-  const hex=clr.replace('#','');
-  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
-  return `rgba(${r},${g},${b},.45)`;
-}
-function tierGlow(t){
-  const clr = TIER_COLOURS[tkSlug(t)];
-  if(!clr) return 'none';
-  const k=tkSlug(t);
-  if(['oro','esmeralda','diamante','maestro','leyenda'].includes(k)){
-    const hex=clr.replace('#','');
-    const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
-    return `rgba(${r},${g},${b},.28)`;
-  }
-  return 'none';
-}
-
-function mkBadge(kitName,tierName,pts,focusKit){
-  const isActive=focusKit===kitName;
-  const bc=tierBorderCol(tierName);
-  const clr=TIER_COLOURS[tkSlug(tierName)]||'#8899bb';
-  const gl=tierGlow(tierName);
-  const glowStyle=gl!=='none'?`box-shadow:0 0 12px ${gl},inset 0 1px 0 rgba(255,255,255,.08);`:'';
-  const activeStyle=isActive?`outline:2px solid rgba(255,255,255,.65);outline-offset:2px;`:'';
-  /* Use the Minecraft item texture that represents this tier */
-  const imgSrc=tierItemUrl(tierName);
-  const slug=tkSlug(tierName);
-  return`<div class="emb" data-tier="${slug}" title="${cap(kitName)}: ${tierName} (${pts} pts)">`+
-    `<div class="emb-bg" style="border-color:${bc};${glowStyle}${activeStyle}">`+
-    `<img class="emb-img" src="${imgSrc}" onerror="this.style.opacity='.25'" loading="lazy" alt="${tierName}"/>`+
-    `</div>`+
-    `<span class="emb-lbl" style="color:${clr}">${tierName.toUpperCase()}</span>`+
-    `</div>`;
-}
-
-/* ── Title colour (TierTitle system) ─────────────────────────────── */
-const TC={
-  'leyenda':'#f87171','maestro':'#c084fc','diamante':'#67e8f9',
-  'esmeralda':'#34d399','oro':'#fbbf24','plata':'#e2e8f0',
-  'bronce':'#cd7f32','hierro':'#9ca3af','sin rango':'#6b7280',
-};
-function tc(t){return TC[(t||'').toLowerCase()]||'#8899bb';}
-
-/* ── Region helpers ───────────────────────────────────────────────── */
-const RF={'EU':'🇪🇺','NA':'🇺🇸','AS':'🇯🇵','SA':'🇧🇷','OC':'🇦🇺','AF':'🇿🇦'};
-function rflag(r){return RF[(r||'').toUpperCase()]||'🌐';}
-function rcls(r){const k=(r||'XX').toUpperCase().substring(0,2).toLowerCase();return're-'+k;}
-
-/* ── User region detection ────────────────────────────────────────── */
-async function detectRegion(){
-  try{
-    const r=await fetch('https://ipapi.co/json/',{signal:AbortSignal.timeout?AbortSignal.timeout(5000):undefined});
-    const d=await r.json();
-    const cmap={'EU':'EU','NA':'NA','AS':'AS','SA':'SA','OC':'OC','AF':'AF'};
-    const reg=cmap[d.continent_code]||d.continent_code||'EU';
-    document.getElementById('sUserReg').textContent=rflag(reg)+' '+(d.country_name||reg);
-  }catch{document.getElementById('sUserReg').textContent='—';}
-}
-
-/* ── Bootstrap ────────────────────────────────────────────────────── */
-async function init(){
-  detectRegion();
-  await Promise.all([fetchStats(),fetchKits()]);
+/* ═══ Bootstrap ══════════════════════════════════════════════════════ */
+async function init() {
+  initCanvas();
+  detectUserRegion();
+  await Promise.all([fetchStats(), fetchKits()]);
   await fetchTop('overall');
-  setInterval(fetchStats,14000);
-  setInterval(()=>{
-    const s=Math.round((Date.now()-lastUpd)/1000);
-    document.getElementById('lastUpd').textContent=s<5?'ahora':`hace ${s}s`;
-  },1000);
+  setInterval(fetchStats, 12000);
+  setInterval(tickUpd, 1000);
 }
 
-async function fetchStats(){
-  try{
-    const d=await(await fetch(`${API}/api/stats`)).json();
-    document.getElementById('sOnline').textContent=d.online??'—';
-    document.getElementById('sDuels').textContent=d.duelos??'—';
-    document.getElementById('sQueue').textContent=d.en_cola??'—';
-    const reg=(d.region||'EU').toUpperCase();
-    document.getElementById('sRegion').textContent=rflag(reg)+' '+reg;
-    document.getElementById('srvStatus').textContent=`En línea · ${d.online??'?'} jugadores`;
+function tickUpd() {
+  const s = Math.round((Date.now() - lastUpdMs) / 1000);
+  const txt = s < 5 ? 'En vivo' : `hace ${s}s`;
+  document.getElementById('lastUpd').textContent = txt;
+  document.getElementById('ftUpd').textContent   = txt;
+}
+
+async function fetchStats() {
+  try {
+    const d = await (await fetch(`${API}/api/stats`)).json();
+    document.getElementById('sOnline').textContent = d.online   ?? '—';
+    document.getElementById('sDuels').textContent  = d.duelos   ?? '—';
+    document.getElementById('sQueue').textContent  = d.en_cola  ?? '—';
+    document.getElementById('sTotal').textContent  = d.total_jugadores ?? '—';
+    const reg = (d.region || 'EU').toUpperCase();
+    const cc  = regionCC(reg);
+    document.getElementById('sRegion').innerHTML = `${flagImg(cc,18)} <span>${REGION_LABEL[reg]||reg}</span>`;
+    document.getElementById('srvStatus').textContent = `En línea · ${d.online ?? '?'} jugadores`;
     document.getElementById('srvDot').classList.remove('off');
-  }catch{
-    document.getElementById('srvStatus').textContent='Sin conexión';
+  } catch {
+    document.getElementById('srvStatus').textContent = 'Sin conexión';
     document.getElementById('srvDot').classList.add('off');
   }
 }
 
-async function fetchKits(){
-  try{kits=await(await fetch(`${API}/api/kits`)).json();buildTabs();}catch{}
+async function fetchKits() {
+  try { kits = await (await fetch(`${API}/api/kits`)).json(); buildTabs(); } catch {}
 }
 
-async function fetchTop(kit){
-  currentKit=kit;
-  document.getElementById('tableBody').innerHTML='<div class="state-msg"><div class="spinner"></div>Cargando…</div>';
-  document.getElementById('lbHeading').textContent=kit==='overall'?'Clasificación General':'Clasificación — '+cap(kit);
-  try{
-    const url=kit==='overall'?`${API}/api/top`:`${API}/api/top/${encodeURIComponent(kit)}`;
-    allPlayers=await(await fetch(url)).json();
-    lastUpd=Date.now();
+async function fetchTop(kit) {
+  currentKit = kit;
+  document.getElementById('tableBody').innerHTML = '<div class="state-msg"><div class="spinner"></div><span>Cargando…</span></div>';
+  const isOverall = kit === 'overall';
+  document.getElementById('lbTitle').textContent = isOverall ? '🏆 Clasificación General' : '⚔ ' + cap(kit);
+  try {
+    const url = isOverall ? `${API}/api/top` : `${API}/api/top/${encodeURIComponent(kit)}`;
+    allPlayers = await (await fetch(url)).json();
+    lastUpdMs  = Date.now();
+    document.getElementById('lbCnt').textContent = allPlayers.length + ' jugadores registrados';
+    renderPodium(allPlayers);
     renderTable(allPlayers);
-    document.getElementById('lbCnt').textContent=allPlayers.length+' jugadores';
-  }catch{
-    document.getElementById('tableBody').innerHTML='<div class="state-msg">Error de conexión. Reintenta en un momento.</div>';
+  } catch {
+    document.getElementById('tableBody').innerHTML = '<div class="state-msg">⚠ Error de conexión. Reintenta en un momento.</div>';
   }
 }
 
-/* ── Tabs (event delegation fixes General tab too) ────────────────── */
-function buildTabs(){
-  const c=document.getElementById('tabsContainer');
-  kits.forEach(k=>{
-    const b=document.createElement('button');
-    b.className='tab-btn';b.dataset.kit=k;
-    const col=['#06b6d4','#a855f7','#22c55e','#f59e0b','#ef4444','#3b82f6'];
-    const ci=kits.indexOf(k)%col.length;
-    b.innerHTML=`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${col[ci]};flex-shrink:0"></span>${cap(k)}`;
+/* ═══ Tabs ═══════════════════════════════════════════════════════════ */
+function buildTabs() {
+  const c = document.getElementById('tabsContainer');
+  kits.forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'tab-btn'; b.dataset.kit = k;
+    const img = kitImgUrl(k);
+    b.innerHTML = `<img class="tab-ico" src="${img}" onerror="this.style.display='none'" loading="lazy" alt=""/><span>${cap(k)}</span>`;
     c.appendChild(b);
   });
 }
-/* Single delegated listener — catches General + all kit tabs */
-document.getElementById('tabsContainer').addEventListener('click',e=>{
-  const btn=e.target.closest('.tab-btn');
-  if(!btn)return;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b===btn));
+document.getElementById('tabsContainer').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   fetchTop(btn.dataset.kit);
 });
 
-/* ── Table ────────────────────────────────────────────────────────── */
-function renderTable(players){
-  const q=(document.getElementById('searchInput').value||'').toLowerCase();
-  const list=q?players.filter(p=>p.nombre.toLowerCase().includes(q)):players;
-  if(!list.length){document.getElementById('tableBody').innerHTML='<div class="state-msg">No se encontraron jugadores.</div>';return;}
-  document.getElementById('tableBody').innerHTML=list.map((p,i)=>{
-    const rank=i+1, gc=rank===1?'g1':rank===2?'g2':rank===3?'g3':'';
-    const rkHtml=rank===1?`<span class="rk-ico">👑</span>`:rank===2?`<span class="rk-ico" style="filter:grayscale(.4)">🥈</span>`:rank===3?`<span class="rk-ico" style="filter:grayscale(.4)">🥉</span>`:`<span class="rk-num">${rank}</span>`;
-    const color=tc(p.titulo), rn=(p.region||'EU').toUpperCase().substring(0,2);
-    const pts=currentKit==='overall'?p.puntosTotales:(p.kits&&p.kits[currentKit]?p.kits[currentKit].puntos:0);
-    const badges=p.kits?Object.entries(p.kits).map(([k,v])=>mkBadge(k,v.tier,v.puntos,currentKit)).join(''):'—';
-    const avUrl=`https://mc-heads.net/avatar/${p.uuid}/42`;
-    return `<div class="lb-row ${gc}" onclick="openModal('${p.uuid}')" style="animation-delay:${Math.min(i*.022,.45)}s">
-      <div class="rk-cell">${rkHtml}</div>
-      <div class="pc">
-        <img class="av" src="${avUrl}" onerror="this.outerHTML='<div class=\\'av-fb\\'>${esc(p.nombre[0]||'?').toUpperCase()}</div>'" alt="${esc(p.nombre)}" loading="lazy"/>
-        <div class="pi">
-          <div class="pn">${esc(p.nombre)}</div>
-          <span class="pt" style="color:${color}">${p.tituloSymbol||'◆'} ${esc(p.titulo)}</span>
-        </div>
+/* ═══ Podium ════════════════════════════════════════════════════════ */
+function renderPodium(players) {
+  const wrap = document.getElementById('podiumWrap');
+  const pod  = document.getElementById('podium');
+  if (!players || players.length < 3) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const top3 = players.slice(0, 3);
+  const order = [top3[1], top3[0], top3[2]]; // 2nd, 1st, 3rd
+  const medals = ['🥈','👑','🥉'];
+  const heights = ['75%','100%','60%'];
+  const podH   = ['2nd','1st','3rd'];
+  pod.innerHTML = order.map((p, i) => {
+    if (!p) return '';
+    const color = tierCol(p.bestTier || '');
+    const pts = currentKit==='overall' ? p.puntosTotales : (p.kits&&p.kits[currentKit]?p.kits[currentKit].puntos:0);
+    const elo = p.elo || 0;
+    return `<div class="pod-slot ${podH[i]}" style="height:${heights[i]}">
+      <div class="pod-inner" style="border-color:${color}40">
+        <div class="pod-medal">${medals[i]}</div>
+        <img class="pod-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/56" onerror="this.src='https://mc-heads.net/avatar/Steve/56'" alt="${esc(p.nombre)}"/>
+        <div class="pod-name">${esc(p.nombre)}</div>
+        <div class="pod-tier" style="color:${color}">${esc(p.bestTier||'—')}</div>
+        <div class="pod-pts">${pts.toLocaleString()} pts</div>
+        <div class="pod-elo" style="color:${eloColor(elo)}">${elo} ELO</div>
       </div>
-      <div class="re-pill-wrap"><span class="re-pill ${rcls(rn)}">${rflag(rn)} ${rn}</span></div>
-      <div class="emblems">${badges}</div>
-      <div class="sc-cell"><div class="sc-n">${pts.toLocaleString()}</div><div class="sc-l">PTS</div></div>
     </div>`;
   }).join('');
 }
 
-/* ── Modal ────────────────────────────────────────────────────────── */
-function openModal(uuid){
-  const p=allPlayers.find(x=>x.uuid===uuid);if(!p)return;
-  document.getElementById('moAv').src=`https://mc-heads.net/avatar/${uuid}/70`;
-  document.getElementById('moNm').textContent=p.nombre;
-  const color=tc(p.titulo);
-  document.getElementById('moTitleBadge').innerHTML=`<span class="pt" style="color:${color}">${p.tituloSymbol||'◆'} ${esc(p.titulo)}</span>`;
-  const kitCount=p.kits?Object.keys(p.kits).length:0;
-  const rn=(p.region||'EU').toUpperCase();
-  document.getElementById('moStats').innerHTML=`
-    <div class="mo-s"><div class="mo-sv" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mo-sl">Pts totales</div></div>
-    <div class="mo-s"><div class="mo-sv" style="color:#06b6d4">${kitCount}</div><div class="mo-sl">Kits jugados</div></div>
-    <div class="mo-s"><div class="mo-sv">${rflag(rn)} ${rn}</div><div class="mo-sl">Región</div></div>`;
-  document.getElementById('moKits').innerHTML=p.kits
-    ?Object.entries(p.kits).map(([k,v])=>`
-      <div class="mo-kr">
-        <div style="flex-shrink:0">${mkBadge(k,v.tier,v.puntos,'')}</div>
-        <span class="mo-kn">${cap(k)}</span>
-        <span class="mo-kp">${v.puntos} pts</span>
-      </div>`).join('')
-    :'<div style="color:var(--dim);font-size:.82rem;grid-column:span 2">Sin datos de kit.</div>';
+/* ═══ Table ══════════════════════════════════════════════════════════ */
+function renderTable(players) {
+  const q    = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  const list = q ? players.filter(p => p.nombre.toLowerCase().includes(q)) : players;
+  const body = document.getElementById('tableBody');
+  if (!list.length) { body.innerHTML = '<div class="state-msg">No se encontraron jugadores.</div>'; return; }
+
+  body.innerHTML = list.map((p, i) => {
+    const rank = i + 1;
+    const gc   = rank === 1 ? 'row-g1' : rank === 2 ? 'row-g2' : rank === 3 ? 'row-g3' : '';
+    const rkHtml = rank === 1 ? `<span class="rk-ico">👑</span>`
+                 : rank === 2 ? `<span class="rk-ico">🥈</span>`
+                 : rank === 3 ? `<span class="rk-ico">🥉</span>`
+                 : `<span class="rk-num">${rank}</span>`;
+
+    const color  = titleColor(p.titulo);
+    const rn     = (p.region || 'EU').toUpperCase().substring(0, 2);
+    const cc     = regionCC(rn);
+    const pts    = currentKit === 'overall'
+                   ? p.puntosTotales
+                   : (p.kits && p.kits[currentKit] ? p.kits[currentKit].puntos : 0);
+    const elo    = p.elo ?? '—';
+    const badges = p.kits
+                   ? Object.entries(p.kits).map(([k,v]) => mkBadge(k, v.tier, v.puntos, currentKit)).join('')
+                   : '<span style="color:var(--dim)">—</span>';
+    const eloC   = typeof elo === 'number' ? eloColor(elo) : '#6b7280';
+
+    return `<div class="lb-row ${gc}" onclick="openModal('${esc(p.nombre)}')" style="animation-delay:${Math.min(i*.02,.4)}s">
+      <div class="c-rank">${rkHtml}</div>
+      <div class="c-player">
+        <img class="row-av" src="https://mc-heads.net/avatar/${esc(p.nombre)}/40" onerror="this.outerHTML='<div class=\\"av-fb\\">${esc((p.nombre||'?')[0]).toUpperCase()}</div>'" loading="lazy" alt="${esc(p.nombre)}"/>
+        <div class="row-info">
+          <div class="row-name">${esc(p.nombre)}</div>
+          <div class="row-title" style="color:${color}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</div>
+        </div>
+      </div>
+      <div class="c-country">${flagImg(cc,20)} <span class="country-lbl">${REGION_LABEL[rn]||rn}</span></div>
+      <div class="c-elo">
+        <span class="elo-val" style="color:${eloC}">${typeof elo==='number'?elo.toLocaleString():elo}</span>
+        <span class="elo-lbl">ELO</span>
+      </div>
+      <div class="c-kits">${badges}</div>
+      <div class="c-pts">
+        <span class="pts-val">${pts.toLocaleString()}</span>
+        <span class="pts-lbl">PTS</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══ Modal ══════════════════════════════════════════════════════════ */
+function openModal(nombre) {
+  const p = allPlayers.find(x => x.nombre === nombre); if (!p) return;
+  const color = tierCol(p.bestTier || '');
+  const tc    = titleColor(p.titulo);
+  const elo   = p.elo ?? 0;
+  const eloC  = eloColor(elo);
+  const rn    = (p.region || 'EU').toUpperCase();
+  const cc    = regionCC(rn);
+  const kitCount = p.kits ? Object.keys(p.kits).length : 0;
+  const eloRk    = p.eloRank > 0 ? `#${p.eloRank}` : '—';
+
+  document.getElementById('moAv').src = `https://mc-heads.net/avatar/${encodeURIComponent(nombre)}/100`;
+  document.getElementById('moNm').textContent = p.nombre;
+  document.getElementById('moRing').style.borderColor = color;
+  document.getElementById('moBadge').innerHTML =
+    `<span class="mo-title-pill" style="color:${tc}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>`;
+  document.getElementById('moRegion').innerHTML =
+    `${flagImg(cc,16)} <span style="color:var(--dim);font-size:.8rem">${REGION_LABEL[rn]||rn}</span>`;
+
+  document.getElementById('moStats').innerHTML = `
+    <div class="mo-st"><div class="mo-sv" style="color:#f59e0b">${p.puntosTotales.toLocaleString()}</div><div class="mo-sl">Puntos totales</div></div>
+    <div class="mo-st"><div class="mo-sv" style="color:${eloC}">${elo.toLocaleString()}</div><div class="mo-sl">ELO</div></div>
+    <div class="mo-st"><div class="mo-sv" style="color:#e2e8f0">${eloRk}</div><div class="mo-sl">Posición ELO</div></div>
+    <div class="mo-st"><div class="mo-sv" style="color:#06b6d4">${kitCount}</div><div class="mo-sl">Kits jugados</div></div>
+    <div class="mo-st"><div class="mo-sv" style="color:${color}">${esc(p.bestTier||'—')}</div><div class="mo-sl">Mejor rango</div></div>`;
+
+  document.getElementById('moKits').innerHTML = p.kits
+    ? Object.entries(p.kits).map(([k, v]) => {
+        const kc = tierCol(v.tier);
+        const gl = tierGlowVal(v.tier);
+        return `<div class="mo-kit-row">
+          <img class="mo-kit-img" src="${kitImgUrl(k)}" onerror="this.src='${tierImgUrl(v.tier)}'" loading="lazy" alt="${esc(k)}"/>
+          <div class="mo-kit-info">
+            <div class="mo-kit-name">${esc(cap(k))}</div>
+            <div class="mo-kit-tier" style="color:${kc}">${esc(v.tier)}</div>
+          </div>
+          <div class="mo-kit-pts">
+            <img class="mo-kit-tier-img" src="${tierImgUrl(v.tier)}" onerror="this.style.display='none'" loading="lazy" alt=""/>
+            <span>${v.puntos} pts</span>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="state-msg" style="padding:1.2rem">Sin datos de kit.</div>';
+
   document.getElementById('moOv').classList.add('open');
 }
-document.getElementById('moClose').addEventListener('click',()=>document.getElementById('moOv').classList.remove('open'));
-document.getElementById('moOv').addEventListener('click',e=>{if(e.target===document.getElementById('moOv'))document.getElementById('moOv').classList.remove('open');});
-document.addEventListener('keydown',e=>e.key==='Escape'&&document.getElementById('moOv').classList.remove('open'));
 
-/* ── Search ───────────────────────────────────────────────────────── */
-document.getElementById('searchInput').addEventListener('input',()=>renderTable(allPlayers));
+document.getElementById('moClose').addEventListener('click', () => document.getElementById('moOv').classList.remove('open'));
+document.getElementById('moOv').addEventListener('click', e => { if (e.target === document.getElementById('moOv')) document.getElementById('moOv').classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('moOv').classList.remove('open'); });
 
-/* ── Helpers ──────────────────────────────────────────────────────── */
-function cap(s){return s?s[0].toUpperCase()+s.slice(1):s;}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* ═══ Search ════════════════════════════════════════════════════════ */
+document.getElementById('searchInput').addEventListener('input', () => renderTable(allPlayers));
+
+/* Ctrl+K / Cmd+K to focus search */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+/* ═══ Ambient canvas background ════════════════════════════════════ */
+function initCanvas() {
+  const cv = document.getElementById('bgCanvas');
+  const ctx = cv.getContext('2d');
+  let W, H, particles = [];
+  function resize() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const COLS = ['rgba(124,58,237,.55)','rgba(6,182,212,.45)','rgba(168,85,247,.5)','rgba(34,211,153,.35)'];
+  for (let i = 0; i < 55; i++) {
+    particles.push({
+      x: Math.random()*1000, y: Math.random()*800,
+      vx: (Math.random()-.5)*.25, vy: (Math.random()-.5)*.25,
+      r: Math.random()*1.8+.4,
+      c: COLS[Math.floor(Math.random()*COLS.length)],
+      a: Math.random()*Math.PI*2
+    });
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.a += .008;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r + Math.sin(p.a)*.5, 0, Math.PI*2);
+      ctx.fillStyle = p.c;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
 
 init();
 </script>

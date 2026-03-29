@@ -142,12 +142,14 @@ public class TierApiServer {
     private void handleStats(HttpExchange ex) throws IOException {
         cors(ex);
         if (preflight(ex)) return;
-        int online = plugin.getServer().getOnlinePlayers().size();
-        int duels  = plugin.getDuelManager().getActiveDuelCount();
-        int queued = plugin.getQueueManager().getTotalQueued();
+        int online  = plugin.getServer().getOnlinePlayers().size();
+        int duels   = plugin.getDuelManager().getActiveDuelCount();
+        int queued  = plugin.getQueueManager().getTotalQueued();
+        int total   = plugin.getEloManager().getEloMap().size();
         String region = plugin.getServerRegion().toUpperCase();
         sendJson(ex, "{\"online\":" + online + ",\"duelos\":" + duels
-                + ",\"en_cola\":" + queued + ",\"region\":\"" + esc(region) + "\"}");
+                + ",\"en_cola\":" + queued + ",\"region\":\"" + esc(region) + "\""
+                + ",\"total_jugadores\":" + total + "}");
     }
 
     // ── JSON builders ─────────────────────────────────────────────────────
@@ -157,6 +159,9 @@ public class TierApiServer {
         int totalScore  = tm.getTotalScore(uuid);
         TierTitle title = tm.getTitle(uuid);
         Map<String, Integer> kits = tm.getKitPoints(uuid);
+        int elo         = plugin.getEloManager().getElo(uuid);
+        int eloRank     = plugin.getEloManager().getRank(uuid);
+        Tier bestTier   = tm.getBestTier(uuid);
 
         StringBuilder kitsJson = new StringBuilder("{");
         boolean first = true;
@@ -168,6 +173,7 @@ public class TierApiServer {
                     .append(",\"tier\":\"").append(esc(t.displayName)).append("\"")
                     .append(",\"tierScore\":").append(t.tierScore())
                     .append(",\"color\":\"").append(esc(tierCssClass(t))).append("\"")
+                    .append(",\"tierOrdinal\":").append(t.ordinal())
                     .append("}");
             first = false;
         }
@@ -178,15 +184,19 @@ public class TierApiServer {
                 ? Tier.fromPoints(focusPts).displayName : null;
 
         return "{"
-                + "\"uuid\":\""         + uuid           + "\""
-                + ",\"nombre\":\""      + esc(name)      + "\""
-                + ",\"titulo\":\""      + esc(title.name)    + "\""
-                + ",\"tituloColor\":\"" + esc(title.colour)  + "\""
-                + ",\"tituloSymbol\":\"" + esc(title.symbol) + "\""
-                + ",\"puntosTotales\":" + totalScore
-                + ",\"region\":\""      + esc(plugin.getServerRegion().toUpperCase()) + "\""
+                + "\"uuid\":\""           + uuid                       + "\""
+                + ",\"nombre\":\""        + esc(name)                  + "\""
+                + ",\"titulo\":\""        + esc(title.name)            + "\""
+                + ",\"tituloColor\":\""   + esc(title.colour)          + "\""
+                + ",\"tituloSymbol\":\""  + esc(title.symbol)          + "\""
+                + ",\"puntosTotales\":"   + totalScore
+                + ",\"elo\":"             + elo
+                + ",\"eloRank\":"         + eloRank
+                + ",\"bestTier\":\""      + esc(bestTier.displayName)  + "\""
+                + ",\"bestTierOrdinal\":" + bestTier.ordinal()
+                + ",\"region\":\""        + esc(plugin.getServerRegion().toUpperCase()) + "\""
                 + (focusTier != null ? ",\"focusTier\":\"" + esc(focusTier) + "\",\"focusPts\":" + focusPts : "")
-                + ",\"kits\":"          + kitsJson
+                + ",\"kits\":"            + kitsJson
                 + "}";
     }
 
