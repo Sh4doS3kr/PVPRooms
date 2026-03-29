@@ -73,6 +73,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private KitTrimGUI kitTrimGUI;
     private NpcManager npcManager;
     private LeaderboardHologramManager hologramManager;
+    private StatsManager statsManager;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -103,6 +104,7 @@ public class PvPRoomsPro extends JavaPlugin {
         wallManager             = new WallManager(this);
         healthHologramManager   = new HealthHologramManager(this);
         tierManager             = new TierManager(this);
+        statsManager            = new StatsManager(this);
         trimGUI                 = new TrimGUI(this);
         kitTrimGUI              = new KitTrimGUI(this);
         npcManager              = new NpcManager(this);
@@ -172,6 +174,9 @@ public class PvPRoomsPro extends JavaPlugin {
 
         // Save trim data
         if (trimManager != null) trimManager.save();
+
+        // Save stats data
+        if (statsManager != null) statsManager.save();
 
         // Shutdown NPC and Hologram managers
         if (npcManager != null) npcManager.shutdown();
@@ -314,5 +319,6 @@ public class PvPRoomsPro extends JavaPlugin {
     public KitTrimGUI            getKitTrimGUI()             { return kitTrimGUI; }
     public NpcManager            getNpcManager()              { return npcManager; }
     public LeaderboardHologramManager getHologramManager()    { return hologramManager; }
+    public StatsManager          getStatsManager()            { return statsManager; }
     public String                getServerRegion()           { return serverRegion; }
 }

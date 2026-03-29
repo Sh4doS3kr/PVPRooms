@@ -263,16 +263,20 @@ public class DuelManager {
 
         // Rating update — BO3 (TIER mode) uses TierPoints; normal duels use ELO
         if (winnerUUID != null && loserUUID != null) {
+            // Record stats for leaderboards
+            Player winner = Bukkit.getPlayer(winnerUUID);
+            Player loser  = Bukkit.getPlayer(loserUUID);
+            String winnerName = winner != null ? winner.getName() : winnerUUID.toString();
+            String loserName  = loser  != null ? loser.getName()  : loserUUID.toString();
+            plugin.getStatsManager().recordWin(winnerUUID, winnerName);
+            plugin.getStatsManager().recordLoss(loserUUID, loserName);
+            
             if (duel.isBo3()) {
                 // TIER mode: update tier points, skip ELO
                 plugin.getTierManager().recordResult(winnerUUID, loserUUID, duel.getKitName());
                 announceResultTier(p1, p2, winnerUUID, loserUUID, duel.getKitName());
             } else {
                 // ELO mode: update ELO, then sync TierManager so both systems agree
-                Player winner = Bukkit.getPlayer(winnerUUID);
-                Player loser  = Bukkit.getPlayer(loserUUID);
-                String winnerName = winner != null ? winner.getName() : winnerUUID.toString();
-                String loserName  = loser  != null ? loser.getName()  : loserUUID.toString();
                 int[] changes = plugin.getEloManager().processResult(
                         winnerUUID, winnerName, loserUUID, loserName);
                 // Sync TierManager from new ELO — keeps web page and scoreboard consistent

@@ -228,39 +228,61 @@ public class LeaderboardHologramManager {
                 lines.add("&8&m                              ");
                 
                 // Get top players based on type
-                if (type == HoloType.TOP_ELO) {
-                    // Use EloManager for ELO rankings
-                    List<String> topElo = plugin.getEloManager().getTopPlayers(count);
-                    int rank = 1;
-                    for (String entry : topElo) {
-                        String medal = switch(rank) {
-                            case 1 -> "&6①";
-                            case 2 -> "&7②";
-                            case 3 -> "&c③";
-                            default -> "&8" + rank + ".";
-                        };
-                        // entry format: "Name §7— §eELO"
-                        String[] parts = entry.split(" §7— §e");
-                        String name = parts.length > 0 ? parts[0] : "???";
-                        String elo = parts.length > 1 ? parts[1] : "0";
-                        lines.add(medal + " &f" + name + " &7- &e" + elo + " ELO");
-                        rank++;
+                int rank = 1;
+                switch (type) {
+                    case TOP_ELO -> {
+                        // Use EloManager for ELO rankings
+                        List<String> topElo = plugin.getEloManager().getTopPlayers(count);
+                        for (String entry : topElo) {
+                            String medal = getMedal(rank);
+                            String[] parts = entry.split(" §7— §e");
+                            String name = parts.length > 0 ? parts[0] : "???";
+                            String elo = parts.length > 1 ? parts[1] : "0";
+                            lines.add(medal + " &f" + name + " &7- &e" + elo + " ELO");
+                            rank++;
+                        }
                     }
-                } else {
-                    // Use TierManager for points-based rankings
-                    List<TierManager.PlayerRank> top = plugin.getTierManager().getTopPlayers(count);
-                    int rank = 1;
-                    for (TierManager.PlayerRank ps : top) {
-                        String medal = switch(rank) {
-                            case 1 -> "&6①";
-                            case 2 -> "&7②";
-                            case 3 -> "&c③";
-                            default -> "&8" + rank + ".";
-                        };
-                        String name = plugin.getServer().getOfflinePlayer(ps.uuid()).getName();
-                        if (name == null) name = "???";
-                        lines.add(medal + " &f" + name + " &7- &f" + ps.score() + " pts");
-                        rank++;
+                    case TOP_WINS -> {
+                        // Use StatsManager for wins
+                        var topWins = plugin.getStatsManager().getTopByWins(count);
+                        for (var entry : topWins) {
+                            String medal = getMedal(rank);
+                            String name = plugin.getStatsManager().getNameMap().getOrDefault(entry.getKey(), "???");
+                            lines.add(medal + " &f" + name + " &7- &a" + entry.getValue() + " victorias");
+                            rank++;
+                        }
+                    }
+                    case TOP_STREAK -> {
+                        // Use StatsManager for streaks
+                        var topStreak = plugin.getStatsManager().getTopByStreak(count);
+                        for (var entry : topStreak) {
+                            String medal = getMedal(rank);
+                            String name = plugin.getStatsManager().getNameMap().getOrDefault(entry.getKey(), "???");
+                            lines.add(medal + " &f" + name + " &7- &c" + entry.getValue() + " racha");
+                            rank++;
+                        }
+                    }
+                    case TOP_KDR -> {
+                        // Use StatsManager for K/D ratio
+                        var topKDR = plugin.getStatsManager().getTopByKDR(count);
+                        for (var entry : topKDR) {
+                            String medal = getMedal(rank);
+                            String name = plugin.getStatsManager().getNameMap().getOrDefault(entry.getKey(), "???");
+                            String kdr = String.format("%.2f", entry.getValue());
+                            lines.add(medal + " &f" + name + " &7- &e" + kdr + " K/D");
+                            rank++;
+                        }
+                    }
+                    default -> {
+                        // Use TierManager for points-based rankings (TOP_GENERAL, TOP_KIT)
+                        List<TierManager.PlayerRank> top = plugin.getTierManager().getTopPlayers(count);
+                        for (TierManager.PlayerRank ps : top) {
+                            String medal = getMedal(rank);
+                            String name = plugin.getServer().getOfflinePlayer(ps.uuid()).getName();
+                            if (name == null) name = "???";
+                            lines.add(medal + " &f" + name + " &7- &f" + ps.score() + " pts");
+                            rank++;
+                        }
                     }
                 }
                 lines.add("&8&m                              ");
@@ -361,6 +383,15 @@ public class LeaderboardHologramManager {
         }
         
         return lines;
+    }
+
+    private String getMedal(int rank) {
+        return switch(rank) {
+            case 1 -> "&6①";
+            case 2 -> "&7②";
+            case 3 -> "&c③";
+            default -> "&8" + rank + ".";
+        };
     }
 
     private String getTierColor(String tier) {
