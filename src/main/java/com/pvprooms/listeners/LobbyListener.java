@@ -47,11 +47,10 @@ public class LobbyListener implements Listener {
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         if (!isInLobby(player)) return;
-        if (player.isOp() || player.hasPermission("pvprooms.admin")) return;
 
         ItemStack item = event.getItem();
 
-        // Handle lobby items
+        // Handle lobby items (works for everyone including OPs)
         if (item != null && (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)) {
             if (handleLobbyItem(player, item)) {
                 event.setCancelled(true);
@@ -59,7 +58,10 @@ public class LobbyListener implements Listener {
             }
         }
 
-        // Block all other block interactions
+        // OPs can interact with blocks
+        if (player.isOp() || player.hasPermission("pvprooms.admin")) return;
+
+        // Block all other block interactions for non-OPs
         if (event.getClickedBlock() != null) {
             Material blockType = event.getClickedBlock().getType();
 
@@ -162,8 +164,8 @@ public class LobbyListener implements Listener {
         }
 
         if (lm.isPartyItem(item)) {
-            // Open party GUI or show party info
-            showPartyInfo(player);
+            // Open party GUI
+            plugin.getPartyGUI().open(player);
             return true;
         }
 
@@ -208,48 +210,6 @@ public class LobbyListener implements Listener {
         // Add to queue with random kit
         plugin.getQueueManager().addToQueue(player, randomKit);
         player.sendMessage(plugin.prefix() + "§a¡Partida rápida! Buscando rival con §e" + randomKit + "§a...");
-    }
-
-    private void showPartyInfo(Player player) {
-        var pm = plugin.getPartyManager();
-
-        if (!pm.isInParty(player.getUniqueId())) {
-            player.sendMessage("");
-            player.sendMessage(plugin.prefix() + "§e§lGestión de Party");
-            player.sendMessage("§7No estás en ninguna party.");
-            player.sendMessage("");
-            player.sendMessage("§7Comandos disponibles:");
-            player.sendMessage("§e/party create §7- Crear una party");
-            player.sendMessage("§e/party invite <jugador> §7- Invitar jugador");
-            player.sendMessage("");
-            player.sendMessage("§7TIP: §eShift + Click derecho §7sobre un jugador para invitarlo.");
-            player.sendMessage("");
-            return;
-        }
-
-        var leaderUUID = pm.getPartyLeader(player.getUniqueId());
-        var members = pm.getPartyMembers(leaderUUID);
-        boolean isLeader = pm.isPartyLeader(player.getUniqueId());
-
-        player.sendMessage("");
-        player.sendMessage(plugin.prefix() + "§d§lTu Party §7(" + members.size() + " miembros)");
-        player.sendMessage("");
-
-        for (var memberUUID : members) {
-            Player member = plugin.getServer().getPlayer(memberUUID);
-            String name = member != null ? member.getName() : "???";
-            String role = memberUUID.equals(leaderUUID) ? " §6★ Líder" : "";
-            String status = member != null ? "§a●" : "§c●";
-            player.sendMessage("§7 " + status + " §f" + name + role);
-        }
-
-        player.sendMessage("");
-        if (isLeader) {
-            player.sendMessage("§7Comandos: §e/party invite, /party kick, /party disband");
-        } else {
-            player.sendMessage("§7Comandos: §e/party leave");
-        }
-        player.sendMessage("");
     }
 
     private boolean isInteractable(Material material) {

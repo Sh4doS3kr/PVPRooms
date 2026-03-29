@@ -68,14 +68,13 @@ public class LobbyManager {
     private ItemStack createQueueItem() {
         ItemStack item = new ItemStack(Material.DIAMOND_SWORD);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("⚔ Unirse a Cola", NamedTextColor.AQUA)
-                .decoration(TextDecoration.ITALIC, false)
-                .decoration(TextDecoration.BOLD, true));
+        meta.displayName(Component.text("Unirse a Cola", NamedTextColor.AQUA)
+                .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
-                Component.text("▶ Click derecho para buscar partida", NamedTextColor.GRAY)
+                Component.text("Click derecho para buscar partida", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("  Elige tu kit y encuentra rival", NamedTextColor.DARK_GRAY)
+                Component.text("Elige tu kit y encuentra rival", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         meta.setCustomModelData(1001);
@@ -86,14 +85,13 @@ public class LobbyManager {
     private ItemStack createQuickMatchItem() {
         ItemStack item = new ItemStack(Material.GOLDEN_SWORD);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("⚡ Partida Rápida", NamedTextColor.GOLD)
-                .decoration(TextDecoration.ITALIC, false)
-                .decoration(TextDecoration.BOLD, true));
+        meta.displayName(Component.text("Partida Rapida", NamedTextColor.GOLD)
+                .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
-                Component.text("▶ Click derecho para partida instantánea", NamedTextColor.GRAY)
+                Component.text("Click derecho para partida instantanea", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("  Te une con el primero en cola", NamedTextColor.DARK_GRAY)
+                Component.text("Te une con el primero en cola", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         meta.setCustomModelData(1002);
@@ -104,18 +102,14 @@ public class LobbyManager {
     private ItemStack createPartyItem() {
         ItemStack item = new ItemStack(Material.CAKE);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("♦ Gestión de Party", NamedTextColor.LIGHT_PURPLE)
-                .decoration(TextDecoration.ITALIC, false)
-                .decoration(TextDecoration.BOLD, true));
+        meta.displayName(Component.text("Gestion de Party", NamedTextColor.LIGHT_PURPLE)
+                .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
-                Component.text("▶ Click derecho para gestionar tu party", NamedTextColor.GRAY)
+                Component.text("Click derecho para gestionar tu party", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("  Crea, invita y gestiona tu grupo", NamedTextColor.DARK_GRAY)
-                        .decoration(TextDecoration.ITALIC, false),
-                Component.empty(),
-                Component.text("TIP: Shift + Click en jugador para invitar", NamedTextColor.YELLOW)
-                        .decoration(TextDecoration.ITALIC, true)
+                Component.text("Crea, invita y gestiona tu grupo", NamedTextColor.DARK_GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
         ));
         meta.setCustomModelData(1003);
         item.setItemMeta(meta);
@@ -126,14 +120,13 @@ public class LobbyManager {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         org.bukkit.inventory.meta.SkullMeta meta = (org.bukkit.inventory.meta.SkullMeta) item.getItemMeta();
         meta.setOwningPlayer(player);
-        meta.displayName(Component.text("★ Tu Perfil", NamedTextColor.GREEN)
-                .decoration(TextDecoration.ITALIC, false)
-                .decoration(TextDecoration.BOLD, true));
+        meta.displayName(Component.text("Tu Perfil", NamedTextColor.GREEN)
+                .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
-                Component.text("▶ Click derecho para ver tu perfil", NamedTextColor.GRAY)
+                Component.text("Click derecho para ver tu perfil", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("  Stats, tier, ELO y más", NamedTextColor.DARK_GRAY)
+                Component.text("Stats, tier, ELO y mas", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         meta.setCustomModelData(1004);
@@ -144,14 +137,13 @@ public class LobbyManager {
     private ItemStack createSettingsItem() {
         ItemStack item = new ItemStack(Material.REDSTONE);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("⚙ Ajustes", NamedTextColor.RED)
-                .decoration(TextDecoration.ITALIC, false)
-                .decoration(TextDecoration.BOLD, true));
+        meta.displayName(Component.text("Ajustes", NamedTextColor.RED)
+                .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
-                Component.text("▶ Click derecho para ajustes", NamedTextColor.GRAY)
+                Component.text("Click derecho para ajustes", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("  Personaliza tu experiencia", NamedTextColor.DARK_GRAY)
+                Component.text("Personaliza tu experiencia", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         meta.setCustomModelData(1005);

@@ -83,6 +83,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private LobbyManager lobbyManager;
     private PartyManager partyManager;
     private com.pvprooms.gui.ProfileGUI profileGUI;
+    private com.pvprooms.gui.PartyGUI partyGUI;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -122,6 +123,7 @@ public class PvPRoomsPro extends JavaPlugin {
         lobbyManager            = new LobbyManager(this);
         partyManager            = new PartyManager(this);
         profileGUI              = new com.pvprooms.gui.ProfileGUI(this);
+        partyGUI                = new com.pvprooms.gui.PartyGUI(this);
         SpearItem.init(this);
         TrimCrate.init(this);
         PhysicalTrimCrate.init(this);
@@ -355,5 +357,6 @@ public class PvPRoomsPro extends JavaPlugin {
     public LobbyManager          getLobbyManager()            { return lobbyManager; }
     public PartyManager          getPartyManager()            { return partyManager; }
     public com.pvprooms.gui.ProfileGUI getProfileGUI()        { return profileGUI; }
+    public com.pvprooms.gui.PartyGUI getPartyGUI()            { return partyGUI; }
     public String                getServerRegion()           { return serverRegion; }
 }
