@@ -233,12 +233,55 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 .tbl-row:last-child{border-bottom:none;}
 .tbl-row:hover{background:rgba(255,255,255,.035);}
 
-.row-g1{background:linear-gradient(90deg,rgba(250,204,21,.055),transparent 65%);}
-.row-g2{background:linear-gradient(90deg,rgba(192,192,192,.04),transparent 65%);}
-.row-g3{background:linear-gradient(90deg,rgba(180,83,9,.035),transparent 65%);}
-.row-g1:hover{background:linear-gradient(90deg,rgba(250,204,21,.09),transparent 65%);}
-.row-g2:hover{background:linear-gradient(90deg,rgba(192,192,192,.07),transparent 65%);}
-.row-g3:hover{background:linear-gradient(90deg,rgba(180,83,9,.065),transparent 65%);}
+/* Top 1 - Gold with glow and shimmer */
+.row-g1{
+  background:linear-gradient(90deg,rgba(255,215,0,.08),rgba(255,180,0,.03) 50%,transparent 80%);
+  box-shadow:inset 0 0 20px rgba(255,215,0,.06);
+  position:relative;overflow:hidden;
+}
+.row-g1::before{
+  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+  animation:shimmer 4s ease-in-out infinite;
+}
+.row-g1:hover{background:linear-gradient(90deg,rgba(255,215,0,.14),rgba(255,180,0,.06) 50%,transparent 80%);box-shadow:inset 0 0 30px rgba(255,215,0,.1);}
+
+/* Top 2 - Silver with glow and shimmer */
+.row-g2{
+  background:linear-gradient(90deg,rgba(192,192,192,.07),rgba(160,160,160,.03) 50%,transparent 80%);
+  box-shadow:inset 0 0 18px rgba(192,192,192,.05);
+  position:relative;overflow:hidden;
+}
+.row-g2::before{
+  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);
+  animation:shimmer 4s ease-in-out infinite;
+  animation-delay:.5s;
+}
+.row-g2:hover{background:linear-gradient(90deg,rgba(192,192,192,.12),rgba(160,160,160,.05) 50%,transparent 80%);box-shadow:inset 0 0 25px rgba(192,192,192,.08);}
+
+/* Top 3 - Bronze with glow and shimmer */
+.row-g3{
+  background:linear-gradient(90deg,rgba(205,127,50,.08),rgba(180,100,40,.03) 50%,transparent 80%);
+  box-shadow:inset 0 0 18px rgba(205,127,50,.05);
+  position:relative;overflow:hidden;
+}
+.row-g3::before{
+  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
+  animation:shimmer 4s ease-in-out infinite;
+  animation-delay:1s;
+}
+.row-g3:hover{background:linear-gradient(90deg,rgba(205,127,50,.13),rgba(180,100,40,.05) 50%,transparent 80%);box-shadow:inset 0 0 25px rgba(205,127,50,.08);}
+
+/* Shimmer animation */
+@keyframes shimmer{
+  0%{left:-100%;opacity:0;}
+  10%{opacity:1;}
+  50%{left:150%;opacity:1;}
+  60%{opacity:0;}
+  100%{left:150%;opacity:0;}
+}
 
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
