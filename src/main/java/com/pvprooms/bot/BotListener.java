@@ -96,11 +96,11 @@ public class BotListener implements Listener {
                     double currentHealth = botEntity.getHealth();
                     
                     if (currentHealth - finalDamage <= 0) {
-                        // Bot will die - handle it manually since NPCDeathEvent may not fire
-                        event.setCancelled(true); // Cancel to prevent death animation issues
-                        plugin.getServer().getScheduler().runTask(plugin, () -> {
-                            plugin.getBotManager().onBotDeath(bot);
-                        });
+                        // Bot will die - MUST handle manually to avoid death message errors
+                        event.setCancelled(true);
+                        
+                        // Immediately end the duel and destroy bot
+                        plugin.getBotManager().onBotKilled(bot, player);
                         return;
                     }
                     

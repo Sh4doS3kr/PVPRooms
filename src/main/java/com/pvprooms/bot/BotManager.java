@@ -186,11 +186,12 @@ public class BotManager {
     }
 
     private String getBotName(BotDifficulty difficulty) {
+        // NO color codes - they cause death message errors in Paper
         return switch (difficulty) {
-            case EASY -> "§aPracticante";
-            case MEDIUM -> "§eGuerrero";
-            case HARD -> "§cMaestro";
-            case HACKER -> "§4§lH4CK3R";
+            case EASY -> "Bot_Facil";
+            case MEDIUM -> "Bot_Medio";
+            case HARD -> "Bot_Dificil";
+            case HACKER -> "Bot_Hacker";
         };
     }
 
@@ -267,6 +268,25 @@ public class BotManager {
                 }
                 return;
             }
+        }
+    }
+
+    /**
+     * Called when player kills the bot - handles it immediately to avoid death message errors.
+     */
+    public void onBotKilled(NPC bot, Player killer) {
+        UUID playerUUID = killer.getUniqueId();
+        BotDuel duel = activeBotDuels.get(playerUUID);
+        
+        if (duel != null && duel.active) {
+            // Destroy bot immediately to prevent death animation/message
+            if (bot.isSpawned()) {
+                bot.despawn();
+            }
+            bot.destroy();
+            
+            // End the duel with player victory
+            endBotDuel(playerUUID, true);
         }
     }
 
