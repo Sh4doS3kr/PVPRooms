@@ -317,7 +317,7 @@ main{padding:2.2rem 1.5rem 3rem;min-height:calc(100vh - 120px);}
 .row-title{font-size:.72rem;font-weight:600;opacity:.75;white-space:nowrap;}
 
 /* Country */
-.col-country{gap:.4rem;font-size:.8rem;color:var(--text);}
+.tbl-row .col-country{gap:.4rem;font-size:.8rem;color:var(--text);}
 .country-nm{font-size:.8rem;color:var(--text);font-weight:500;}
 
 /* Tier pill — compact colored badge (mctiers style) */
