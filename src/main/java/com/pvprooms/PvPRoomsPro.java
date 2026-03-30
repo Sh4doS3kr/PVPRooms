@@ -28,6 +28,9 @@ import com.pvprooms.listeners.ChatListener;
 import com.pvprooms.api.TierApiServer;
 import com.pvprooms.listeners.SpearListener;
 import com.pvprooms.listeners.AttributeSwapListener;
+import com.pvprooms.bot.BotManager;
+import com.pvprooms.bot.BotListener;
+import com.pvprooms.gui.BotPracticeGUI;
 import com.pvprooms.managers.TierManager;
 import com.pvprooms.model.TrimCrate;
 import com.pvprooms.model.PhysicalTrimCrate;
@@ -88,6 +91,8 @@ public class PvPRoomsPro extends JavaPlugin {
     private com.pvprooms.gui.ProfileGUI profileGUI;
     private com.pvprooms.gui.PartyGUI partyGUI;
     private com.pvprooms.listeners.AntiMultiaccountListener antiMultiaccountListener;
+    private BotManager botManager;
+    private BotPracticeGUI botPracticeGUI;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -128,6 +133,8 @@ public class PvPRoomsPro extends JavaPlugin {
         partyManager            = new PartyManager(this);
         profileGUI              = new com.pvprooms.gui.ProfileGUI(this);
         partyGUI                = new com.pvprooms.gui.PartyGUI(this);
+        botManager              = new BotManager(this);
+        botPracticeGUI          = new BotPracticeGUI(this);
         SpearItem.init(this);
         TrimCrate.init(this);
         PhysicalTrimCrate.init(this);
@@ -208,6 +215,9 @@ public class PvPRoomsPro extends JavaPlugin {
         // Shutdown NPC and Hologram managers
         if (npcManager != null) npcManager.shutdown();
         if (hologramManager != null) hologramManager.shutdown();
+        
+        // Shutdown bot manager
+        if (botManager != null) botManager.shutdown();
 
         // Cancel all scheduled tasks owned by this plugin
         Bukkit.getScheduler().cancelTasks(this);
@@ -295,6 +305,11 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new LobbyListener(this), this);
         pm.registerEvents(new ChatListener(this), this);
         
+        // Bot practice system (only if Citizens is present)
+        if (Bukkit.getPluginManager().getPlugin("Citizens") != null) {
+            pm.registerEvents(new BotListener(this), this);
+        }
+        
         // Anti-multiaccount system
         antiMultiaccountListener = new com.pvprooms.listeners.AntiMultiaccountListener(this);
         pm.registerEvents(antiMultiaccountListener, this);
@@ -374,4 +389,6 @@ public class PvPRoomsPro extends JavaPlugin {
     public com.pvprooms.gui.PartyGUI getPartyGUI()            { return partyGUI; }
     public com.pvprooms.listeners.AntiMultiaccountListener getAntiMultiaccount() { return antiMultiaccountListener; }
     public String                getServerRegion()           { return serverRegion; }
+    public BotManager            getBotManager()              { return botManager; }
+    public BotPracticeGUI        getBotPracticeGUI()          { return botPracticeGUI; }
 }

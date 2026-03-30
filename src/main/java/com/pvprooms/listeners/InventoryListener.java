@@ -59,6 +59,9 @@ public class InventoryListener implements Listener {
             } else if (slot == QueueModeGUI.SLOT_TIER) {
                 player.closeInventory();
                 plugin.getKitGUI().openTierMode(player);
+            } else if (slot == QueueModeGUI.SLOT_BOT) {
+                player.closeInventory();
+                plugin.getBotPracticeGUI().open(player);
             }
             return;
         }

@@ -5,6 +5,7 @@ api-version: '1.21'
 description: Professional PvP duels plugin with ELO, GUI kits, and auto arena instancing
 authors: [PvPRoomsPro]
 website: https://github.com/pvproomspro
+softdepend: [Citizens, PlaceholderAPI]
 
 commands:
   kit:

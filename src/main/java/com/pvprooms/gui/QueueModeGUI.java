@@ -14,16 +14,18 @@ import java.util.List;
 
 /**
  * GUI shown when a player runs /queue.
- * Two options: join the ELO queue or the TIER queue.
+ * Three options: join the ELO queue, TIER queue, or practice vs Bot.
  *
  * Layout (27 slots):
- *   Slot 11 — ELO  mode
- *   Slot 15 — TIER mode
+ *   Slot 10 — ELO  mode
+ *   Slot 13 — BOT  mode (practice)
+ *   Slot 16 — TIER mode
  */
 public class QueueModeGUI {
 
-    public static final int SLOT_ELO  = 11;
-    public static final int SLOT_TIER = 15;
+    public static final int SLOT_ELO  = 10;
+    public static final int SLOT_BOT  = 13;
+    public static final int SLOT_TIER = 16;
 
     public Inventory build(EloManager eloManager, TierManager tierManager, UUID uuid) {
         QueueModeHolder holder = new QueueModeHolder();
@@ -63,6 +65,21 @@ public class QueueModeGUI {
                         "§fPuntos:  §e" + totalPoints,
                         "",
                         "§aClick para seleccionar kit.")));
+
+        // BOT button - practice mode
+        inv.setItem(SLOT_BOT, item(Material.ARMOR_STAND,
+                "§6§l🤖 Práctica vs Bot",
+                List.of("§7Entrena contra un bot con IA.",
+                        "§7Elige dificultad y kit.",
+                        "",
+                        "§8• §aFácil §8- Reacción lenta",
+                        "§8• §eMedio §8- Equilibrado",
+                        "§8• §cDifícil §8- Muy preciso",
+                        "§8• §4HACKER §8- Perfecto",
+                        "",
+                        "§c¡No afecta ELO ni Tier!",
+                        "",
+                        "§aClick para practicar.")));
 
         return inv;
     }
