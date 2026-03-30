@@ -175,7 +175,7 @@ public class ProfileGUI implements Listener {
         TierTitle title = plugin.getTierManager().getTitle(uuid);
         ItemStack item = new ItemStack(Material.NAME_TAG);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Titulo", titleColor(title))
+        meta.displayName(Component.text("Título", titleColor(title))
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),

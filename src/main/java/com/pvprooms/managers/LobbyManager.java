@@ -85,11 +85,11 @@ public class LobbyManager {
     private ItemStack createQuickMatchItem() {
         ItemStack item = new ItemStack(Material.GOLDEN_SWORD);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Partida Rapida", NamedTextColor.GOLD)
+        meta.displayName(Component.text("Partida Rápida", NamedTextColor.GOLD)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
-                Component.text("Click derecho para partida instantanea", NamedTextColor.GRAY)
+                Component.text("Click derecho para partida instantánea", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Te une con el primero en cola", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
@@ -102,7 +102,7 @@ public class LobbyManager {
     private ItemStack createPartyItem() {
         ItemStack item = new ItemStack(Material.CAKE);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Gestion de Party", NamedTextColor.LIGHT_PURPLE)
+        meta.displayName(Component.text("Gestión de Party", NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
@@ -126,7 +126,7 @@ public class LobbyManager {
                 Component.empty(),
                 Component.text("Click derecho para ver tu perfil", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("Stats, tier, ELO y mas", NamedTextColor.DARK_GRAY)
+                Component.text("Stats, tier, ELO y más", NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         meta.setCustomModelData(1004);

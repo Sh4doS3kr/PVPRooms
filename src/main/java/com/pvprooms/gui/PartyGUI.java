@@ -23,7 +23,7 @@ import java.util.*;
 public class PartyGUI implements Listener {
 
     private final PvPRoomsPro plugin;
-    private static final String GUI_TITLE = "Gestion de Party";
+    private static final String GUI_TITLE = "Gestión de Party";
     private static final String INVITE_TITLE = "Invitar Jugador";
     private static final String MATCH_TITLE = "Configurar Partida";
     private static final String KIT_SELECT_TITLE = "Seleccionar Kit";
@@ -480,15 +480,15 @@ public class PartyGUI implements Listener {
         for (UUID memberUUID : members) {
             Player member = Bukkit.getPlayer(memberUUID);
             if (member == null || !member.isOnline()) {
-                player.sendMessage(plugin.prefix() + "§cAlgunos miembros no estan online.");
+                player.sendMessage(plugin.prefix() + "§cAlgunos miembros no están online.");
                 return;
             }
             if (plugin.getDuelManager().isInDuel(memberUUID)) {
-                player.sendMessage(plugin.prefix() + "§c" + member.getName() + " esta en un duelo.");
+                player.sendMessage(plugin.prefix() + "§c" + member.getName() + " está en un duelo.");
                 return;
             }
             if (plugin.getQueueManager().isInQueue(memberUUID)) {
-                player.sendMessage(plugin.prefix() + "§c" + member.getName() + " esta en cola.");
+                player.sendMessage(plugin.prefix() + "§c" + member.getName() + " está en cola.");
                 return;
             }
         }
@@ -506,7 +506,7 @@ public class PartyGUI implements Listener {
 
         // TODO: Create actual FFA arena instance and teleport players
         // For now, just announce
-        player.sendMessage(plugin.prefix() + "§e[FFA] Sistema en desarrollo. Proximamente...");
+        player.sendMessage(plugin.prefix() + "§e[FFA] Sistema en desarrollo. Próximamente...");
         
         // Clean up selections
         selectedKit.remove(leaderUUID);
