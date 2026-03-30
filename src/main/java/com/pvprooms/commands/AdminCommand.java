@@ -97,9 +97,41 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "reload" -> handleReload(sender);
             case "info" -> handleInfo(sender);
             case "spear"     -> handleSpear(sender, args);
+            case "resetall"  -> handleResetAll(sender, args);
             default -> sendHelp(sender);
         }
         return true;
+    }
+
+    // ── Reset ALL data ────────────────────────────────────────────────────
+
+    private void handleResetAll(CommandSender sender, String[] args) {
+        if (args.length < 2 || !args[1].equalsIgnoreCase("confirm")) {
+            sender.sendMessage(plugin.prefix() + "§4§l⚠ ADVERTENCIA ⚠");
+            sender.sendMessage(plugin.prefix() + "§cEsto borrará TODOS los datos de TODOS los jugadores:");
+            sender.sendMessage("§7  • ELO de todos los jugadores");
+            sender.sendMessage("§7  • Tiers de todos los jugadores");
+            sender.sendMessage("§7  • Puntos de todos los kits");
+            sender.sendMessage("§7  • Rankings y estadísticas");
+            sender.sendMessage("");
+            sender.sendMessage(plugin.prefix() + "§cEscribe §e/admin resetall confirm §cpara confirmar.");
+            return;
+        }
+
+        // Reset ELO
+        plugin.getEloManager().resetAllElo();
+        // Reset Tiers
+        plugin.getTierManager().resetAllData();
+
+        sender.sendMessage(plugin.prefix() + "§4§l☠ TODOS LOS DATOS HAN SIDO RESETEADOS");
+        sender.sendMessage(plugin.prefix() + "§cELO y Tiers de todos los jugadores han sido eliminados.");
+        plugin.getLogger().warning("§4" + sender.getName() + " ha reseteado TODOS los datos de jugadores.");
+
+        // Notify online players
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.sendMessage(plugin.prefix() + "§c§lTus estadísticas han sido reseteadas por un administrador.");
+            plugin.getScoreboardManager().restoreLobbyScoreboard(p);
+        }
     }
 
     // ── ELO subcommands ───────────────────────────────────────────────────
@@ -394,7 +426,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/admin elo reset §f<jugador>        §8» §7Resetear ELO");
         sender.sendMessage("§e/admin elo set §f<jugador> <valor>  §8» §7Establecer ELO");
         sender.sendMessage("§e/admin elo get §f<jugador>          §8» §7Ver ELO");
-        sender.sendMessage("§e/admin elo resetall                §8» §7⚠ Resetear TODOS");
+        sender.sendMessage("§e/admin elo resetall                §8» §7⚠ Resetear TODOS los ELO");
+        sender.sendMessage("§4/admin resetall confirm            §8» §c☠ BORRAR TODO (ELO+Tiers)");
         sender.sendMessage("§e/admin kick §f<jugador>             §8» §7Sacar de cola/duelo");
         sender.sendMessage("§e/admin forceend §f<jugador>         §8» §7Terminar duelo (empate)");
         sender.sendMessage("§e/admin setupwall §f<id>             §8» §7Herramienta de muro");

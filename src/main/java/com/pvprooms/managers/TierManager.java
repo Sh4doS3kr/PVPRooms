@@ -276,6 +276,19 @@ public class TierManager {
         return Collections.unmodifiableSet(pointsByKit.keySet());
     }
 
+    /** Resetea TODOS los datos de tiers de TODOS los jugadores. */
+    public void resetAllData() {
+        pointsByKit.clear();
+        save();
+        plugin.getLogger().info("[TierManager] TODOS los datos de tiers han sido reseteados.");
+    }
+
+    /** Resetea los datos de tier de un jugador específico. */
+    public void resetPlayer(UUID uuid) {
+        pointsByKit.remove(uuid);
+        save();
+    }
+
     // ── Inner record ─────────────────────────────────────────────────────
 
     public record PlayerRank(UUID uuid, int score, String kit, int kitPoints) {}

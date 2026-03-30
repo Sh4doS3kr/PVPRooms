@@ -33,6 +33,7 @@ public class AdminPanelGUI {
     public static final int SLOT_FORCEEND      = 19;
     public static final int SLOT_RELOAD        = 27;
     public static final int SLOT_INFO          = 28;
+    public static final int SLOT_RESET_ALL     = 36;
     public static final int SLOT_CLOSE         = 49;
 
     private final PvPRoomsPro plugin;
@@ -95,7 +96,18 @@ public class AdminPanelGUI {
                 List.of("&7Recarga config.yml sin reiniciar.", "", "&fUso: &e/admin reload")));
         inv.setItem(SLOT_INFO, btn(Material.WRITABLE_BOOK, "&b&lInfo del plugin",
                 List.of("&7Muestra versión y estado del plugin.", "", "&fUso: &e/admin info")));
-        for (int i = 29; i <= 44; i++) inv.setItem(i, sep());
+        for (int i = 29; i <= 35; i++) inv.setItem(i, sep());
+
+        // ── Row 4: Danger zone ───────────────────────────────────────────────
+        inv.setItem(SLOT_RESET_ALL, btn(Material.BARRIER, "&4&l☠ RESETEAR TODO",
+                List.of("&c¡PELIGRO! Esto borrará TODOS los datos:", "",
+                        "&7• ELO de todos los jugadores",
+                        "&7• Tiers de todos los jugadores", 
+                        "&7• Puntos de todos los kits",
+                        "&7• Estadísticas y rankings", "",
+                        "&4¡ESTA ACCIÓN NO SE PUEDE DESHACER!", "",
+                        "&fUso: &e/admin resetall confirm")));
+        for (int i = 37; i <= 44; i++) inv.setItem(i, sep());
 
         // ── Row 5: Close ───────────────────────────────────────────────────
         for (int i = 45; i <= 53; i++) inv.setItem(i, sep());
