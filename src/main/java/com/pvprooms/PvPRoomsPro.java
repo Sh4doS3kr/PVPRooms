@@ -24,6 +24,7 @@ import com.pvprooms.listeners.TrimCrateListener;
 import com.pvprooms.listeners.TrimGUIListener;
 import com.pvprooms.listeners.PhysicalTrimCrateListener;
 import com.pvprooms.listeners.LobbyListener;
+import com.pvprooms.listeners.ChatListener;
 import com.pvprooms.api.TierApiServer;
 import com.pvprooms.listeners.SpearListener;
 import com.pvprooms.managers.TierManager;
@@ -289,6 +290,7 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new TrimCrateListener(this), this);
         pm.registerEvents(new PhysicalTrimCrateListener(this), this);
         pm.registerEvents(new LobbyListener(this), this);
+        pm.registerEvents(new ChatListener(this), this);
     }
 
     // ── Lobby world setup ──────────────────────────────────────────────────
