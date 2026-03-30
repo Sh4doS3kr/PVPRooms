@@ -92,20 +92,29 @@ public class PhysicalTrimCrateListener implements Listener {
         // Prevent shulker from opening normally
         event.setCancelled(true);
         
-        // Check if player has a key
-        ItemStack itemInHand = event.getItem();
-        if (!isCrateKey(itemInHand)) {
-            player.sendMessage(plugin.prefix() + "§cNecesitas una §6Llave de Crate §cpara abrir esta crate.");
-            player.sendMessage(plugin.prefix() + "§7Obtén llaves completando partidas o comprándolas.");
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
-            return;
-        }
-
         String crateType = PhysicalTrimCrate.getCrateType(block);
         ArmorPiece piece = PhysicalTrimCrate.getArmorPiece(block);
         boolean legendary = PhysicalTrimCrate.isLegendary(block);
 
         if (piece == null || crateType == null) return;
+        
+        // Check if player has a key
+        ItemStack itemInHand = event.getItem();
+        if (!isCrateKey(itemInHand)) {
+            player.sendMessage(plugin.prefix() + "§cNecesitas una §6" + piece.getDisplayName() + " Key §cpara abrir esta crate.");
+            player.sendMessage(plugin.prefix() + "§7Obtén llaves completando partidas o comprándolas.");
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
+            return;
+        }
+        
+        // Check if key matches crate piece
+        ArmorPiece keyPiece = PhysicalCrateCommand.getKeyPiece(itemInHand);
+        if (keyPiece == null || keyPiece != piece) {
+            String keyPieceName = keyPiece != null ? keyPiece.getDisplayName() : "desconocida";
+            player.sendMessage(plugin.prefix() + "§cEsta llave es de §6" + keyPieceName + "§c, necesitas una §6" + piece.getDisplayName() + " Key§c.");
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
+            return;
+        }
 
         // Consume one key from hand
         if (itemInHand.getAmount() > 1) {
@@ -128,12 +137,14 @@ public class PhysicalTrimCrateListener implements Listener {
     /** Checks if an item is a crate key */
     private boolean isCrateKey(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
-        // Check by TrimCrate key tag first (most reliable)
+        // Check by piece-specific key tag (new system)
+        if (PhysicalCrateCommand.getKeyPiece(item) != null) return true;
+        // Check by TrimCrate key tag (legacy)
         if (TrimCrate.isKey(item)) return true;
         // Fallback: check by material and name
         return item.getType() == Material.TRIPWIRE_HOOK && 
                item.getItemMeta().getDisplayName() != null &&
-               item.getItemMeta().getDisplayName().contains("Llave");
+               item.getItemMeta().getDisplayName().contains("Key");
     }
     
     @EventHandler

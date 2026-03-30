@@ -5,12 +5,14 @@ import com.pvprooms.model.ArmorPiece;
 import com.pvprooms.model.PhysicalTrimCrate;
 import com.pvprooms.model.HelmetTrimBlock;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,12 +26,14 @@ import java.util.UUID;
 public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
 
     private final PvPRoomsPro plugin;
+    private static NamespacedKey keyPieceTag;
     
     // Players in setup mode: UUID -> {piece, legendary}
     private static final Map<UUID, SetupData> setupMode = new HashMap<>();
 
     public PhysicalCrateCommand(PvPRoomsPro plugin) {
         this.plugin = plugin;
+        keyPieceTag = new NamespacedKey(plugin, "crate_key_piece");
     }
     
     /** Data for players in setup mode */
@@ -54,13 +58,19 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
 
         String type = args[0].toLowerCase();
         
-        // Handle "key" subcommand
+        // Handle "key" subcommand - requires piece argument
         if (type.equals("key")) {
-            if (!player.hasPermission("pvprooms.admin")) {
-                player.sendMessage(plugin.prefix() + "§cSin permiso.");
+            if (args.length < 2) {
+                player.sendMessage(plugin.prefix() + "§cUso: /crate key <pieza>");
+                player.sendMessage(plugin.prefix() + "§7Piezas: helmet, chestplate, leggings, boots");
                 return true;
             }
-            giveKey(player);
+            ArmorPiece keyPiece = ArmorPiece.fromName(args[1].toLowerCase());
+            if (keyPiece == null) {
+                player.sendMessage(plugin.prefix() + "§cPieza inválida. Usa: helmet, chestplate, leggings, boots");
+                return true;
+            }
+            giveKey(player, keyPiece);
             return true;
         }
 
@@ -136,11 +146,11 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** Gives a crate key to the player */
-    private void giveKey(Player player) {
-        ItemStack key = createCrateKey();
+    /** Gives a piece-specific crate key to the player */
+    private void giveKey(Player player, ArmorPiece piece) {
+        ItemStack key = createCrateKey(piece);
         player.getInventory().addItem(key);
-        player.sendMessage(plugin.prefix() + "§aRecibiste una §6Llave de Crate§a. Úsala para abrir crates.");
+        player.sendMessage(plugin.prefix() + "§aRecibiste una §6" + piece.getDisplayName() + " Key§a. Úsala para abrir crates de " + piece.getDisplayName() + ".");
     }
 
     /** Gives a helmet trim block to the player */
@@ -150,22 +160,39 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(plugin.prefix() + "§aRecibiste un §6Bloque de Trims de Casco§a. Colócalo en el mundo y úsalo con una llave.");
     }
 
-    /** Creates a crate key item */
-    private ItemStack createCrateKey() {
+    /** Creates a piece-specific crate key item */
+    private ItemStack createCrateKey(ArmorPiece piece) {
         ItemStack key = new ItemStack(Material.TRIPWIRE_HOOK);
         org.bukkit.inventory.meta.ItemMeta meta = key.getItemMeta();
-        meta.setDisplayName("§6§l✦ §eLlave de Crate §6§l✦");
+        meta.setDisplayName("§6§l✦ §e" + piece.getDisplayName() + " Key §6§l✦");
         meta.setLore(List.of(
-            "§7Usa esta llave para abrir crates físicas",
-            "§7de trims en el mundo.",
+            "§7Usa esta llave para abrir crates de",
+            "§d" + piece.getDisplayName() + " §7en el mundo.",
             "",
-            "§8▸ Click derecho en una crate"
+            "§8▸ Click derecho en una crate de " + piece.getDisplayName().toLowerCase()
         ));
+        // Store piece type in persistent data
+        meta.getPersistentDataContainer().set(keyPieceTag, PersistentDataType.STRING, piece.name());
         meta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true);
         meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
         key.setItemMeta(meta);
         return key;
     }
+    
+    /** Gets the piece type from a key item */
+    public static ArmorPiece getKeyPiece(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return null;
+        if (keyPieceTag == null) return null;
+        String pieceName = item.getItemMeta().getPersistentDataContainer().get(keyPieceTag, PersistentDataType.STRING);
+        if (pieceName == null) return null;
+        try {
+            return ArmorPiece.valueOf(pieceName);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+    
+    public static NamespacedKey getKeyPieceTag() { return keyPieceTag; }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
@@ -200,7 +227,7 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
     private void sendHelp(Player p) {
         p.sendMessage("§5§m          §r §dCrates Físicas §5§m          ");
         p.sendMessage("§7/crate §f<tipo> <pieza> [legendary]");
-        p.sendMessage("§7/crate §fkey §8- Da llave de crate (admin)");
+        p.sendMessage("§7/crate §fkey <pieza> §8- Da llave específica (admin)");
         p.sendMessage("§7/crate §fhelmetblock §8- Da bloque de trims de casco (admin)");
         p.sendMessage("§7/crate §fcolocar <pieza> [legendary] §8- Modo colocación");
         p.sendMessage("§7/crate §fcancelar §8- Cancela modo colocación");
@@ -223,7 +250,7 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         p.sendMessage("§7/crate normal helmet");
         p.sendMessage("§7/crate themed chestplate");
         p.sendMessage("§7/crate normal boots legendary");
-        p.sendMessage("§7/crate key");
+        p.sendMessage("§7/crate key chestplate");
         p.sendMessage("§7/crate helmetblock");
     }
 }

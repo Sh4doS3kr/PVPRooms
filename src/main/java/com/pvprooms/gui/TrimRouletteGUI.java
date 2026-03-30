@@ -13,7 +13,12 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
+import org.bukkit.inventory.meta.trim.TrimPattern;
+import org.bukkit.Registry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,37 +76,66 @@ public class TrimRouletteGUI {
         // Horizontal spinning slots (row 3: slots 19-25)
         int[] spinSlots = {19, 20, 21, 22, 23, 24, 25};
         
-        // Pre-generate some random trims for the spin animation
-        List<Trim> spinTrims = new ArrayList<>();
-        for (int i = 0; i < 50; i++) {
-            spinTrims.add(plugin.getTrimManager().randomTrimForPiece(piece, legendary));
-        }
-        
-        // Generate final trim now (so we can show it at the end)
+        // Generate final trim FIRST
         Trim finalTrim = plugin.getTrimManager().randomTrimForPiece(piece, legendary);
         
-        // Run animation - starts fast, slows down
+        // Build spin list with 40+ trims, final trim will be at the end so it lands in center
+        List<Trim> spinTrims = new ArrayList<>();
+        for (int i = 0; i < 45; i++) {
+            spinTrims.add(plugin.getTrimManager().randomTrimForPiece(piece, legendary));
+        }
+        // Insert final trim at position that will land in center slot (position 3 from end)
+        int finalPosition = spinTrims.size() - 3;
+        spinTrims.set(finalPosition, finalTrim);
+        
+        // Calculate total animation ticks
+        int totalSpins = 45; // How many positions to scroll through
+        int[] delays = new int[totalSpins];
         int totalTicks = 0;
-        for (int i = 0; i < 40; i++) {
-            final int tick = i;
-            // Speed decreases as animation progresses
-            int delay = i < 20 ? 2 : (i < 30 ? 3 : (i < 35 ? 4 : 6));
-            totalTicks += delay;
+        
+        for (int i = 0; i < totalSpins; i++) {
+            // Speed decreases as animation progresses (starts fast, slows down)
+            if (i < 15) delays[i] = 1;
+            else if (i < 25) delays[i] = 2;
+            else if (i < 32) delays[i] = 3;
+            else if (i < 38) delays[i] = 4;
+            else if (i < 42) delays[i] = 6;
+            else delays[i] = 10;
+            totalTicks += delays[i];
+        }
+        
+        // Run animation - scroll through all items
+        int currentTick = 0;
+        for (int i = 0; i < totalSpins; i++) {
+            final int scrollPosition = i;
+            final int scheduleTick = currentTick;
             
-            final int currentTotalTicks = totalTicks;
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!player.getOpenInventory().getTopInventory().equals(holder.getInventory())) return;
 
-                // Update spinning items horizontally
-                updateHorizontalSpin(holder.getInventory(), spinSlots, spinTrims, tick, piece, finalTrim);
+                // Update spinning items - show 7 items centered on current scroll position
+                Inventory inv = holder.getInventory();
+                for (int j = 0; j < spinSlots.length; j++) {
+                    int trimIndex = (scrollPosition + j) % spinTrims.size();
+                    Trim trim = spinTrims.get(trimIndex);
+                    boolean isCenter = (j == 3); // Center slot (index 3 of 7 slots)
+                    inv.setItem(spinSlots[j], createTrimmedArmorItem(trim, piece, isCenter));
+                }
                 
-                // Play tick sound (pitch increases as it slows)
-                float pitch = 0.5f + (tick / 40f) * 1.5f;
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.5f, pitch);
-            }, currentTotalTicks);
+                // Update pointer arrows
+                inv.setItem(13, createPointerItem());
+                inv.setItem(31, createPointerItem());
+                
+                // Play tick sound
+                float pitch = 0.8f + (scrollPosition / (float)totalSpins) * 1.2f;
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.6f, pitch);
+            }, scheduleTick);
+            
+            currentTick += delays[i];
         }
 
-        // Final result after animation
+        // Final result after animation completes
+        final int finalTotalTicks = totalTicks;
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!player.getOpenInventory().getTopInventory().equals(holder.getInventory())) return;
             
@@ -133,42 +167,51 @@ public class TrimRouletteGUI {
                     player.closeInventory();
                 }
             }, 60);
-        }, totalTicks + 10);
+        }, finalTotalTicks + 15);
     }
     
-    private void updateHorizontalSpin(Inventory inv, int[] slots, List<Trim> trims, int tick, ArmorPiece piece, Trim finalTrim) {
-        // Shift items to the left, new item comes from right
-        for (int i = 0; i < slots.length; i++) {
-            int trimIndex = (tick + i) % trims.size();
-            Trim trim = trims.get(trimIndex);
+    /** Creates a netherite armor item with the actual trim applied */
+    private ItemStack createTrimmedArmorItem(Trim trim, ArmorPiece piece, boolean highlighted) {
+        // Get netherite armor material for this piece
+        Material armorMat = getNetheriteArmorMaterial(piece);
+        ItemStack item = new ItemStack(armorMat);
+        
+        // Apply the actual trim to the armor
+        if (item.getItemMeta() instanceof ArmorMeta armorMeta) {
+            try {
+                TrimPattern pattern = Registry.TRIM_PATTERN.get(
+                    org.bukkit.NamespacedKey.minecraft(trim.getPattern().toLowerCase()));
+                TrimMaterial material = Registry.TRIM_MATERIAL.get(
+                    org.bukkit.NamespacedKey.minecraft(trim.getMaterial().toLowerCase()));
+                
+                if (pattern != null && material != null) {
+                    armorMeta.setTrim(new ArmorTrim(material, pattern));
+                }
+            } catch (Exception ignored) {}
             
-            // Center slot (22) gets highlight
-            boolean isCenter = slots[i] == 22;
-            inv.setItem(slots[i], createTrimSpinItem(trim, piece, isCenter));
+            String col = plugin.getTrimManager().patternColour(trim.getPattern());
+            armorMeta.setDisplayName(col + trim.getPattern());
+            armorMeta.setLore(List.of("§7" + trim.getMaterial()));
+            
+            if (highlighted) {
+                armorMeta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                armorMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }
+            armorMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(armorMeta);
         }
         
-        // Update pointer arrows
-        inv.setItem(13, createPointerItem());
-        inv.setItem(31, createPointerItem());
+        return item;
     }
     
-    private ItemStack createTrimSpinItem(Trim trim, ArmorPiece piece, boolean highlighted) {
-        String col = plugin.getTrimManager().patternColour(trim.getPattern());
-        Material mat = highlighted ? piece.getDisplayMaterial() : getRandomArmorMaterial();
-        
-        ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(col + trim.getPattern());
-        meta.setLore(List.of(
-            "§7" + trim.getMaterial()
-        ));
-        if (highlighted) {
-            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        item.setItemMeta(meta);
-        return item;
+    /** Gets the netherite armor material for the given piece */
+    private Material getNetheriteArmorMaterial(ArmorPiece piece) {
+        return switch (piece) {
+            case HELMET -> Material.NETHERITE_HELMET;
+            case CHESTPLATE -> Material.NETHERITE_CHESTPLATE;
+            case LEGGINGS -> Material.NETHERITE_LEGGINGS;
+            case BOOTS -> Material.NETHERITE_BOOTS;
+        };
     }
     
     private ItemStack createPointerItem() {
@@ -177,12 +220,6 @@ public class TrimRouletteGUI {
         meta.setDisplayName("§e§l▼");
         item.setItemMeta(meta);
         return item;
-    }
-    
-    private Material getRandomArmorMaterial() {
-        Material[] mats = {Material.IRON_CHESTPLATE, Material.GOLDEN_CHESTPLATE, Material.DIAMOND_CHESTPLATE, 
-                          Material.NETHERITE_CHESTPLATE, Material.LEATHER_CHESTPLATE, Material.CHAINMAIL_CHESTPLATE};
-        return mats[random.nextInt(mats.length)];
     }
 
 
