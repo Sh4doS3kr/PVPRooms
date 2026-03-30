@@ -326,28 +326,36 @@ public class TierManager {
 
     // ── Rankings ──────────────────────────────────────────────────────────
 
-    /** Top N jugadores por puntuación total. */
+    /** Top N jugadores por puntuación total. Desempata por ELO. */
     public List<PlayerRank> getTopPlayers(int limit) {
         return pointsByKit.keySet().stream()
-                .map(uuid -> new PlayerRank(uuid, getTotalScore(uuid), null, -1))
+                .map(uuid -> new PlayerRank(uuid, getTotalScore(uuid), null, -1, getElo(uuid)))
                 .filter(r -> r.score() > 0)
-                .sorted(Comparator.comparingInt(PlayerRank::score).reversed())
+                .sorted(Comparator.comparingInt(PlayerRank::score).reversed()
+                        .thenComparingInt(PlayerRank::elo).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
     }
 
-    /** Top N jugadores para un kit específico, ordenados por puntos del kit. */
+    /** Top N jugadores para un kit específico, ordenados por puntos del kit. Desempata por ELO. */
     public List<PlayerRank> getTopForKit(String kitName, int limit) {
         String kit = kitName.toLowerCase();
         List<PlayerRank> list = new ArrayList<>();
         for (var entry : pointsByKit.entrySet()) {
             Integer pts = entry.getValue().get(kit);
             if (pts != null && pts >= 0) {
-                list.add(new PlayerRank(entry.getKey(), getTotalScore(entry.getKey()), kit, pts));
+                list.add(new PlayerRank(entry.getKey(), getTotalScore(entry.getKey()), kit, pts, getElo(entry.getKey())));
             }
         }
-        list.sort(Comparator.comparingInt(PlayerRank::kitPoints).reversed());
+        // Sort by kit points, then by ELO as tiebreaker
+        list.sort(Comparator.comparingInt(PlayerRank::kitPoints).reversed()
+                .thenComparingInt(PlayerRank::elo).reversed());
         return list.stream().limit(limit).collect(Collectors.toList());
+    }
+    
+    /** Helper to get player's ELO for tiebreaker sorting. */
+    private int getElo(UUID uuid) {
+        return plugin.getEloManager().getElo(uuid);
     }
 
     /** Todos los UUIDs con al menos un registro de tier. */
@@ -370,5 +378,5 @@ public class TierManager {
 
     // ── Inner record ─────────────────────────────────────────────────────
 
-    public record PlayerRank(UUID uuid, int score, String kit, int kitPoints) {}
+    public record PlayerRank(UUID uuid, int score, String kit, int kitPoints, int elo) {}
 }
