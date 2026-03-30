@@ -326,13 +326,16 @@ public class TierManager {
 
     // ── Rankings ──────────────────────────────────────────────────────────
 
-    /** Top N jugadores por puntuación total. Desempata por ELO. */
+    /** Top N jugadores por puntuación total. Desempata por ELO (mayor primero). */
     public List<PlayerRank> getTopPlayers(int limit) {
         return pointsByKit.keySet().stream()
                 .map(uuid -> new PlayerRank(uuid, getTotalScore(uuid), null, -1, getElo(uuid)))
                 .filter(r -> r.score() > 0)
-                .sorted(Comparator.comparingInt(PlayerRank::score).reversed()
-                        .thenComparingInt(PlayerRank::elo).reversed())
+                .sorted((a, b) -> {
+                    int cmp = Integer.compare(b.score(), a.score()); // Higher score first
+                    if (cmp != 0) return cmp;
+                    return Integer.compare(b.elo(), a.elo()); // Higher ELO first as tiebreaker
+                })
                 .limit(limit)
                 .collect(Collectors.toList());
     }
@@ -347,9 +350,12 @@ public class TierManager {
                 list.add(new PlayerRank(entry.getKey(), getTotalScore(entry.getKey()), kit, pts, getElo(entry.getKey())));
             }
         }
-        // Sort by kit points, then by ELO as tiebreaker
-        list.sort(Comparator.comparingInt(PlayerRank::kitPoints).reversed()
-                .thenComparingInt(PlayerRank::elo).reversed());
+        // Sort by kit points (higher first), then by ELO as tiebreaker (higher first)
+        list.sort((a, b) -> {
+            int cmp = Integer.compare(b.kitPoints(), a.kitPoints()); // Higher points first
+            if (cmp != 0) return cmp;
+            return Integer.compare(b.elo(), a.elo()); // Higher ELO first as tiebreaker
+        });
         return list.stream().limit(limit).collect(Collectors.toList());
     }
     

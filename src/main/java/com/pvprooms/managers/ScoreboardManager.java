@@ -165,8 +165,9 @@ public class ScoreboardManager {
         if (duel.isBo3()) {
             int myW = duel.getWins(player.getUniqueId());
             int opW = duel.getWins(duel.getOpponent(player.getUniqueId()));
-            int rnd = Math.min(duel.getCurrentRound(), 3);
-            tl(obj, s++, leg("&6⚑ &fRonda &6" + rnd + "&8/3  &a" + myW + " &8- &c" + opW), 11);
+            int needed = duel.getWinsNeeded();
+            int rnd = Math.min(duel.getCurrentRound(), needed);
+            tl(obj, s++, leg("&6⚑ &fRonda &6" + rnd + "&8/" + needed + "  &a" + myW + " &8- &c" + opW), 11);
         }
         
         tl(obj, s++, " ", 10);
