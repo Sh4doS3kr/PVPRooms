@@ -13,6 +13,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
 
 /**
  * Handles all lobby-specific events:
@@ -28,6 +29,33 @@ public class LobbyListener implements Listener {
 
     public LobbyListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+
+    // ── Clear Effects on Lobby Entry ────────────────────────────────────────
+    
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        if (isInLobby(player)) {
+            clearAllEffects(player);
+        }
+    }
+    
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerJoinLobby(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (isInLobby(player)) {
+            // Delay 1 tick to ensure all other plugins have finished
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                clearAllEffects(player);
+            }, 1L);
+        }
+    }
+    
+    private void clearAllEffects(Player player) {
+        for (PotionEffect effect : player.getActivePotionEffects()) {
+            player.removePotionEffect(effect.getType());
+        }
     }
 
     // ── No Damage in Lobby ─────────────────────────────────────────────────
