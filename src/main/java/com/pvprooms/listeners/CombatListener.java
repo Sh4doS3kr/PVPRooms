@@ -2,7 +2,10 @@ package com.pvprooms.listeners;
 
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
+import net.citizensnpcs.api.CitizensAPI;
+import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -34,6 +37,36 @@ public class CombatListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // ── Bot Duel: Player attacking bot ──
+        if (event.getEntity() instanceof LivingEntity && CitizensAPI.getNPCRegistry() != null) {
+            NPC npc = CitizensAPI.getNPCRegistry().getNPC(event.getEntity());
+            if (npc != null && event.getDamager() instanceof Player player) {
+                if (plugin.getBotManager() != null && plugin.getBotManager().isInBotDuel(player.getUniqueId())) {
+                    NPC playerBot = plugin.getBotManager().getPlayerBot(player.getUniqueId());
+                    if (playerBot != null && playerBot.getId() == npc.getId()) {
+                        // Player attacking their bot - ALLOW damage
+                        event.setCancelled(false);
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // ── Bot Duel: Bot attacking player ──
+        if (event.getEntity() instanceof Player victim && CitizensAPI.getNPCRegistry() != null) {
+            NPC attackerNpc = CitizensAPI.getNPCRegistry().getNPC(event.getDamager());
+            if (attackerNpc != null) {
+                if (plugin.getBotManager() != null && plugin.getBotManager().isInBotDuel(victim.getUniqueId())) {
+                    NPC playerBot = plugin.getBotManager().getPlayerBot(victim.getUniqueId());
+                    if (playerBot != null && playerBot.getId() == attackerNpc.getId()) {
+                        // Bot attacking player - ALLOW damage
+                        event.setCancelled(false);
+                        return;
+                    }
+                }
+            }
+        }
+        
         if (!(event.getEntity() instanceof Player victim)) return;
 
         Player attacker = resolveAttacker(event.getDamager());
