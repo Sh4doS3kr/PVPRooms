@@ -66,16 +66,31 @@ public class BotManager {
             return false;
         }
 
-        // Get random arena
-        List<ArenaTemplate> arenas = new ArrayList<>();
-        for (ArenaTemplate t : plugin.getArenaManager().getAllArenas()) {
-            if (t.isFullyConfigured()) arenas.add(t);
+        // Use arena connected to kit (same system as regular duels)
+        String connectedArena = plugin.getKitManager().getConnectedArena(kitName);
+        if (connectedArena != null) connectedArena = connectedArena.trim();
+        ArenaTemplate template = null;
+        
+        if (connectedArena != null && !connectedArena.isEmpty()) {
+            template = plugin.getArenaManager().getArena(connectedArena);
+            if (template == null || !template.isFullyConfigured()) {
+                player.sendMessage(plugin.prefix() + "§e⚠ Arena vinculada al kit no disponible. Usando arena aleatoria...");
+                template = null;
+            }
         }
-        if (arenas.isEmpty()) {
-            player.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles.");
-            return false;
+        
+        // Fallback to random arena if no connected arena
+        if (template == null) {
+            List<ArenaTemplate> arenas = new ArrayList<>();
+            for (ArenaTemplate t : plugin.getArenaManager().getAllArenas()) {
+                if (t.isFullyConfigured()) arenas.add(t);
+            }
+            if (arenas.isEmpty()) {
+                player.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles.");
+                return false;
+            }
+            template = arenas.get(new Random().nextInt(arenas.size()));
         }
-        ArenaTemplate template = arenas.get(new Random().nextInt(arenas.size()));
 
         // Create instance world
         String matchId = "bot_" + uuid.toString().substring(0, 8);
@@ -252,6 +267,12 @@ public class BotManager {
             bot.destroy();
         }
 
+        // Close arena walls (same as regular duels)
+        World instanceWorld = Bukkit.getWorld(botDuel.instanceWorldName);
+        if (instanceWorld != null && botDuel.template != null) {
+            plugin.getWallManager().animateClose(botDuel.template.getName(), instanceWorld);
+        }
+
         // Restore player
         Player player = Bukkit.getPlayer(playerUUID);
         if (player != null) {
@@ -271,10 +292,10 @@ public class BotManager {
             player.sendMessage(plugin.prefix() + result + " §7(Sin cambios en ELO/Tier)");
         }
 
-        // Destroy arena instance
+        // Destroy arena instance (delay to allow wall animation)
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             plugin.getArenaInstanceManager().destroyInstance(botDuel.instanceWorldName);
-        }, 20L);
+        }, 60L);
     }
 
     /**
