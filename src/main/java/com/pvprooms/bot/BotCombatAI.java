@@ -91,15 +91,16 @@ public class BotCombatAI {
         this.difficulty = difficulty;
         this.kitName = kitName;
         
-        // Set difficulty parameters
+        // Set difficulty parameters (human-like values)
         this.tickRate = difficulty.ticksBetweenActions;
         this.accuracy = difficulty.hitAccuracy;
         this.reactionMs = (int) difficulty.reactionTimeMs;
+        // Human crit chance: requires timing jump perfectly, most players hit 20-40%
         this.critChance = switch(difficulty) {
-            case EASY -> 0.1;
-            case MEDIUM -> 0.3;
-            case HARD -> 0.5;
-            case HACKER -> 0.8;
+            case EASY -> 0.08;   // Beginner rarely crits
+            case MEDIUM -> 0.18; // Average player
+            case HARD -> 0.30;   // Good player (human-like)
+            case HACKER -> 0.75; // Inhuman timing
         };
         this.healThreshold = difficulty.healThreshold;
     }
@@ -241,36 +242,36 @@ public class BotCombatAI {
     private void handleMaceAttack(Player bot, double distance) {
         long now = System.currentTimeMillis();
         
-        // Mace is most effective with fall damage - jump high and smash
-        if (bot.isOnGround() && now - lastMaceJump > 2000) {
-            // Jump for mace smash
+        // Mace is most effective with fall damage - but human-like jumps
+        if (bot.isOnGround() && now - lastMaceJump > 2500) {
+            // Normal human jump power (vanilla jump is 0.42)
             double jumpPower = switch(difficulty) {
-                case EASY -> 0.5;
-                case MEDIUM -> 0.7;
-                case HARD -> 1.0;
-                case HACKER -> 1.2;
+                case EASY -> 0.42;    // Normal jump
+                case MEDIUM -> 0.45;  // Slightly higher
+                case HARD -> 0.48;    // Human-like
+                case HACKER -> 0.6;   // Only hacker jumps high
             };
             
-            // Jump towards target
+            // Jump towards target with vanilla-like velocity
             Vector direction = target.getLocation().toVector()
                     .subtract(bot.getLocation().toVector()).normalize();
             direction.setY(jumpPower);
-            direction.multiply(0.5);
+            direction.multiply(0.4); // Modest horizontal speed
             bot.setVelocity(direction);
             
             lastMaceJump = now;
             
             // Attack when falling
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (isValid() && bot.getFallDistance() > 0.5) {
+                if (isValid() && bot.getFallDistance() > 0.3) {
                     performMaceSmash(bot);
                 }
-            }, 10L);
-        } else if (bot.getFallDistance() > 0.5) {
+            }, 8L);
+        } else if (bot.getFallDistance() > 0.3) {
             // Already falling - smash!
             performMaceSmash(bot);
         } else if (distance <= 3.0) {
-            // Ground attack
+            // Ground attack - normal melee
             performAttack(bot, false);
             lastAttackTime = now;
         }
@@ -285,28 +286,32 @@ public class BotCombatAI {
         // Swing animation
         bot.swingMainHand();
         
-        // Mace smash damage scales with fall distance
+        // Mace smash damage scales with fall distance (vanilla-like)
         double fallDistance = bot.getFallDistance();
-        double baseDamage = 7.0;
-        double bonusDamage = Math.min(fallDistance * 2, 20); // Cap at 20 bonus
+        double baseDamage = 6.0;
+        double bonusDamage = Math.min(fallDistance * 1.5, 10); // Reasonable cap
         double totalDamage = baseDamage + bonusDamage;
         
         // Deal damage
         target.damage(totalDamage, bot);
         
-        // Mace smash knockback (radial)
-        Vector knockback = target.getLocation().toVector()
-                .subtract(bot.getLocation().toVector())
-                .normalize()
-                .multiply(0.8 + (fallDistance * 0.1))
-                .setY(0.4);
+        // Mace knockback - vanilla-like, not excessive
+        Vector direction = target.getLocation().toVector()
+                .subtract(bot.getLocation().toVector());
+        direction.setY(0);
+        direction.normalize();
+        
+        // Small horizontal + normal vertical lift
+        double kbHorizontal = 0.5 + Math.min(fallDistance * 0.05, 0.3);
+        Vector knockback = direction.multiply(kbHorizontal);
+        knockback.setY(0.4);
         target.setVelocity(knockback);
         
         // Sound and particles
         bot.getWorld().playSound(bot.getLocation(), Sound.ITEM_MACE_SMASH_GROUND, 1.0f, 1.0f);
         
         lastAttackTime = System.currentTimeMillis();
-        comboCount = 0; // Reset combo after smash
+        comboCount = 0;
     }
 
     private void handleSpearMelee(Player bot, double distance) {
@@ -354,29 +359,43 @@ public class BotCombatAI {
         lastComboHit = now;
     }
 
+    /**
+     * Apply vanilla-like knockback to victim.
+     * Based on Minecraft Wiki knockback mechanics:
+     * - Base horizontal: 0.4 blocks/tick
+     * - Base vertical: 0.4 blocks/tick (lifts off ground)
+     * - Sprint bonus: +0.4 horizontal (no stack with crit)
+     * - Knockback enchant: +0.5 per level
+     */
     private void applyKnockback(Player attacker, Player victim) {
-        Vector knockback = victim.getLocation().toVector()
-                .subtract(attacker.getLocation().toVector())
-                .normalize();
+        // Direction from attacker to victim
+        Vector direction = victim.getLocation().toVector()
+                .subtract(attacker.getLocation().toVector());
+        direction.setY(0); // Only horizontal for direction
+        direction.normalize();
         
-        // Base knockback
-        double kbStrength = 0.4;
-        double kbY = 0.35;
+        // Vanilla base knockback values
+        double kbHorizontal = 0.4;
+        double kbVertical = 0.4;
         
-        // Bonus for sprinting
+        // Sprint bonus (only if sprinting, doesn't stack with other bonuses excessively)
         if (attacker.isSprinting()) {
-            kbStrength += 0.3;
+            kbHorizontal += 0.4;
         }
         
-        // Knockback enchantment
+        // Knockback enchantment (+0.5 per level, vanilla value)
         ItemStack weapon = attacker.getInventory().getItemInMainHand();
         if (weapon != null && weapon.hasItemMeta()) {
             int kbLevel = weapon.getEnchantmentLevel(Enchantment.KNOCKBACK);
-            kbStrength += kbLevel * 0.3;
+            kbHorizontal += kbLevel * 0.5;
         }
         
-        knockback.multiply(kbStrength).setY(kbY);
-        victim.setVelocity(victim.getVelocity().add(knockback));
+        // Build final knockback vector
+        Vector knockback = direction.multiply(kbHorizontal);
+        knockback.setY(kbVertical);
+        
+        // Apply - don't add to existing velocity, replace it (vanilla behavior)
+        victim.setVelocity(knockback);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

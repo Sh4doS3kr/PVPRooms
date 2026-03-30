@@ -114,31 +114,34 @@ public class BotListener implements Listener {
                         return;
                     }
                     
-                    // Apply NORMAL knockback to bot (NPCs don't receive knockback by default)
-                    // Calculate knockback like vanilla Minecraft
+                    // Apply VANILLA knockback to bot (NPCs don't receive knockback by default)
+                    // Based on Minecraft Wiki knockback mechanics
                     Vector direction = botEntity.getLocation().toVector()
-                            .subtract(player.getLocation().toVector())
-                            .normalize();
+                            .subtract(player.getLocation().toVector());
+                    direction.setY(0); // Horizontal direction only
+                    direction.normalize();
                     
-                    // Base knockback strength
-                    double kbStrength = 0.4;
-                    double kbY = 0.4;
+                    // Vanilla base knockback
+                    double kbHorizontal = 0.4;
+                    double kbVertical = 0.4;
                     
-                    // Bonus for sprinting (like real combat)
+                    // Sprint bonus (+0.4 horizontal)
                     if (player.isSprinting()) {
-                        kbStrength += 0.4;
+                        kbHorizontal += 0.4;
                     }
                     
-                    // Knockback enchantment
+                    // Knockback enchantment (+0.5 per level)
                     ItemStack weapon = player.getInventory().getItemInMainHand();
                     if (weapon != null && weapon.hasItemMeta()) {
                         int kbLevel = weapon.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.KNOCKBACK);
-                        kbStrength += kbLevel * 0.4;
+                        kbHorizontal += kbLevel * 0.5;
                     }
                     
-                    Vector knockback = direction.multiply(kbStrength).setY(kbY);
+                    // Build knockback vector
+                    Vector knockback = direction.multiply(kbHorizontal);
+                    knockback.setY(kbVertical);
                     
-                    // Apply knockback immediately
+                    // Apply knockback (replace, not add - vanilla behavior)
                     botEntity.setVelocity(knockback);
                 }
             }
