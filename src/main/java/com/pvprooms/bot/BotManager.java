@@ -239,7 +239,11 @@ public class BotManager {
     public void onBotDeath(NPC bot) {
         for (Map.Entry<UUID, NPC> entry : playerBots.entrySet()) {
             if (entry.getValue().getId() == bot.getId()) {
-                endBotDuel(entry.getKey(), true);
+                BotDuel duel = activeBotDuels.get(entry.getKey());
+                // Only end if duel is active (after countdown)
+                if (duel != null && duel.active) {
+                    endBotDuel(entry.getKey(), true);
+                }
                 return;
             }
         }
@@ -288,6 +292,7 @@ public class BotManager {
         public final String instanceWorldName;
         public final ArenaTemplate arenaTemplate;
         public BotCombatAI ai;
+        public boolean active = false; // Only true after countdown finishes
 
         public BotDuel(UUID playerUUID, int botNpcId, String kitName, 
                        BotDifficulty difficulty, String instanceWorldName, 
@@ -302,6 +307,7 @@ public class BotManager {
 
         public void setAI(BotCombatAI ai) {
             this.ai = ai;
+            this.active = true; // Duel is now active
         }
     }
 }
