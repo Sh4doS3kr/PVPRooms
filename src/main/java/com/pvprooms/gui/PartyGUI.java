@@ -29,6 +29,7 @@ public class PartyGUI implements Listener {
     private static final String MATCH_TITLE = "Configurar Partida";
     private static final String KIT_SELECT_TITLE = "Seleccionar Kit";
     private static final String ARENA_SELECT_TITLE = "Seleccionar Arena";
+    private static final String MODE_SELECT_TITLE = "Seleccionar Modo";
 
     public PartyGUI(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -223,7 +224,7 @@ public class PartyGUI implements Listener {
         
         if (!title.contains(GUI_TITLE) && !title.contains(INVITE_TITLE) 
                 && !title.contains(MATCH_TITLE) && !title.contains(KIT_SELECT_TITLE) 
-                && !title.contains(ARENA_SELECT_TITLE)) return;
+                && !title.contains(ARENA_SELECT_TITLE) && !title.contains(MODE_SELECT_TITLE)) return;
         event.setCancelled(true);
 
         ItemStack clicked = event.getCurrentItem();
@@ -233,7 +234,13 @@ public class PartyGUI implements Listener {
         var pm = plugin.getPartyManager();
         UUID uuid = player.getUniqueId();
 
-        // Handle match config menu FIRST (before main menu switch)
+        // Handle mode select menu FIRST (most specific)
+        if (title.contains(MODE_SELECT_TITLE)) {
+            handleModeSelectClick(player, clicked);
+            return;
+        }
+
+        // Handle match config menu
         if (title.contains(MATCH_TITLE)) {
             handleMatchConfigClick(player, clicked);
             return;
@@ -328,6 +335,7 @@ public class PartyGUI implements Listener {
 
     private final Map<UUID, String> selectedKit = new HashMap<>();
     private final Map<UUID, String> selectedArena = new HashMap<>();
+    private final Map<UUID, String> selectedMode = new HashMap<>();
 
     public void openMatchConfigMenu(Player player) {
         var pm = plugin.getPartyManager();
@@ -341,10 +349,10 @@ public class PartyGUI implements Listener {
         ItemStack glass = createItem(Material.GRAY_STAINED_GLASS_PANE, " ", null);
         for (int i = 0; i < 27; i++) inv.setItem(i, glass);
 
-        // FFA option (slot 11)
-        inv.setItem(11, createItem(Material.IRON_SWORD, "FFA (Todos contra todos)",
-                List.of("", "§7Todos los miembros pelean", "§7entre si. Ultimo en pie gana.", "",
-                        "§eJugadores: §f" + memberCount)));
+        // Select Mode (slot 11)
+        String mode = selectedMode.getOrDefault(player.getUniqueId(), "FFA");
+        inv.setItem(11, createItem(Material.IRON_SWORD, "Modo de Juego",
+                List.of("", "§7Modo actual: §e" + mode, "", "§aClick para cambiar")));
 
         // Select Kit (slot 13)
         String kit = selectedKit.getOrDefault(player.getUniqueId(), "Ninguno");
@@ -360,7 +368,7 @@ public class PartyGUI implements Listener {
         boolean ready = selectedKit.containsKey(player.getUniqueId());
         if (ready) {
             inv.setItem(22, createItem(Material.LIME_WOOL, "INICIAR PARTIDA",
-                    List.of("", "§aClick para iniciar FFA", "§7con " + memberCount + " jugadores")));
+                    List.of("", "§aClick para iniciar " + mode, "§7con " + memberCount + " jugadores")));
         } else {
             inv.setItem(22, createItem(Material.RED_WOOL, "Selecciona un kit",
                     List.of("", "§cDebes seleccionar un kit", "§cpara iniciar la partida")));
@@ -420,11 +428,55 @@ public class PartyGUI implements Listener {
         Material type = clicked.getType();
         
         switch (type) {
-            case ARROW -> openMatchConfigMenu(player);
+            case ARROW -> open(player);
+            case IRON_SWORD -> openModeSelectMenu(player);
             case CHEST -> openKitSelectMenu(player);
             case GRASS_BLOCK -> openArenaSelectMenu(player);
-            case LIME_WOOL -> startPartyFFA(player);
-            case IRON_SWORD -> {} // FFA info, no action
+            case LIME_WOOL -> startPartyMatch(player);
+        }
+    }
+    
+    public void openModeSelectMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, Component.text(MODE_SELECT_TITLE, NamedTextColor.RED));
+        
+        ItemStack glass = createItem(Material.GRAY_STAINED_GLASS_PANE, " ", null);
+        for (int i = 0; i < 27; i++) inv.setItem(i, glass);
+        
+        // FFA Mode
+        inv.setItem(11, createItem(Material.IRON_SWORD, "FFA",
+                List.of("", "§7Todos contra todos", "§7El ultimo en pie gana", "", "§aClick para seleccionar")));
+        
+        // 1v1 Mode (split party into teams)
+        inv.setItem(13, createItem(Material.DIAMOND_SWORD, "1v1",
+                List.of("", "§7Duelo uno contra uno", "§7Requiere exactamente 2 jugadores", "", "§aClick para seleccionar")));
+        
+        // 2v2 Mode
+        inv.setItem(15, createItem(Material.GOLDEN_SWORD, "2v2",
+                List.of("", "§7Equipos de 2 vs 2", "§7Requiere exactamente 4 jugadores", "", "§aClick para seleccionar")));
+        
+        inv.setItem(22, createItem(Material.ARROW, "Volver", List.of("", "§7Volver")));
+        player.openInventory(inv);
+    }
+    
+    private void handleModeSelectClick(Player player, ItemStack clicked) {
+        Material type = clicked.getType();
+        
+        if (type == Material.ARROW) {
+            openMatchConfigMenu(player);
+            return;
+        }
+        
+        String mode = switch (type) {
+            case IRON_SWORD -> "FFA";
+            case DIAMOND_SWORD -> "1v1";
+            case GOLDEN_SWORD -> "2v2";
+            default -> null;
+        };
+        
+        if (mode != null) {
+            selectedMode.put(player.getUniqueId(), mode);
+            player.sendMessage(plugin.prefix() + "§aModo seleccionado: §e" + mode);
+            openMatchConfigMenu(player);
         }
     }
 
@@ -461,7 +513,7 @@ public class PartyGUI implements Listener {
         }
     }
 
-    private void startPartyFFA(Player player) {
+    private void startPartyMatch(Player player) {
         var pm = plugin.getPartyManager();
         UUID leaderUUID = player.getUniqueId();
         
@@ -476,9 +528,26 @@ public class PartyGUI implements Listener {
             return;
         }
 
+        String mode = selectedMode.getOrDefault(leaderUUID, "FFA");
         Set<UUID> members = pm.getPartyMembers(leaderUUID);
-        if (members.size() < 2) {
-            player.sendMessage(plugin.prefix() + "§cNecesitas al menos 2 jugadores para iniciar.");
+        
+        // Validate player count for mode
+        int required = switch (mode) {
+            case "1v1" -> 2;
+            case "2v2" -> 4;
+            default -> 2; // FFA needs at least 2
+        };
+        
+        if (mode.equals("1v1") && members.size() != 2) {
+            player.sendMessage(plugin.prefix() + "§cEl modo 1v1 requiere exactamente 2 jugadores.");
+            return;
+        }
+        if (mode.equals("2v2") && members.size() != 4) {
+            player.sendMessage(plugin.prefix() + "§cEl modo 2v2 requiere exactamente 4 jugadores.");
+            return;
+        }
+        if (members.size() < required) {
+            player.sendMessage(plugin.prefix() + "§cNecesitas al menos " + required + " jugadores para este modo.");
             return;
         }
 
@@ -515,11 +584,29 @@ public class PartyGUI implements Listener {
             return;
         }
 
-        // Start FFA match
-        plugin.getDuelManager().startFFAMatch(participants, kitName, arena);
+        // Start match based on mode
+        switch (mode) {
+            case "1v1" -> {
+                // Start 1v1 duel between the two party members
+                plugin.getDuelManager().startDuel(participants.get(0).getUniqueId(), participants.get(1).getUniqueId(), kitName);
+            }
+            case "2v2" -> {
+                // For now, 2v2 uses FFA (teams not implemented yet)
+                // TODO: Implement team-based matches
+                plugin.getDuelManager().startFFAMatch(participants, kitName, arena);
+                for (Player p : participants) {
+                    p.sendMessage(plugin.prefix() + "§e2v2 en desarrollo - jugando como FFA por ahora.");
+                }
+            }
+            default -> {
+                // FFA mode
+                plugin.getDuelManager().startFFAMatch(participants, kitName, arena);
+            }
+        }
         
         // Clean up selections
         selectedKit.remove(leaderUUID);
         selectedArena.remove(leaderUUID);
+        selectedMode.remove(leaderUUID);
     }
 }
