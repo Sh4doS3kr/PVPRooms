@@ -292,6 +292,33 @@ public class BotManager {
         return playerBots.get(uuid);
     }
 
+    /** Players who disconnected during a bot duel */
+    private final Set<UUID> disconnectedPlayers = new HashSet<>();
+
+    /**
+     * Called when a player disconnects during a bot duel.
+     */
+    public void onPlayerDisconnect(UUID uuid) {
+        if (activeBotDuels.containsKey(uuid)) {
+            disconnectedPlayers.add(uuid);
+            endBotDuel(uuid, false);
+        }
+    }
+
+    /**
+     * Check if player was in a bot duel when they disconnected.
+     */
+    public boolean wasInBotDuel(UUID uuid) {
+        return disconnectedPlayers.contains(uuid);
+    }
+
+    /**
+     * Clear disconnected player flag after handling reconnect.
+     */
+    public void clearDisconnectedPlayer(UUID uuid) {
+        disconnectedPlayers.remove(uuid);
+    }
+
     /**
      * Clean up all bot duels on plugin disable.
      */
@@ -299,6 +326,7 @@ public class BotManager {
         for (UUID uuid : new ArrayList<>(activeBotDuels.keySet())) {
             endBotDuel(uuid, false);
         }
+        disconnectedPlayers.clear();
     }
 
     /**

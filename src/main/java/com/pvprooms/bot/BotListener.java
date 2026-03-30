@@ -4,12 +4,16 @@ import com.pvprooms.PvPRoomsPro;
 import net.citizensnpcs.api.event.NPCDeathEvent;
 import net.citizensnpcs.api.event.NPCDespawnEvent;
 import net.citizensnpcs.api.npc.NPC;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.util.Vector;
 
 /**
  * Handles events related to bot practice duels.
@@ -20,6 +24,32 @@ public class BotListener implements Listener {
 
     public BotListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        
+        // If player disconnects during bot duel, end the duel and mark for teleport on rejoin
+        if (plugin.getBotManager().isInBotDuel(player.getUniqueId())) {
+            plugin.getBotManager().onPlayerDisconnect(player.getUniqueId());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        
+        // Teleport to lobby if they disconnected during a bot duel
+        if (plugin.getBotManager().wasInBotDuel(player.getUniqueId())) {
+            plugin.getBotManager().clearDisconnectedPlayer(player.getUniqueId());
+            // Teleport to lobby after 1 tick to ensure player is fully loaded
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                player.teleport(plugin.getLobbySpawn());
+                plugin.getLobbyManager().giveLobbyItems(player);
+                player.sendMessage(plugin.prefix() + "§7Tu duelo contra bot terminó por desconexión.");
+            }, 5L);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -58,6 +88,21 @@ public class BotListener implements Listener {
                         && bot.getEntity().equals(event.getEntity())) {
                     // Player attacking their bot - allow it
                     event.setCancelled(false);
+                    
+                    // Apply knockback to bot (NPCs don't receive knockback by default)
+                    LivingEntity botEntity = (LivingEntity) bot.getEntity();
+                    Vector knockback = botEntity.getLocation().toVector()
+                            .subtract(player.getLocation().toVector())
+                            .normalize()
+                            .multiply(0.5)
+                            .setY(0.35);
+                    
+                    // Apply knockback after 1 tick to ensure damage is processed first
+                    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                        if (botEntity.isValid()) {
+                            botEntity.setVelocity(botEntity.getVelocity().add(knockback));
+                        }
+                    }, 1L);
                 }
             }
         }
