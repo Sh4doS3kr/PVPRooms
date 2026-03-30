@@ -173,11 +173,27 @@ public class BotManager {
                     player.playSound(player.getLocation(), 
                             org.bukkit.Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);
                     
+                    // Mark duel as active
+                    botDuel.active = true;
+                    
+                    // Open arena wall (like in regular duels)
+                    World instanceWorld = Bukkit.getWorld(botDuel.instanceWorldName);
+                    if (instanceWorld != null) {
+                        plugin.getWallManager().animateOpen(
+                                botDuel.template.getName(), instanceWorld);
+                    }
+                    
+                    // Show bot duel scoreboard
+                    showBotDuelScoreboard(player, botDuel);
+                    
                     // Start bot AI
                     BotCombatAI ai = new BotCombatAI(plugin, bot, player, 
                             botDuel.difficulty, botDuel.kitName);
                     botDuel.setAI(ai);
                     ai.start();
+                    
+                    // Start scoreboard update task
+                    startScoreboardTask(player, botDuel);
                     
                     cancel();
                 }
@@ -222,6 +238,9 @@ public class BotManager {
         BotDuel botDuel = activeBotDuels.remove(playerUUID);
         if (botDuel == null) return;
 
+        // Stop scoreboard task
+        stopScoreboardTask(playerUUID);
+
         // Stop AI
         if (botDuel.ai != null) {
             botDuel.ai.stop();
@@ -243,6 +262,9 @@ public class BotManager {
             player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
             plugin.getLobbyManager().giveLobbyItems(player);
             player.teleport(plugin.getLobbySpawn());
+            
+            // Restore lobby scoreboard
+            plugin.getScoreboardManager().restoreLobbyScoreboard(player);
             
             String result = playerWon ? "§a§l¡VICTORIA!" : "§c§lDERROTA";
             player.sendTitle(result, "§7Práctica vs Bot " + botDuel.difficulty.displayName, 10, 60, 20);
@@ -353,30 +375,101 @@ public class BotManager {
     /**
      * Inner class to track bot duel state.
      */
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCOREBOARD
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private final Map<UUID, org.bukkit.scheduler.BukkitTask> scoreboardTasks = new HashMap<>();
+
+    private void showBotDuelScoreboard(Player player, BotDuel botDuel) {
+        plugin.getScoreboardManager().showBotDuelScoreboard(player, botDuel);
+    }
+
+    private void startScoreboardTask(Player player, BotDuel botDuel) {
+        UUID uuid = player.getUniqueId();
+        
+        // Cancel existing task if any
+        if (scoreboardTasks.containsKey(uuid)) {
+            scoreboardTasks.get(uuid).cancel();
+        }
+        
+        // Update scoreboard every second
+        org.bukkit.scheduler.BukkitTask task = new org.bukkit.scheduler.BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!activeBotDuels.containsKey(uuid)) {
+                    cancel();
+                    scoreboardTasks.remove(uuid);
+                    return;
+                }
+                Player p = Bukkit.getPlayer(uuid);
+                if (p == null || !p.isOnline()) {
+                    cancel();
+                    scoreboardTasks.remove(uuid);
+                    return;
+                }
+                showBotDuelScoreboard(p, botDuel);
+            }
+        }.runTaskTimer(plugin, 20L, 20L);
+        
+        scoreboardTasks.put(uuid, task);
+    }
+
+    private void stopScoreboardTask(UUID uuid) {
+        if (scoreboardTasks.containsKey(uuid)) {
+            scoreboardTasks.get(uuid).cancel();
+            scoreboardTasks.remove(uuid);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // /PVPLEAVE SUPPORT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Called when player uses /pvpleave in a bot duel.
+     * Returns true if the player was in a bot duel and it was ended.
+     */
+    public boolean forfeitBotDuel(UUID uuid) {
+        if (activeBotDuels.containsKey(uuid)) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                player.sendMessage(plugin.prefix() + "§cTe has rendido en el duelo contra el bot.");
+            }
+            endBotDuel(uuid, false);
+            return true;
+        }
+        return false;
+    }
+
     public static class BotDuel {
         public final UUID playerUUID;
         public final int botNpcId;
         public final String kitName;
         public final BotDifficulty difficulty;
         public final String instanceWorldName;
-        public final ArenaTemplate arenaTemplate;
+        public final ArenaTemplate template;
         public BotCombatAI ai;
-        public boolean active = false; // Only true after countdown finishes
+        public boolean active = false;
+        public long startTimeMillis = System.currentTimeMillis();
 
         public BotDuel(UUID playerUUID, int botNpcId, String kitName, 
                        BotDifficulty difficulty, String instanceWorldName, 
-                       ArenaTemplate arenaTemplate) {
+                       ArenaTemplate template) {
             this.playerUUID = playerUUID;
             this.botNpcId = botNpcId;
             this.kitName = kitName;
             this.difficulty = difficulty;
             this.instanceWorldName = instanceWorldName;
-            this.arenaTemplate = arenaTemplate;
+            this.template = template;
         }
 
         public void setAI(BotCombatAI ai) {
             this.ai = ai;
-            this.active = true; // Duel is now active
+        }
+
+        public long getElapsedSeconds() {
+            return (System.currentTimeMillis() - startTimeMillis) / 1000;
         }
     }
 }

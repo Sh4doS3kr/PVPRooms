@@ -50,6 +50,12 @@ public class LeaveCommand implements CommandExecutor {
             return true;
         }
 
+        // Check for bot duel first
+        if (plugin.getBotManager().isInBotDuel(uuid)) {
+            plugin.getBotManager().forfeitBotDuel(uuid);
+            return true;
+        }
+
         Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
         if (duel != null && duel.getState() != Duel.State.ENDED) {
             UUID opponentUUID = duel.getOpponent(uuid);

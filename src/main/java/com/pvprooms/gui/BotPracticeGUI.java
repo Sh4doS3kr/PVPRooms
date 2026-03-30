@@ -38,6 +38,7 @@ public class BotPracticeGUI implements Listener {
 
     /**
      * Opens the kit selection menu.
+     * Only shows kits that have a connected arena configured.
      */
     public void open(Player player) {
         if (!plugin.getBotManager().isCitizensEnabled()) {
@@ -46,14 +47,30 @@ public class BotPracticeGUI implements Listener {
             return;
         }
 
-        List<String> kits = plugin.getKitManager().getKitNames();
-        int size = Math.min(54, ((kits.size() / 9) + 1) * 9);
+        // Only show kits that have a connected arena
+        List<String> allKits = plugin.getKitManager().getKitNames();
+        List<String> connectedKits = allKits.stream()
+                .filter(kit -> {
+                    String arena = plugin.getKitManager().getConnectedArena(kit);
+                    if (arena == null || arena.trim().isEmpty()) return false;
+                    var template = plugin.getArenaManager().getArena(arena.trim());
+                    return template != null && template.isFullyConfigured();
+                })
+                .toList();
+
+        if (connectedKits.isEmpty()) {
+            player.sendMessage(plugin.prefix() + "§cNo hay kits con arena configurada para practicar.");
+            player.sendMessage(plugin.prefix() + "§7Pide a un admin que conecte kits a arenas.");
+            return;
+        }
+
+        int size = Math.min(54, ((connectedKits.size() / 9) + 1) * 9);
         if (size < 9) size = 9;
 
         Inventory inv = Bukkit.createInventory(null, size, Component.text(TITLE_KIT));
 
-        for (int i = 0; i < kits.size() && i < 54; i++) {
-            String kitName = kits.get(i);
+        for (int i = 0; i < connectedKits.size() && i < 54; i++) {
+            String kitName = connectedKits.get(i);
             inv.setItem(i, createKitItem(kitName));
         }
 

@@ -247,6 +247,45 @@ public class ScoreboardManager {
         tl(obj, s,   pingLine(player),                                                                -1);
     }
 
+    // ── Bot Duel scoreboard ─────────────────────────────────────────────────
+
+    public void showBotDuelScoreboard(Player player, com.pvprooms.bot.BotManager.BotDuel botDuel) {
+        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
+        if (player == null || botDuel == null) return;
+
+        Objective obj = getOrCreate(player, "pvpbotduel", "&c&l⚔ &4&lPRÁCTICA BOT");
+        lobbyPlayers.remove(player.getUniqueId());
+        queuePlayers.remove(player.getUniqueId());
+
+        long elapsed = botDuel.getElapsedSeconds();
+        String time = String.format("§a%d§7:§a%02d", elapsed / 60, elapsed % 60);
+        String diffColor = switch(botDuel.difficulty) {
+            case EASY -> "§a";
+            case MEDIUM -> "§e";
+            case HARD -> "§c";
+            case HACKER -> "§4§l";
+        };
+
+        int s = 0;
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
+        tl(obj, s++, " ", 14);
+        tl(obj, s++, leg("&e⏱ &fTiempo: " + time), 13);
+        tl(obj, s++, leg("&b⚔ &fKit: &b" + botDuel.kitName), 12);
+        tl(obj, s++, " ", 11);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 10);
+        tl(obj, s++, " ", 9);
+        tl(obj, s++, leg("&c☠ &fvs Bot"), 8);
+        tl(obj, s++, leg("  " + diffColor + botDuel.difficulty.name()), 7);
+        tl(obj, s++, " ", 6);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 5);
+        tl(obj, s++, " ", 4);
+        tl(obj, s++, leg("&7No afecta ELO/Tier"), 3);
+        tl(obj, s++, " ", 2);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 1);
+        tl(obj, s++, leg("  &c/pvpleave &8para salir"), 0);
+        tl(obj, s, pingLine(player), -1);
+    }
+
     // ── Clear ──────────────────────────────────────────────────────────────
 
     public void clearScoreboard(Player player) {
