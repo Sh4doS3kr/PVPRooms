@@ -11,8 +11,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
+import org.bukkit.inventory.meta.trim.TrimPattern;
+import org.bukkit.Registry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -466,9 +471,30 @@ public class TrimGUI {
             title = piece.getSymbol() + " " + col + "§l" + piece.getDisplayName();
         }
         
-        return current != null 
-            ? buildGlowItem(piece.getDisplayMaterial(), title, lore)
-            : buildItem(piece.getDisplayMaterial(), title, lore);
+        // Create armor item with the actual trim applied (if equipped)
+        ItemStack item = new ItemStack(piece.getDisplayMaterial());
+        ItemMeta meta = item.getItemMeta();
+        
+        // Apply the trim if player has one equipped
+        if (current != null && meta instanceof ArmorMeta armorMeta) {
+            try {
+                TrimPattern pattern = Registry.TRIM_PATTERN.get(
+                    org.bukkit.NamespacedKey.minecraft(current.getPattern().toLowerCase()));
+                TrimMaterial material = Registry.TRIM_MATERIAL.get(
+                    org.bukkit.NamespacedKey.minecraft(current.getMaterial().toLowerCase()));
+                if (pattern != null && material != null) {
+                    armorMeta.setTrim(new ArmorTrim(material, pattern));
+                }
+            } catch (Exception ignored) {}
+            armorMeta.addEnchant(Enchantment.UNBREAKING, 1, true);
+            armorMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        meta.setDisplayName(title);
+        meta.setLore(lore);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        item.setItemMeta(meta);
+        return item;
     }
 
     private void fillPremiumBackground(Inventory inv) {

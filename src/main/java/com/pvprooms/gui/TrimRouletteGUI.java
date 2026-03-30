@@ -243,20 +243,22 @@ public class TrimRouletteGUI {
         inv.setItem(13, createBorderItem());
         inv.setItem(31, createBorderItem());
         
-        // Center result with glow
-        ItemStack result = createGlowItem(piece.getDisplayMaterial(), 
-            "§5§l✦ " + col + "§l" + trim.getPattern() + " §5§l✦",
-            List.of(
-                "§8━━━━━━━━━━━━━━━━━━",
-                "",
-                "§7Pieza: §f" + piece.getDisplayName(),
-                "§7Patrón: " + col + "§l" + trim.getPattern(),
-                "§7Material: " + mc + "§l" + trim.getMaterial(),
-                "",
-                "§8━━━━━━━━━━━━━━━━━━",
-                "",
-                "§a§l✦ ¡TRIM DESBLOQUEADO! ✦"
-            ));
+        // Center result - USE THE ACTUAL TRIMMED NETHERITE ARMOR
+        ItemStack result = createTrimmedArmorItem(trim, piece, true);
+        ItemMeta meta = result.getItemMeta();
+        meta.setDisplayName("§5§l✦ " + col + "§l" + trim.getPattern() + " §5§l✦");
+        meta.setLore(List.of(
+            "§8━━━━━━━━━━━━━━━━━━",
+            "",
+            "§7Pieza: §f" + piece.getDisplayName(),
+            "§7Patrón: " + col + "§l" + trim.getPattern(),
+            "§7Material: " + mc + "§l" + trim.getMaterial(),
+            "",
+            "§8━━━━━━━━━━━━━━━━━━",
+            "",
+            "§a§l✦ ¡TRIM DESBLOQUEADO! ✦"
+        ));
+        result.setItemMeta(meta);
         
         inv.setItem(22, result);
         
