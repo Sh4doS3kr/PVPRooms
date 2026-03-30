@@ -13,6 +13,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 /**
@@ -113,19 +114,32 @@ public class BotListener implements Listener {
                         return;
                     }
                     
-                    // Apply knockback to bot (NPCs don't receive knockback by default)
-                    Vector knockback = botEntity.getLocation().toVector()
+                    // Apply NORMAL knockback to bot (NPCs don't receive knockback by default)
+                    // Calculate knockback like vanilla Minecraft
+                    Vector direction = botEntity.getLocation().toVector()
                             .subtract(player.getLocation().toVector())
-                            .normalize()
-                            .multiply(0.5)
-                            .setY(0.35);
+                            .normalize();
                     
-                    // Apply knockback after 1 tick to ensure damage is processed first
-                    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                        if (botEntity.isValid()) {
-                            botEntity.setVelocity(botEntity.getVelocity().add(knockback));
-                        }
-                    }, 1L);
+                    // Base knockback strength
+                    double kbStrength = 0.4;
+                    double kbY = 0.4;
+                    
+                    // Bonus for sprinting (like real combat)
+                    if (player.isSprinting()) {
+                        kbStrength += 0.4;
+                    }
+                    
+                    // Knockback enchantment
+                    ItemStack weapon = player.getInventory().getItemInMainHand();
+                    if (weapon != null && weapon.hasItemMeta()) {
+                        int kbLevel = weapon.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.KNOCKBACK);
+                        kbStrength += kbLevel * 0.4;
+                    }
+                    
+                    Vector knockback = direction.multiply(kbStrength).setY(kbY);
+                    
+                    // Apply knockback immediately
+                    botEntity.setVelocity(knockback);
                 }
             }
         }
