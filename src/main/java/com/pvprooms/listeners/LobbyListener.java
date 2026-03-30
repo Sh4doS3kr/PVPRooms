@@ -213,16 +213,6 @@ public class LobbyListener implements Listener {
     }
 
     private void handleQuickMatch(Player player) {
-        // Get a random kit from available kits
-        var kits = plugin.getKitManager().getKitNames();
-        if (kits.isEmpty()) {
-            player.sendMessage(plugin.prefix() + "§cNo hay kits disponibles.");
-            return;
-        }
-
-        // Pick a random kit
-        String randomKit = kits.get((int) (Math.random() * kits.size()));
-
         // Check if player is already in queue
         if (plugin.getQueueManager().isInQueue(player.getUniqueId())) {
             player.sendMessage(plugin.prefix() + "§cYa estás en cola. Usa §e/pvpleave §cpara salir.");
@@ -235,9 +225,60 @@ public class LobbyListener implements Listener {
             return;
         }
 
-        // Add to queue with random kit
-        plugin.getQueueManager().addToQueue(player, randomKit);
-        player.sendMessage(plugin.prefix() + "§a¡Partida rápida! Buscando rival con §e" + randomKit + "§a...");
+        var kits = plugin.getKitManager().getKitNames();
+        if (kits.isEmpty()) {
+            player.sendMessage(plugin.prefix() + "§cNo hay kits disponibles.");
+            return;
+        }
+
+        // Find queue with players: check both Tier and ELO for each kit
+        String bestKit = null;
+        boolean useTier = false;
+        int maxPlayers = 0;
+
+        for (String kit : kits) {
+            // Check Tier queue first (priority to longer matches)
+            int tierSize = plugin.getQueueManager().getTierQueueSize(kit);
+            if (tierSize > maxPlayers) {
+                maxPlayers = tierSize;
+                bestKit = kit;
+                useTier = true;
+            }
+            
+            // Check ELO queue
+            int eloSize = plugin.getQueueManager().getQueueSize(kit);
+            if (eloSize > maxPlayers) {
+                maxPlayers = eloSize;
+                bestKit = kit;
+                useTier = false;
+            }
+        }
+
+        // If no queue has players, pick random kit and join Tier queue
+        if (bestKit == null || maxPlayers == 0) {
+            bestKit = kits.get((int) (Math.random() * kits.size()));
+            useTier = true; // Default to Tier for quick match
+        }
+
+        // Add to the appropriate queue
+        boolean joined;
+        if (useTier) {
+            joined = plugin.getQueueManager().addToTierQueue(player, bestKit);
+            if (joined) {
+                player.sendMessage(plugin.prefix() + "§6¡Partida rápida! §eCola TIER §6con §e" + bestKit + 
+                    " §8(§a" + (maxPlayers + 1) + " en cola§8)");
+            }
+        } else {
+            joined = plugin.getQueueManager().addToQueue(player, bestKit);
+            if (joined) {
+                player.sendMessage(plugin.prefix() + "§6¡Partida rápida! §bCola ELO §6con §e" + bestKit + 
+                    " §8(§a" + (maxPlayers + 1) + " en cola§8)");
+            }
+        }
+
+        if (!joined) {
+            player.sendMessage(plugin.prefix() + "§cNo se pudo unir a la cola. Intenta de nuevo.");
+        }
     }
 
     private boolean isInteractable(Material material) {
