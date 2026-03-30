@@ -278,6 +278,7 @@ public class DuelManager {
 
         // Remove spectators
         for (UUID specUUID : duel.getSpectators()) {
+            playerDuelMap.remove(specUUID); // CRITICAL: Remove from tracking map
             Player spec = Bukkit.getPlayer(specUUID);
             if (spec != null) {
                 spec.sendMessage(plugin.prefix() + "§7El duelo ha terminado. Volviendo al lobby...");
