@@ -29,8 +29,8 @@ public class NpcCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (!player.hasPermission("pvprooms.admin")) {
-            player.sendMessage("§cNo tienes permiso para usar este comando.");
+        if (!player.isOp()) {
+            player.sendMessage("§cSolo OPs pueden usar este comando.");
             return true;
         }
 

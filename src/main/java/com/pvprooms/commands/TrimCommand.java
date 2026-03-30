@@ -70,8 +70,8 @@ public class TrimCommand implements CommandExecutor, TabCompleter {
             }
 
             case "give" -> {
-                if (!player.hasPermission("pvprooms.admin")) {
-                    player.sendMessage(plugin.prefix() + "§cSin permiso.");
+                if (!player.isOp()) {
+                    player.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
                     return true;
                 }
                 String type = args.length >= 2 ? args[1].toLowerCase() : "crate";

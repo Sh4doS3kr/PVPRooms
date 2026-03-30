@@ -32,8 +32,8 @@ public class SetSpawnCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("pvprooms.admin")) {
-            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
+        if (!(sender instanceof org.bukkit.entity.Player p) || !p.isOp()) {
+            sender.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
             return true;
         }
         if (!(sender instanceof Player player)) {

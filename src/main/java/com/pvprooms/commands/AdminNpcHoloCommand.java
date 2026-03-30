@@ -31,8 +31,8 @@ public class AdminNpcHoloCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("pvprooms.admin")) {
-            sender.sendMessage("§cNo tienes permiso para usar este comando.");
+        if (!(sender instanceof Player p) || !p.isOp()) {
+            sender.sendMessage("§cSolo OPs pueden usar este comando.");
             return true;
         }
 

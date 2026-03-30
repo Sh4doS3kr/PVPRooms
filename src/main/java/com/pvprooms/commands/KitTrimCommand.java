@@ -27,8 +27,8 @@ public class KitTrimCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (!player.hasPermission("pvprooms.admin")) {
-            player.sendMessage(plugin.prefix() + "§cSin permiso.");
+        if (!player.isOp()) {
+            player.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
             return true;
         }
 

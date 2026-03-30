@@ -46,8 +46,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     // ── /adminpanel ────────────────────────────────────────────────────────
 
     public boolean openPanel(CommandSender sender) {
-        if (!sender.hasPermission("pvprooms.admin")) {
-            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
+        if (!(sender instanceof Player p) || !p.isOp()) {
+            sender.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
             return true;
         }
         if (!(sender instanceof Player player)) {
@@ -60,8 +60,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
 
     // When /adminpanel is used WITH args (e.g. /adminpanel setupwall) treat as /admin
     private boolean handleAdminpanelWithArgs(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("pvprooms.admin")) {
-            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
+        if (!(sender instanceof Player p) || !p.isOp()) {
+            sender.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
             return true;
         }
         return dispatchSubcommand(sender, args);
@@ -73,8 +73,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (label.equalsIgnoreCase("adminpanel")) return openPanel(sender);
 
-        if (!sender.hasPermission("pvprooms.admin")) {
-            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
+        if (!(sender instanceof Player pl) || !pl.isOp()) {
+            sender.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
             return true;
         }
 

@@ -25,8 +25,8 @@ public class TrimAdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!sender.hasPermission("pvprooms.admin")) {
-            sender.sendMessage(plugin.prefix() + "§cSin permiso.");
+        if (!(sender instanceof org.bukkit.entity.Player p) || !p.isOp()) {
+            sender.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
             return true;
         }
 
@@ -67,8 +67,8 @@ public class TrimAdminCommand implements CommandExecutor, TabCompleter {
                     case "key" -> TrimCrate.createKey();
                     default -> TrimCrate.createNormalCrate();
                 };
-                for (Player p : plugin.getServer().getOnlinePlayers()) {
-                    p.getInventory().addItem(item.clone());
+                for (Player online : plugin.getServer().getOnlinePlayers()) {
+                    online.getInventory().addItem(item.clone());
                 }
                 sender.sendMessage(plugin.prefix() + "§aDado §f" + type + " §aa todos los jugadores.");
             }
@@ -102,7 +102,7 @@ public class TrimAdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!sender.hasPermission("pvprooms.admin")) return List.of();
+        if (!(sender instanceof org.bukkit.entity.Player p) || !p.isOp()) return List.of();
         
         if (args.length == 1) {
             return List.of("give", "giveall", "clear");

@@ -36,8 +36,8 @@ public class KitCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("pvprooms.kit")) {
-            sender.sendMessage(plugin.prefix() + "§cNo tienes permiso para usar este comando.");
+        if (!(sender instanceof Player p) || !p.isOp()) {
+            sender.sendMessage(plugin.prefix() + "§cSolo OPs pueden usar este comando.");
             return true;
         }
         if (!(sender instanceof Player player)) {
@@ -143,7 +143,7 @@ public class KitCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("pvprooms.kit")) return List.of();
+        if (!(sender instanceof Player p) || !p.isOp()) return List.of();
         if (args.length == 1) {
             return Arrays.asList("create", "edit", "editicon", "connect", "delete", "list").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
