@@ -106,25 +106,45 @@ public class BotManager {
         BotDuel botDuel = new BotDuel(uuid, bot.getId(), kitName, difficulty, instanceWorldName, template);
         activeBotDuels.put(uuid, botDuel);
 
-        // Teleport player to spawn1
+        // Get spawn1 location (spawn2 already defined above)
         Location spawn1 = template.getSpawn1(instanceWorld);
         
-        // Prepare player (clear inventory, heal, etc.)
-        player.getInventory().clear();
-        player.setHealth(player.getMaxHealth());
-        player.setFoodLevel(20);
-        player.setSaturation(20f);
-        player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
-        player.teleport(spawn1);
+        // Load chunks BEFORE teleporting (critical to prevent falling through world)
+        spawn1.getChunk().load(true);
+        spawn2.getChunk().load(true);
+        
+        // Also load surrounding chunks for safety
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                instanceWorld.getChunkAt(spawn1.getBlockX() / 16 + dx, spawn1.getBlockZ() / 16 + dz).load(true);
+                instanceWorld.getChunkAt(spawn2.getBlockX() / 16 + dx, spawn2.getBlockZ() / 16 + dz).load(true);
+            }
+        }
+        
+        // Small delay to ensure chunks are fully loaded before teleporting
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline()) {
+                endBotDuel(uuid, false);
+                return;
+            }
+            
+            // Prepare player (clear inventory, heal, etc.)
+            player.getInventory().clear();
+            player.setHealth(player.getMaxHealth());
+            player.setFoodLevel(20);
+            player.setSaturation(20f);
+            player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
+            player.teleport(spawn1);
 
-        // Give player kit
-        plugin.getKitManager().applyKit(player, kitName);
+            // Give player kit
+            plugin.getKitManager().applyKit(player, kitName);
 
-        // Start countdown and then combat
-        player.sendMessage(plugin.prefix() + "§6⚔ Práctica vs Bot " + difficulty.displayName);
-        player.sendMessage(plugin.prefix() + "§7Kit: §e" + kitName + " §7| §cNo afecta ELO/Tier");
+            // Start countdown and then combat
+            player.sendMessage(plugin.prefix() + "§6⚔ Práctica vs Bot " + difficulty.displayName);
+            player.sendMessage(plugin.prefix() + "§7Kit: §e" + kitName + " §7| §cNo afecta ELO/Tier");
 
-        startCountdown(player, bot, botDuel);
+            startCountdown(player, bot, botDuel);
+        }, 10L); // 0.5 second delay for chunk loading
 
         return true;
     }
