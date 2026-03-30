@@ -105,6 +105,11 @@
     <div class="stat-item"><span class="stat-val" id="sRegion">—</span><span class="stat-lbl">Región del servidor</span></div>
     <div class="stat-sep"></div>
     <div class="stat-item"><span class="stat-val" id="sYou">—</span><span class="stat-lbl">Tu ubicación</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <span class="stat-val" id="sPing">—</span>
+      <span class="stat-lbl" id="sPingStatus">Midiendo ping...</span>
+    </div>
   </div>
 </div>
 
@@ -753,6 +758,45 @@ function setupPrivacyListeners() {
 if (!checkPrivacyAccepted()) {
   setupPrivacyListeners();
 }
+
+// ── Ping measurement ─────────────────────────────────────────────────────
+async function measurePing() {
+  const pingEl = document.getElementById('sPing');
+  const statusEl = document.getElementById('sPingStatus');
+  
+  try {
+    const start = performance.now();
+    await fetch(API + '/stats', { method: 'HEAD', cache: 'no-store' });
+    const ping = Math.round(performance.now() - start);
+    
+    // Color based on ping value
+    let color, status;
+    if (ping < 80) {
+      color = '#4ade80'; // green
+      status = '✓ Óptimo para PvP';
+    } else if (ping < 150) {
+      color = '#facc15'; // yellow
+      status = '⚠ Aceptable';
+    } else {
+      color = '#f87171'; // red
+      status = '✗ Alto para PvP';
+    }
+    
+    pingEl.textContent = ping + 'ms';
+    pingEl.style.color = color;
+    statusEl.textContent = status;
+    statusEl.style.color = color;
+  } catch (e) {
+    pingEl.textContent = '—';
+    pingEl.style.color = '#888';
+    statusEl.textContent = 'Sin conexión';
+    statusEl.style.color = '#888';
+  }
+}
+
+// Measure ping every 2 seconds
+measurePing();
+setInterval(measurePing, 2000);
 
 init();
 </script>
