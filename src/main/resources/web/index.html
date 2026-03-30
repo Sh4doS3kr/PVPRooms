@@ -406,9 +406,10 @@ function tierPill(tierName){
   const c = tc(tierName);
   const sk = slug(tierName);
   const img = tierImg(tierName);
+  const displayName = tierName.toLowerCase() === 'unranked' ? 'UR' : tierName;
   return '<span class="tier-pill tier-'+sk+'" style="color:'+c+';border-color:'+c+'22;background:'+c+'12">' +
     '<img src="'+img+'" class="tier-pill-img">' +
-    esc(tierName)+'</span>';
+    esc(displayName)+'</span>';
 }
 
 /* Official rank pill (MCTiers style: HT1, LT1, HT2, etc.) */
@@ -428,9 +429,10 @@ function kitBadge(kitName, tierName, pts, highlight){
   const sk = slug(tierName);
   const ki = kitImg(kitName);
   const hl = highlight === kitName ? ' kit-badge-hl' : '';
+  const displayName = tierName.toLowerCase() === 'unranked' ? 'UR' : tierName;
   return '<div class="kit-badge'+hl+'" data-tier="'+sk+'" title="'+esc(cap(kitName))+'">' +
     '<img class="kb-kit-img" src="'+ki+'">' +
-    '<span class="kb-tier" style="color:'+c+'">'+esc(tierName)+'</span>' +
+    '<span class="kb-tier" style="color:'+c+'">'+esc(displayName)+'</span>' +
   '</div>';
 }
 
