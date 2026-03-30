@@ -21,8 +21,10 @@ import org.bukkit.inventory.meta.trim.TrimPattern;
 import org.bukkit.Registry;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -47,6 +49,9 @@ public class TrimRouletteGUI {
         fillRoulette(inv, piece, legendary);
 
         player.openInventory(inv);
+        
+        // Mark animation as active (prevent closing)
+        startAnimation(player.getUniqueId());
 
         // Schedule the spin animation
         startSpinAnimation(player, holder, piece, crateType, legendary);
@@ -139,8 +144,12 @@ public class TrimRouletteGUI {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!player.getOpenInventory().getTopInventory().equals(holder.getInventory())) return;
             
-            // Unlock the trim for the player
-            plugin.getTrimManager().unlockTrim(player.getUniqueId(), piece, finalTrim.getPattern());
+            // Unlock the FULL trim for the player (pattern + material)
+            plugin.getTrimManager().unlockFullTrim(player.getUniqueId(), piece, finalTrim);
+            
+            // Mark animation as complete
+            holder.setAnimationComplete(true);
+            endAnimation(player.getUniqueId());
             
             // Show final result with fanfare
             showFinalResult(holder.getInventory(), piece, finalTrim);
@@ -161,9 +170,9 @@ public class TrimRouletteGUI {
             player.sendMessage("§7Para tu: §f" + piece.getDisplayName());
             player.sendMessage("");
             
-            // Close after 3 seconds
+            // Close after 3 seconds (animation is already complete, so they can close manually too)
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (player.isOnline()) {
+                if (player.isOnline() && player.getOpenInventory().getTopInventory().getHolder() instanceof TrimRouletteHolder) {
                     player.closeInventory();
                 }
             }, 60);
@@ -310,12 +319,77 @@ public class TrimRouletteGUI {
         return materials[random.nextInt(materials.length)];
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // PREVIEW GUI - Shows all possible trims when left-clicking a crate
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    public void openPreview(Player player, ArmorPiece piece, boolean legendary) {
+        Inventory inv = Bukkit.createInventory(null, 54, "§d§l" + piece.getDisplayName() + " §7- Posibles Trims");
+        
+        // Fill border
+        ItemStack border = createBorderItem();
+        for (int i = 0; i < 9; i++) inv.setItem(i, border);
+        for (int i = 45; i < 54; i++) inv.setItem(i, border);
+        
+        // Get patterns based on legendary flag
+        List<String> patterns = legendary ? 
+            plugin.getTrimManager().getLegendaryPatternKeys() : 
+            plugin.getTrimManager().getNormalPatternKeys();
+        List<String> materials = plugin.getTrimManager().getMaterialKeys();
+        
+        // Show all possible pattern+material combinations (sample)
+        int slot = 9;
+        for (String pattern : patterns) {
+            if (slot >= 45) break;
+            // Pick a random material for display
+            String material = materials.get(random.nextInt(materials.size()));
+            Trim trim = new Trim(material, pattern);
+            inv.setItem(slot, createTrimmedArmorItem(trim, piece, false));
+            slot++;
+        }
+        
+        // Info item
+        inv.setItem(4, createGlowItem(Material.BOOK, "§e§lPOSIBLES TRIMS",
+            List.of(
+                "§7Estos son los trims que podrías",
+                "§7obtener al abrir esta crate.",
+                "",
+                "§7Tipo: " + (legendary ? "§5§lLEGENDARIO" : "§b§lNORMAL"),
+                "§7Patrones: §f" + patterns.size(),
+                "§7Materiales: §f" + materials.size(),
+                "",
+                "§aUsa una llave para abrir la crate!"
+            )));
+        
+        player.openInventory(inv);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // HOLDER CLASS - Tracks animation state
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    // Track players with active animations (can't close inventory)
+    private static final Set<UUID> activeAnimations = new HashSet<>();
+    
+    public static boolean hasActiveAnimation(UUID playerId) {
+        return activeAnimations.contains(playerId);
+    }
+    
+    public static void startAnimation(UUID playerId) {
+        activeAnimations.add(playerId);
+    }
+    
+    public static void endAnimation(UUID playerId) {
+        activeAnimations.remove(playerId);
+    }
+
     public static class TrimRouletteHolder implements InventoryHolder {
         private final UUID playerId;
         private final ArmorPiece piece;
         private final String crateType;
         private final boolean legendary;
         private Inventory inventory;
+        private boolean animationComplete = false;
 
         public TrimRouletteHolder(UUID playerId, ArmorPiece piece, String crateType, boolean legendary) {
             this.playerId = playerId;
@@ -328,6 +402,8 @@ public class TrimRouletteGUI {
         public ArmorPiece getPiece() { return piece; }
         public String getCrateType() { return crateType; }
         public boolean isLegendary() { return legendary; }
+        public boolean isAnimationComplete() { return animationComplete; }
+        public void setAnimationComplete(boolean complete) { this.animationComplete = complete; }
 
         @Override
         public Inventory getInventory() { return inventory; }

@@ -17,6 +17,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -34,13 +36,30 @@ public class PhysicalTrimCrateListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
 
         Block block = event.getClickedBlock();
         if (block == null) return;
         
         Player player = event.getPlayer();
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // LEFT CLICK: Show preview of possible trims
+        // ═══════════════════════════════════════════════════════════════════
+        if (event.getAction() == Action.LEFT_CLICK_BLOCK && PhysicalTrimCrate.isPhysicalCrate(block)) {
+            event.setCancelled(true);
+            
+            ArmorPiece piece = PhysicalTrimCrate.getArmorPiece(block);
+            boolean legendary = PhysicalTrimCrate.isLegendary(block);
+            
+            if (piece != null) {
+                player.playSound(player.getLocation(), Sound.BLOCK_CHEST_LOCKED, 1f, 1.2f);
+                plugin.getTrimRouletteGUI().openPreview(player, piece, legendary);
+            }
+            return;
+        }
+        
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         
         // ═══════════════════════════════════════════════════════════════════
         // SETUP MODE: Convert block to crate
@@ -180,21 +199,45 @@ public class PhysicalTrimCrateListener implements Listener {
         Block block = event.getBlock();
         if (!PhysicalTrimCrate.isPhysicalCrate(block)) return;
 
-        // Only allow breaking with proper permission
-        if (!event.getPlayer().hasPermission("pvprooms.admin")) {
-            event.setCancelled(true);
-            event.getPlayer().sendMessage(plugin.prefix() + "§cNo puedes romper crates físicas.");
-            return;
-        }
-
-        // Drop the crate item when broken
-        String crateType = PhysicalTrimCrate.getCrateType(block);
+        // Always cancel breaking crates - use left click to preview instead
+        event.setCancelled(true);
+        
+        Player player = event.getPlayer();
+        
+        // Show preview instead of breaking
         ArmorPiece piece = PhysicalTrimCrate.getArmorPiece(block);
         boolean legendary = PhysicalTrimCrate.isLegendary(block);
-
-        if (piece != null && crateType != null) {
-            ItemStack crateItem = PhysicalTrimCrate.createCrateItem(crateType, piece, legendary);
-            block.getWorld().dropItemNaturally(block.getLocation(), crateItem);
+        
+        if (piece != null) {
+            player.sendMessage(plugin.prefix() + "§7Usa §eclick izquierdo §7para ver lo que puedes ganar.");
+            player.sendMessage(plugin.prefix() + "§7Usa una §6" + piece.getDisplayName() + " Key §7para abrir.");
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // Prevent closing roulette GUI during animation
+    // ═══════════════════════════════════════════════════════════════════
+    
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) return;
+        
+        // Check if player has active animation
+        if (TrimRouletteGUI.hasActiveAnimation(player.getUniqueId())) {
+            // Re-open the inventory on next tick
+            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline() && TrimRouletteGUI.hasActiveAnimation(player.getUniqueId())) {
+                    player.openInventory(event.getInventory());
+                }
+            }, 1);
+        }
+    }
+    
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryClick(InventoryClickEvent event) {
+        // Prevent clicking during roulette animation
+        if (event.getInventory().getHolder() instanceof TrimRouletteGUI.TrimRouletteHolder holder) {
+            event.setCancelled(true);
         }
     }
 }

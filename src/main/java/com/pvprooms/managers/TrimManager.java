@@ -169,6 +169,25 @@ public class TrimManager {
         save();
     }
 
+    /** 
+     * Unlocks a FULL trim (pattern + material combo) for a player.
+     * Stores as "pattern:material" in the unlocked set.
+     */
+    public void unlockFullTrim(UUID uuid, ArmorPiece piece, Trim trim) {
+        Set<String> playerSet = unlockedTrims.computeIfAbsent(uuid, k -> new EnumMap<>(ArmorPiece.class))
+                .computeIfAbsent(piece, p -> new HashSet<>());
+        // Store both the pattern alone AND the full combo
+        playerSet.add(trim.getPattern().toLowerCase());
+        playerSet.add(trim.getPattern().toLowerCase() + ":" + trim.getMaterial().toLowerCase());
+        save();
+    }
+
+    /** Checks if a player has unlocked a specific pattern+material combo. */
+    public boolean hasUnlockedFullTrim(UUID uuid, ArmorPiece piece, String pattern, String material) {
+        Set<String> unlocked = getUnlockedTrims(uuid, piece);
+        return unlocked.contains(pattern.toLowerCase() + ":" + material.toLowerCase());
+    }
+
     /** Unlocks multiple trim patterns at once. */
     public void unlockTrims(UUID uuid, ArmorPiece piece, Set<String> patterns) {
         Set<String> playerSet = unlockedTrims.computeIfAbsent(uuid, k -> new EnumMap<>(ArmorPiece.class))
