@@ -666,17 +666,27 @@ public class BotCombatAI {
     private void performStrafe(Player bot) {
         long now = System.currentTimeMillis();
         
-        // Change strafe direction periodically
-        if (now - lastStrafeChange > 500 && random.nextDouble() < 0.3) {
+        // Human-like: don't strafe constantly, only sometimes
+        if (random.nextDouble() > 0.4) return; // 60% chance to NOT strafe
+        
+        // Change strafe direction periodically (human-like timing 800-1500ms)
+        if (now - lastStrafeChange > 800 + random.nextInt(700) && random.nextDouble() < 0.25) {
             strafeDirection *= -1;
             lastStrafeChange = now;
         }
         
-        // Calculate strafe vector (perpendicular to facing)
+        // Calculate strafe vector - MUCH slower than before (human-like)
+        double strafeSpeed = switch(difficulty) {
+            case EASY -> 0.08;
+            case MEDIUM -> 0.10;
+            case HARD -> 0.12;    // Human-like
+            case HACKER -> 0.18;
+        };
+        
         Vector strafe = bot.getLocation().getDirection()
                 .crossProduct(new Vector(0, 1, 0))
                 .normalize()
-                .multiply(0.25 * strafeDirection);
+                .multiply(strafeSpeed * strafeDirection);
         
         // Apply strafe
         Vector currentVel = bot.getVelocity();
@@ -685,8 +695,14 @@ public class BotCombatAI {
     }
 
     private boolean shouldWTap() {
-        return (difficulty == BotDifficulty.HARD || difficulty == BotDifficulty.HACKER)
-                && random.nextDouble() < 0.4;
+        // Human-like: W-tap is hard to do consistently, reduce chance
+        double chance = switch(difficulty) {
+            case EASY -> 0.0;     // Beginners don't W-tap
+            case MEDIUM -> 0.08;  // Rarely
+            case HARD -> 0.15;    // Sometimes (human-like)
+            case HACKER -> 0.35;  // Often
+        };
+        return random.nextDouble() < chance;
     }
 
     private void performWTap(Player bot) {
@@ -698,11 +714,18 @@ public class BotCombatAI {
     }
 
     private void retreat(Player bot) {
-        // Move away from target
+        // Move away from target (human-like speed)
+        double retreatSpeed = switch(difficulty) {
+            case EASY -> 0.2;
+            case MEDIUM -> 0.25;
+            case HARD -> 0.3;    // Human-like
+            case HACKER -> 0.4;
+        };
+        
         Vector away = bot.getLocation().toVector()
                 .subtract(target.getLocation().toVector())
                 .normalize()
-                .multiply(0.5);
+                .multiply(retreatSpeed);
         away.setY(0);
         
         bot.setVelocity(bot.getVelocity().add(away));
@@ -712,8 +735,17 @@ public class BotCombatAI {
     }
 
     private boolean shouldPlaceBlock(Player bot, double distance) {
-        // Place blocks for tactical advantage
-        if (System.currentTimeMillis() - lastBlockPlace < 500) return false;
+        // Human-like: place blocks less frequently
+        long cooldown = switch(difficulty) {
+            case EASY -> 2000;    // Very slow
+            case MEDIUM -> 1500;  // Slow  
+            case HARD -> 1000;    // Human-like
+            case HACKER -> 400;   // Fast
+        };
+        if (System.currentTimeMillis() - lastBlockPlace < cooldown) return false;
+        
+        // Don't always place blocks (human hesitation)
+        if (random.nextDouble() > 0.3) return false;
         
         // Bridge gaps or tower up
         Block below = bot.getLocation().subtract(0, 1, 0).getBlock();
@@ -734,9 +766,35 @@ public class BotCombatAI {
         ItemStack blocks = bot.getInventory().getItem(slot);
         if (blocks == null) return;
         
-        // Place block below
-        below.setType(blocks.getType());
-        blocks.setAmount(blocks.getAmount() - 1);
+        // Store current held item
+        ItemStack previousHeld = bot.getInventory().getItemInMainHand();
+        int previousSlot = bot.getInventory().getHeldItemSlot();
+        
+        // Switch to block slot (hold in hand)
+        bot.getInventory().setHeldItemSlot(slot);
+        
+        // Small delay to simulate human switching, then place
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) return;
+            
+            Block targetBlock = bot.getLocation().subtract(0, 1, 0).getBlock();
+            if (targetBlock.getType() != Material.AIR) return;
+            
+            ItemStack blockItem = bot.getInventory().getItemInMainHand();
+            if (blockItem == null || !blockItem.getType().isBlock()) return;
+            
+            // Place block and swing arm
+            targetBlock.setType(blockItem.getType());
+            bot.swingMainHand();
+            blockItem.setAmount(blockItem.getAmount() - 1);
+            
+            // Switch back to weapon after placing (human-like delay)
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!isValid()) return;
+                bot.getInventory().setHeldItemSlot(previousSlot);
+            }, 4L); // 200ms to switch back
+            
+        }, 3L); // 150ms to switch to block
         
         lastBlockPlace = System.currentTimeMillis();
     }
@@ -899,7 +957,24 @@ public class BotCombatAI {
     }
 
     private void lookAt(Player bot, Location target) {
+        // Human-like: don't always look perfectly at target
+        if (random.nextDouble() > accuracy + 0.2) return; // Sometimes miss the look
+        
         Vector direction = target.toVector().subtract(bot.getEyeLocation().toVector()).normalize();
+        
+        // Add slight inaccuracy to aim (human jitter)
+        double jitter = switch(difficulty) {
+            case EASY -> 0.15;     // Very inaccurate
+            case MEDIUM -> 0.08;   // Somewhat inaccurate
+            case HARD -> 0.04;     // Small jitter (human-like)
+            case HACKER -> 0.01;   // Nearly perfect
+        };
+        direction.add(new Vector(
+            (random.nextDouble() - 0.5) * jitter,
+            (random.nextDouble() - 0.5) * jitter * 0.5,
+            (random.nextDouble() - 0.5) * jitter
+        )).normalize();
+        
         Location loc = bot.getLocation().clone();
         loc.setDirection(direction);
         bot.teleport(loc);
