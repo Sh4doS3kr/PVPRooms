@@ -93,7 +93,8 @@ public class DuelManager {
         }
 
         Duel duel = new Duel(uuid1, uuid2, kitName, instanceWorldName, template);
-        duel.setBo3(bo3);
+        duel.setRanked(bo3);
+        duel.setWinsNeeded(bo3 ? 10 : 1); // Tier: first to 10, ELO: single round
         activeDuels.put(duel.getId(), duel);
         playerDuelMap.put(uuid1, duel.getId());
         playerDuelMap.put(uuid2, duel.getId());
@@ -313,9 +314,10 @@ public class DuelManager {
     // ── BO3 round logic ────────────────────────────────────────────────────
 
     /**
-     * Called after a round ends in a BO3 duel.
+     * Called after a round ends in a ranked (Tier) duel.
      * Increments the winner's round count, then either starts the next round
-     * or finalises the match if someone has reached 2 wins.
+     * or finalises the match if someone has reached the required wins.
+     * Tier matches: first to 10 wins
      */
     private void handleBo3Round(Duel duel, UUID roundWinnerUUID) {
         duel.addWin(roundWinnerUUID);
@@ -364,8 +366,9 @@ public class DuelManager {
             if (rp2 != null) sendTitle(rp2, topLine, subLine, 80);
         }, 4L); // 4 ticks ≈ 0.2s
 
-        // Check for match winner (first to 2)
-        UUID matchWinner = w1 >= 2 ? duel.getPlayer1() : (w2 >= 2 ? duel.getPlayer2() : null);
+        // Check for match winner (first to winsNeeded - default 10 for Tier)
+        int needed = duel.getWinsNeeded();
+        UUID matchWinner = w1 >= needed ? duel.getPlayer1() : (w2 >= needed ? duel.getPlayer2() : null);
         if (matchWinner != null) {
             // Full match decided — run cleanup after titles are visible
             Bukkit.getScheduler().runTaskLater(plugin, () ->

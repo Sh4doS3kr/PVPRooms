@@ -35,24 +35,23 @@ import java.util.stream.Collectors;
 public class TierManager {
 
     // ══════════════════════════════════════════════════════════════════════
-    // SISTEMA DE PUNTOS COMPETITIVO
+    // SISTEMA DE PUNTOS COMPETITIVO - TIER (Mejor de 10 rondas)
     // ══════════════════════════════════════════════════════════════════════
-    // Base: ~10 puntos por victoria, ~8 por derrota
-    // Necesitas ~20 victorias NETAS para subir de LT5 a HT5
-    // Necesitas ~200+ victorias totales para llegar a HT3
+    // Tier matches son al mejor de 10 (primero en llegar a 10 puntos gana)
+    // Dan más puntos que ELO porque son partidas más largas
     // Tiers Elite (LT2+) requieren verificación manual via Discord
     // ══════════════════════════════════════════════════════════════════════
     
-    public static final int WIN_BASE         = 10;   // Puntos base por victoria
-    public static final int LOSS_BASE        = 8;    // Puntos base perdidos por derrota
-    public static final int TIER_DIFF_BONUS  = 3;    // Bonus por vencer a tier superior
-    public static final int MIN_LOSS         = 4;    // Mínimo que pierdes
-    public static final int MAX_WIN          = 20;   // Máximo que ganas
-    public static final int MIN_WIN          = 5;    // Mínimo que ganas
+    public static final int WIN_BASE         = 25;   // Puntos base por victoria (más que ELO porque son 10 rondas)
+    public static final int LOSS_BASE        = 15;   // Puntos base perdidos por derrota
+    public static final int TIER_DIFF_BONUS  = 5;    // Bonus por vencer a tier superior
+    public static final int MIN_LOSS         = 8;    // Mínimo que pierdes
+    public static final int MAX_WIN          = 50;   // Máximo que ganas
+    public static final int MIN_WIN          = 15;   // Mínimo que ganas
     
     // Bonus por rachas
-    public static final int STREAK_BONUS     = 2;    // Bonus extra por racha de 3+
-    public static final int MAX_STREAK_BONUS = 10;   // Máximo bonus por racha
+    public static final int STREAK_BONUS     = 5;    // Bonus extra por racha de 3+
+    public static final int MAX_STREAK_BONUS = 25;   // Máximo bonus por racha
     
     // Tracking de rachas
     private final Map<UUID, Integer> winStreaks = new HashMap<>();
