@@ -109,29 +109,30 @@ public class ScoreboardManager {
 
     private void buildQueueScoreboard(Player player, String kitName, long elapsedSeconds) {
         if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
-        Objective obj = getOrCreate(player, "pvpqueue", "&c&lPvPRooms");
+        Objective obj = getOrCreate(player, "pvpqueue", "&6&l⚔ &e&lEN COLA");
 
         int s = 0;
-        // Use kit-specific tier from TierManager (same source as the web page)
         Tier qTier = plugin.getTierManager().getTier(player.getUniqueId(), kitName);
         int  qElo  = plugin.getEloManager().getElo(player.getUniqueId());
         int  qPts  = plugin.getTierManager().getPoints(player.getUniqueId(), kitName);
         String waitStr = elapsedSeconds < 60
-                ? "§e" + elapsedSeconds + "§fs"
-                : "§e" + (elapsedSeconds / 60) + "§fm §e" + (elapsedSeconds % 60) + "§fs";
+                ? "§a" + elapsedSeconds + "§7s"
+                : "§a" + (elapsedSeconds / 60) + "§7m §a" + (elapsedSeconds % 60) + "§7s";
+        int inQueue = plugin.getQueueManager().getTotalQueued();
 
-        tl(obj, s++, " ",                                                                          10);
-        tl(obj, s++, leg("&e&l» &fKit:  &e" + kitName),                                          9);
-        tl(obj, s++, leg("&e&l» &fTier: " + qTier.colour + "&l" + qTier.displayName),            8);
-        tl(obj, s++, leg("&e&l» &fELO: &6" + qElo + (qPts >= 0 ? "  &8| &7Pts: &6" + qPts : "")), 7);
-        tl(obj, s++, " ",                                                          6);
-        tl(obj, s++, leg("&e&l» &fEn cola: &a" + plugin.getQueueManager().getTotalQueued()), 5);
-        tl(obj, s++, " ",                                                          4);
-        tl(obj, s++, leg("&7⏳ Esperando: " + waitStr),                           3);
-        tl(obj, s++, leg("&7¡Buscando rival..."),                                 2);
-        tl(obj, s++, leg("&7Usa &f/pvpleave &7para salir"),                       1);
-        tl(obj, s++, " ",                                                          0);
-        tl(obj, s,   pingLine(player),                                            -1);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━",                                    12);
+        tl(obj, s++, " ",                                                          11);
+        tl(obj, s++, leg("&f&l" + kitName.toUpperCase()),                          10);
+        tl(obj, s++, leg("  " + qTier.colour + "▸ " + qTier.displayName + " &8• &6" + qElo + " ELO"), 9);
+        tl(obj, s++, " ",                                                          8);
+        tl(obj, s++, leg("&e⏳ &fTiempo: " + waitStr),                             7);
+        tl(obj, s++, leg("&a👥 &fEn cola: &a" + inQueue),                          6);
+        tl(obj, s++, " ",                                                          5);
+        tl(obj, s++, leg("&7&oBuscando rival..."),                                 4);
+        tl(obj, s++, " ",                                                          3);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━",                                    2);
+        tl(obj, s++, leg("  &c/pvpleave &8para salir"),                            1);
+        tl(obj, s,   pingLine(player),                                             0);
     }
 
     // ── Duel scoreboard ────────────────────────────────────────────────────
@@ -142,62 +143,69 @@ public class ScoreboardManager {
 
         UUID opponentUUID = duel.getOpponent(player.getUniqueId());
         Player opponent   = opponentUUID != null ? Bukkit.getPlayer(opponentUUID) : null;
-        String opponentName = opponent != null ? opponent.getName() : "Unknown";
-        String titleCfg   = plugin.getConfig().getString("scoreboard.title", "&c&lPvPRooms");
+        String opponentName = opponent != null ? opponent.getName() : "???";
 
-        Objective obj = getOrCreate(player, "pvpduel", titleCfg);
+        Objective obj = getOrCreate(player, "pvpduel", "&c&l⚔ &4&lEN DUELO");
 
         int s = 0;
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
         tl(obj, s++, " ", 14);
 
+        // Time / Status
         if (duel.getState() == Duel.State.COUNTDOWN) {
-            tl(obj, s++, leg("&e⏳ Preparando..."), 13);
+            tl(obj, s++, leg("&e&l⏳ &fPreparando..."), 13);
         } else {
             long elapsed = duel.getElapsedSeconds();
-            String time  = String.format("%d:%02d", elapsed / 60, elapsed % 60);
-            tl(obj, s++, leg("&e&l» &fTiempo: &a" + time), 13);
+            String time  = String.format("§a%d§7:§a%02d", elapsed / 60, elapsed % 60);
+            tl(obj, s++, leg("&e⏱ &fTiempo: " + time), 13);
         }
 
-        tl(obj, s++, " ", 12);
-        tl(obj, s++, leg("&e&l» &fKit: &e" + duel.getKitName()), 11);
+        // Kit & Round (BO3)
+        tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), 12);
         if (duel.isBo3()) {
             int myW = duel.getWins(player.getUniqueId());
             int opW = duel.getWins(duel.getOpponent(player.getUniqueId()));
             int rnd = Math.min(duel.getCurrentRound(), 3);
-            tl(obj, s++, leg("&e&l» &fRonda &e" + rnd + "&7/3  &a" + myW + "&7-&c" + opW), 10);
+            tl(obj, s++, leg("&6⚑ &fRonda &6" + rnd + "&8/3  &a" + myW + " &8- &c" + opW), 11);
         }
-        tl(obj, s++, " ", 9);
-        tl(obj, s++, leg("&e&l» &fRival: &c" + opponentName), 8);
+        
+        tl(obj, s++, " ", 10);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 9);
+        tl(obj, s++, " ", 8);
+
+        // Opponent info
+        tl(obj, s++, leg("&c☠ &fvs &c&l" + opponentName), 7);
         if (opponent != null) {
             int opPing = opponent.getPing();
             String pingCol = opPing < 50 ? "§a" : opPing < 100 ? "§e" : opPing < 150 ? "§6" : "§c";
-            tl(obj, s++, leg("&e&l» &fPing rival: " + pingCol + opPing + "ms"), 7);
+            
+            if (duel.isBo3()) {
+                Tier opKitTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
+                tl(obj, s++, leg("  &7Tier: " + opKitTier.colour + opKitTier.displayName + " &8• " + pingCol + opPing + "ms"), 6);
+            } else {
+                int opElo = plugin.getEloManager().getElo(opponentUUID);
+                Tier opTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
+                tl(obj, s++, leg("  &7" + opTier.colour + opTier.displayName + " &8• &6" + opElo + " &8• " + pingCol + opPing + "ms"), 6);
+            }
         }
 
+        tl(obj, s++, " ", 5);
+
+        // My stats
         if (duel.isBo3()) {
             Tier myKitTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
             int  myPts     = plugin.getTierManager().getPoints(player.getUniqueId(), duel.getKitName());
-            com.pvprooms.model.TierTitle myTitle = plugin.getTierManager().getTitle(player.getUniqueId());
-            tl(obj, s++, leg("&e&l» &fTier &8(" + duel.getKitName() + "&8): " + myKitTier.colour + myKitTier.displayName), 7);
-            tl(obj, s++, leg("&e&l» &fPuntos: &6" + Math.max(0, myPts)), 6);
-            if (opponent != null) {
-                Tier opKitTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
-                tl(obj, s++, leg("&e&l» &fTier rival: &c" + opKitTier.colour + opKitTier.displayName), 4);
-            }
+            tl(obj, s++, leg("&a★ &fTu tier: " + myKitTier.colour + myKitTier.displayName), 4);
+            tl(obj, s++, leg("  &7Puntos: &6" + Math.max(0, myPts)), 3);
         } else {
             int  myElo  = plugin.getEloManager().getElo(player.getUniqueId());
             Tier myTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
-            tl(obj, s++, leg("&e&l» &fTier:     " + myTier.colour + "&l" + myTier.displayName), 7);
-            tl(obj, s++, leg("&e&l» &fTu ELO:   &6" + myElo), 6);
-            if (opponent != null) {
-                int  opElo  = plugin.getEloManager().getElo(opponentUUID);
-                Tier opTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
-                tl(obj, s++, leg("&e&l» &fRival: &c" + opElo + " ELO &7(" + opTier.colour + opTier.displayName + "&7)"), 5);
-            }
+            tl(obj, s++, leg("&a★ &f" + myTier.colour + myTier.displayName + " &8• &6" + myElo + " ELO"), 4);
         }
 
-        tl(obj, s++, " ", 3);
-        tl(obj, s,   pingLine(player), 2);
+        tl(obj, s++, " ", 2);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 1);
+        tl(obj, s,   pingLine(player), 0);
     }
 
     // ── Lobby scoreboard ───────────────────────────────────────────────────
@@ -211,32 +219,30 @@ public class ScoreboardManager {
         int online        = Bukkit.getOnlinePlayers().size();
         int activeMatches = plugin.getDuelManager().getActiveDuelCount();
         int inQueue       = plugin.getQueueManager().getTotalQueued();
-        String hora       = LocalTime.now().format(TIME_FMT);
-        String rankStr    = rank == -1 ? "§7-" : "§e#" + rank;
-        // Use TierManager as single source of truth — same as the web page
+        String rankStr    = rank == -1 ? "§7#-" : "§e#" + rank;
         Tier lobbyTier    = plugin.getTierManager().getBestTier(player.getUniqueId());
         com.pvprooms.model.TierTitle title = plugin.getTierManager().getTitle(player.getUniqueId());
 
-        Objective obj = getOrCreate(player, "pvplobby", "&6&lPvPRooms");
+        Objective obj = getOrCreate(player, "pvplobby", "&6&l✦ &e&lPvPRooms");
         lobbyPlayers.put(player.getUniqueId(), true);
 
         int s = 0;
-        tl(obj, s++, " ",                                                                              15);
-        tl(obj, s++, leg("&e&l» &fJugadores online"),                                                 14);
-        tl(obj, s++, leg("  &7" + online + " conectados"),                                            13);
-        tl(obj, s++, " ",                                                                              12);
-        tl(obj, s++, leg("&e&l» &fDuelos activos"),                                                   11);
-        tl(obj, s++, leg("  &7" + activeMatches + " en curso · " + inQueue + " en cola"),             10);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━",                                                       15);
+        tl(obj, s++, " ",                                                                              14);
+        tl(obj, s++, leg("&a👥 &fOnline: &a" + online),                                                13);
+        tl(obj, s++, leg("&c⚔ &fDuelos: &c" + activeMatches + " &8• &eEn cola: &e" + inQueue),       12);
+        tl(obj, s++, " ",                                                                              11);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━",                                                       10);
         tl(obj, s++, " ",                                                                              9);
-        tl(obj, s++, leg("&e&l» &fTu Tier"),                                                          8);
-        tl(obj, s++, leg("  " + lobbyTier.colour + "&l" + lobbyTier.displayName),                     7);
-        tl(obj, s++, leg("&e&l» &fELO / Pos"),                                                        6);
-        tl(obj, s++, leg("  &6" + elo + " ELO  &8| " + rankStr),                                     5);
-        tl(obj, s++, " ",                                                                              4);
-        tl(obj, s++, leg("&e&l» &fInsignia"),                                                         3);
-        tl(obj, s++, leg("  " + title.colour + title.symbol + " &r" + title.name),                    2);
-        tl(obj, s++, " ",                                                                              1);
-        tl(obj, s++, leg("&a/queue &7para combatir"),                                                  0);
+        tl(obj, s++, leg("&e⭐ &fTu Rango"),                                                          8);
+        tl(obj, s++, leg("  " + lobbyTier.colour + "▸ &l" + lobbyTier.displayName + " &8• &6" + elo + " ELO"), 7);
+        tl(obj, s++, leg("  &7Posición: " + rankStr),                                                 6);
+        tl(obj, s++, " ",                                                                              5);
+        tl(obj, s++, leg("&d✧ &fInsignia"),                                                           4);
+        tl(obj, s++, leg("  " + title.colour + title.symbol + " &7" + title.name),                    3);
+        tl(obj, s++, " ",                                                                              2);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━",                                                       1);
+        tl(obj, s++, leg("  &a/queue &8para jugar"),                                                   0);
         tl(obj, s,   pingLine(player),                                                                -1);
     }
 
