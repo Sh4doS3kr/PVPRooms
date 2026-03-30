@@ -266,6 +266,18 @@ public class ScoreboardManager {
             case HACKER -> "§4§l";
         };
 
+        // Get bot health
+        String botHealthStr = "§c???";
+        net.citizensnpcs.api.npc.NPC botNpc = plugin.getBotManager().getPlayerBot(player.getUniqueId());
+        if (botNpc != null && botNpc.isSpawned() && botNpc.getEntity() instanceof org.bukkit.entity.LivingEntity living) {
+            double health = living.getHealth();
+            double maxHealth = living.getMaxHealth();
+            int hearts = (int) Math.ceil(health / 2);
+            int maxHearts = (int) Math.ceil(maxHealth / 2);
+            String healthColor = health > maxHealth * 0.5 ? "§a" : health > maxHealth * 0.25 ? "§e" : "§c";
+            botHealthStr = healthColor + String.format("%.1f", health) + "§7/§c" + (int)maxHealth + " §c❤";
+        }
+
         int s = 0;
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
         tl(obj, s++, " ", 14);
@@ -274,16 +286,15 @@ public class ScoreboardManager {
         tl(obj, s++, " ", 11);
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 10);
         tl(obj, s++, " ", 9);
-        tl(obj, s++, leg("&c☠ &fvs Bot"), 8);
-        tl(obj, s++, leg("  " + diffColor + botDuel.difficulty.name()), 7);
+        tl(obj, s++, leg("&c☠ &fvs Bot " + diffColor + botDuel.difficulty.name()), 8);
+        tl(obj, s++, leg("  &fVida: " + botHealthStr), 7);
         tl(obj, s++, " ", 6);
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 5);
-        tl(obj, s++, " ", 4);
-        tl(obj, s++, leg("&7No afecta ELO/Tier"), 3);
-        tl(obj, s++, " ", 2);
-        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 1);
-        tl(obj, s++, leg("  &c/pvpleave &8para salir"), 0);
-        tl(obj, s, pingLine(player), -1);
+        tl(obj, s++, leg("&7No afecta ELO/Tier"), 4);
+        tl(obj, s++, " ", 3);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 2);
+        tl(obj, s++, leg("  &c/pvpleave &8para salir"), 1);
+        tl(obj, s, pingLine(player), 0);
     }
 
     // ── Clear ──────────────────────────────────────────────────────────────
