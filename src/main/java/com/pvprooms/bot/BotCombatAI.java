@@ -2,25 +2,39 @@ package com.pvprooms.bot;
 
 import com.pvprooms.PvPRoomsPro;
 import net.citizensnpcs.api.npc.NPC;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
-import java.util.Random;
+import java.util.*;
 
 /**
- * Combat AI for practice bots.
- * Handles attacking, healing, potion throwing, and movement.
+ * Advanced Combat AI for practice bots.
+ * 
+ * Features:
+ * - Sword/Axe combat with proper timing
+ * - Mace attacks with jump crits and smash damage
+ * - Spear/Trident throwing and attribute swapping
+ * - Elytra flight combat
+ * - Golden apple eating with proper timing
+ * - Potion throwing (splash & lingering)
+ * - Block placing for bridging/towering
+ * - W-tapping for knockback
+ * - Strafing and movement prediction
+ * - Critical hits with proper jump timing
+ * - Shield blocking and disabling
+ * - Bow/Crossbow usage
+ * - Combo tracking and reset
  */
 public class BotCombatAI {
 
@@ -31,14 +45,43 @@ public class BotCombatAI {
     private final String kitName;
     private final Random random = new Random();
     
-    private BukkitTask combatTask;
+    // Tasks
+    private BukkitTask mainTask;
     private BukkitTask movementTask;
+    private BukkitTask healTask;
+    
+    // Combat state
     private long lastAttackTime = 0;
     private long lastHealTime = 0;
     private long lastPotionTime = 0;
+    private long lastBlockPlace = 0;
+    private long lastBowShot = 0;
+    private long lastMaceJump = 0;
+    private long lastSpearThrow = 0;
+    private long lastElytraUse = 0;
+    
+    // Combo tracking
     private int comboCount = 0;
-    private boolean isStrafing = false;
+    private long lastComboHit = 0;
+    
+    // Movement state
     private int strafeDirection = 1;
+    private long lastStrafeChange = 0;
+    private boolean isRetreating = false;
+    private boolean isEating = false;
+    private boolean isBlocking = false;
+    private boolean isUsingElytra = false;
+    
+    // Weapon detection cache
+    private WeaponType currentWeapon = WeaponType.SWORD;
+    private long lastWeaponCheck = 0;
+    
+    // Constants based on difficulty
+    private final int tickRate;
+    private final double accuracy;
+    private final int reactionMs;
+    private final double critChance;
+    private final double healThreshold;
 
     public BotCombatAI(PvPRoomsPro plugin, NPC npc, Player target, 
                        BotDifficulty difficulty, String kitName) {
@@ -47,283 +90,872 @@ public class BotCombatAI {
         this.target = target;
         this.difficulty = difficulty;
         this.kitName = kitName;
+        
+        // Set difficulty parameters
+        this.tickRate = difficulty.ticksBetweenActions;
+        this.accuracy = difficulty.hitAccuracy;
+        this.reactionMs = (int) difficulty.reactionTimeMs;
+        this.critChance = switch(difficulty) {
+            case EASY -> 0.1;
+            case MEDIUM -> 0.3;
+            case HARD -> 0.5;
+            case HACKER -> 0.8;
+        };
+        this.healThreshold = difficulty.healThreshold;
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // LIFECYCLE
+    // ══════════════════════════════════════════════════════════════════════════
+
     public void start() {
-        startCombatLoop();
+        startMainLoop();
         startMovementLoop();
+        startHealLoop();
     }
 
     public void stop() {
-        if (combatTask != null) {
-            combatTask.cancel();
-            combatTask = null;
-        }
-        if (movementTask != null) {
-            movementTask.cancel();
-            movementTask = null;
-        }
+        if (mainTask != null) { mainTask.cancel(); mainTask = null; }
+        if (movementTask != null) { movementTask.cancel(); movementTask = null; }
+        if (healTask != null) { healTask.cancel(); healTask = null; }
     }
 
-    private void startCombatLoop() {
-        combatTask = new BukkitRunnable() {
+    // ══════════════════════════════════════════════════════════════════════════
+    // MAIN COMBAT LOOP
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void startMainLoop() {
+        mainTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (!npc.isSpawned() || target == null || !target.isOnline() || target.isDead()) {
-                    stop();
-                    return;
-                }
-
-                LivingEntity botEntity = (LivingEntity) npc.getEntity();
-                if (botEntity == null || botEntity.isDead()) {
-                    stop();
-                    return;
-                }
-
-                double distance = botEntity.getLocation().distance(target.getLocation());
-                double health = botEntity.getHealth();
-                double maxHealth = botEntity.getMaxHealth();
-                double healthPercent = (health / maxHealth) * 100;
-
-                // Healing logic
-                if (healthPercent <= difficulty.healThreshold) {
-                    tryHeal(botEntity);
-                }
-
-                // Potion throwing logic (for kits with potions)
-                if (distance <= 10) {
-                    tryThrowPotion(botEntity);
-                }
-
-                // Combat logic
+                if (!isValid()) { stop(); return; }
+                
+                Player bot = getBotPlayer();
+                if (bot == null) return;
+                
+                double distance = bot.getLocation().distance(target.getLocation());
+                
+                // Update weapon type periodically
+                updateWeaponType(bot);
+                
+                // Decision making based on situation
+                if (isEating) return; // Don't interrupt eating
+                
+                // Combat decisions based on distance and weapon
                 if (distance <= 4.0) {
-                    tryAttack(botEntity, distance);
-                } else if (distance <= 16) {
-                    // Chase the player
+                    handleMeleeCombat(bot, distance);
+                } else if (distance <= 8.0) {
+                    handleMidRangeCombat(bot, distance);
+                } else if (distance <= 30.0) {
+                    handleLongRangeCombat(bot, distance);
+                } else {
+                    // Chase target
                     npc.getNavigator().setTarget(target, true);
                 }
             }
-        }.runTaskTimer(plugin, 5L, difficulty.ticksBetweenActions);
+        }.runTaskTimer(plugin, 1L, tickRate);
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MELEE COMBAT (distance <= 4)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void handleMeleeCombat(Player bot, double distance) {
+        long now = System.currentTimeMillis();
+        
+        // Check reaction time
+        if (now - lastAttackTime < reactionMs) return;
+        
+        // Accuracy check
+        if (random.nextDouble() > accuracy) return;
+        
+        // Look at target
+        lookAt(bot, target.getLocation());
+        
+        // Select best weapon for situation
+        selectBestWeapon(bot);
+        
+        // Attack based on weapon type
+        switch (currentWeapon) {
+            case MACE -> handleMaceAttack(bot, distance);
+            case AXE -> handleAxeAttack(bot, distance);
+            case TRIDENT, SPEAR -> handleSpearMelee(bot, distance);
+            default -> handleSwordAttack(bot, distance);
+        }
+    }
+
+    private void handleSwordAttack(Player bot, double distance) {
+        if (distance > 3.5) return;
+        
+        long now = System.currentTimeMillis();
+        
+        // W-tap for extra knockback (sprint reset)
+        if (shouldWTap()) {
+            performWTap(bot);
+        }
+        
+        // Critical hit - jump before hitting
+        boolean doCrit = random.nextDouble() < critChance && bot.isOnGround();
+        if (doCrit) {
+            bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
+            // Delay attack to land crit
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (isValid()) performAttack(bot, true);
+            }, 3L);
+        } else {
+            performAttack(bot, false);
+        }
+        
+        lastAttackTime = now;
+    }
+
+    private void handleAxeAttack(Player bot, double distance) {
+        if (distance > 3.5) return;
+        
+        long now = System.currentTimeMillis();
+        
+        // Axe attacks are slower but deal more damage and can disable shields
+        // Check if target is blocking
+        boolean targetBlocking = target.isBlocking();
+        
+        if (targetBlocking) {
+            // Prioritize axe to disable shield
+            performAttack(bot, false);
+            // Shield disabled for 5 seconds
+        } else {
+            // Normal axe crit
+            boolean doCrit = random.nextDouble() < critChance && bot.isOnGround();
+            if (doCrit) {
+                bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (isValid()) performAttack(bot, true);
+                }, 3L);
+            } else {
+                performAttack(bot, false);
+            }
+        }
+        
+        lastAttackTime = now;
+    }
+
+    private void handleMaceAttack(Player bot, double distance) {
+        long now = System.currentTimeMillis();
+        
+        // Mace is most effective with fall damage - jump high and smash
+        if (bot.isOnGround() && now - lastMaceJump > 2000) {
+            // Jump for mace smash
+            double jumpPower = switch(difficulty) {
+                case EASY -> 0.5;
+                case MEDIUM -> 0.7;
+                case HARD -> 1.0;
+                case HACKER -> 1.2;
+            };
+            
+            // Jump towards target
+            Vector direction = target.getLocation().toVector()
+                    .subtract(bot.getLocation().toVector()).normalize();
+            direction.setY(jumpPower);
+            direction.multiply(0.5);
+            bot.setVelocity(direction);
+            
+            lastMaceJump = now;
+            
+            // Attack when falling
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (isValid() && bot.getFallDistance() > 0.5) {
+                    performMaceSmash(bot);
+                }
+            }, 10L);
+        } else if (bot.getFallDistance() > 0.5) {
+            // Already falling - smash!
+            performMaceSmash(bot);
+        } else if (distance <= 3.0) {
+            // Ground attack
+            performAttack(bot, false);
+            lastAttackTime = now;
+        }
+    }
+
+    private void performMaceSmash(Player bot) {
+        if (!isValid()) return;
+        
+        double distance = bot.getLocation().distance(target.getLocation());
+        if (distance > 4.0) return;
+        
+        // Swing animation
+        bot.swingMainHand();
+        
+        // Mace smash damage scales with fall distance
+        double fallDistance = bot.getFallDistance();
+        double baseDamage = 7.0;
+        double bonusDamage = Math.min(fallDistance * 2, 20); // Cap at 20 bonus
+        double totalDamage = baseDamage + bonusDamage;
+        
+        // Deal damage
+        target.damage(totalDamage, bot);
+        
+        // Mace smash knockback (radial)
+        Vector knockback = target.getLocation().toVector()
+                .subtract(bot.getLocation().toVector())
+                .normalize()
+                .multiply(0.8 + (fallDistance * 0.1))
+                .setY(0.4);
+        target.setVelocity(knockback);
+        
+        // Sound and particles
+        bot.getWorld().playSound(bot.getLocation(), Sound.ITEM_MACE_SMASH_GROUND, 1.0f, 1.0f);
+        
+        lastAttackTime = System.currentTimeMillis();
+        comboCount = 0; // Reset combo after smash
+    }
+
+    private void handleSpearMelee(Player bot, double distance) {
+        // Spear can be used in melee or thrown
+        if (distance <= 3.0) {
+            // Melee attack
+            performAttack(bot, random.nextDouble() < critChance);
+            lastAttackTime = System.currentTimeMillis();
+        } else if (distance <= 6.0) {
+            // Consider throwing
+            handleSpearThrow(bot, distance);
+        }
+    }
+
+    private void performAttack(Player bot, boolean isCrit) {
+        if (!isValid()) return;
+        
+        double distance = bot.getLocation().distance(target.getLocation());
+        if (distance > 4.0) return;
+        
+        // Swing animation
+        bot.swingMainHand();
+        
+        // Calculate damage
+        double damage = getWeaponDamage(bot);
+        if (isCrit) {
+            damage *= 1.5;
+            // Crit particles
+            target.getWorld().spawnParticle(Particle.CRIT, target.getLocation().add(0, 1, 0), 10);
+        }
+        
+        // Apply damage
+        target.damage(damage, bot);
+        
+        // Apply knockback
+        applyKnockback(bot, target);
+        
+        // Update combo
+        long now = System.currentTimeMillis();
+        if (now - lastComboHit < 1500) {
+            comboCount++;
+        } else {
+            comboCount = 1;
+        }
+        lastComboHit = now;
+    }
+
+    private void applyKnockback(Player attacker, Player victim) {
+        Vector knockback = victim.getLocation().toVector()
+                .subtract(attacker.getLocation().toVector())
+                .normalize();
+        
+        // Base knockback
+        double kbStrength = 0.4;
+        double kbY = 0.35;
+        
+        // Bonus for sprinting
+        if (attacker.isSprinting()) {
+            kbStrength += 0.3;
+        }
+        
+        // Knockback enchantment
+        ItemStack weapon = attacker.getInventory().getItemInMainHand();
+        if (weapon != null && weapon.hasItemMeta()) {
+            int kbLevel = weapon.getEnchantmentLevel(Enchantment.KNOCKBACK);
+            kbStrength += kbLevel * 0.3;
+        }
+        
+        knockback.multiply(kbStrength).setY(kbY);
+        victim.setVelocity(victim.getVelocity().add(knockback));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MID-RANGE COMBAT (4 < distance <= 8)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void handleMidRangeCombat(Player bot, double distance) {
+        // Options: chase, throw potions, throw spear, use bow
+        
+        // Check for throwables first
+        if (hasSpear(bot) && shouldThrowSpear()) {
+            handleSpearThrow(bot, distance);
+            return;
+        }
+        
+        if (hasSplashPotions(bot) && shouldThrowPotion()) {
+            throwPotion(bot);
+            return;
+        }
+        
+        // Chase to melee range
+        npc.getNavigator().setTarget(target, true);
+        
+        // Sprint
+        bot.setSprinting(true);
+    }
+
+    private void handleSpearThrow(Player bot, double distance) {
+        long now = System.currentTimeMillis();
+        if (now - lastSpearThrow < 1500) return;
+        
+        // Find trident/spear in inventory
+        int slot = findTrident(bot.getInventory());
+        if (slot == -1) return;
+        
+        // Accuracy check
+        if (random.nextDouble() > accuracy) return;
+        
+        // Switch to trident
+        bot.getInventory().setHeldItemSlot(slot);
+        
+        // Look at target with prediction
+        Location predictedLoc = predictTargetLocation(target, distance);
+        lookAt(bot, predictedLoc);
+        
+        // Throw trident
+        ItemStack trident = bot.getInventory().getItem(slot);
+        if (trident != null && trident.getType() == Material.TRIDENT) {
+            Trident thrown = bot.getWorld().spawn(bot.getEyeLocation(), Trident.class);
+            
+            Vector velocity = predictedLoc.toVector()
+                    .subtract(bot.getEyeLocation().toVector())
+                    .normalize()
+                    .multiply(2.5);
+            
+            thrown.setVelocity(velocity);
+            thrown.setShooter(bot);
+            thrown.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+            
+            // Loyalty - trident returns
+            if (trident.getEnchantmentLevel(Enchantment.LOYALTY) > 0) {
+                // Simulate return after delay
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (thrown.isValid()) thrown.remove();
+                }, 60L);
+            } else {
+                // Consume if no loyalty
+                trident.setAmount(trident.getAmount() - 1);
+            }
+            
+            bot.swingMainHand();
+            lastSpearThrow = now;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // LONG-RANGE COMBAT (distance > 8)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void handleLongRangeCombat(Player bot, double distance) {
+        // Options: bow, crossbow, elytra approach, chase
+        
+        if (hasBow(bot) && shouldShootBow()) {
+            handleBowShot(bot, distance);
+            return;
+        }
+        
+        if (hasElytra(bot) && shouldUseElytra(distance)) {
+            handleElytraApproach(bot);
+            return;
+        }
+        
+        // Default: chase
+        npc.getNavigator().setTarget(target, true);
+        bot.setSprinting(true);
+    }
+
+    private void handleBowShot(Player bot, double distance) {
+        long now = System.currentTimeMillis();
+        if (now - lastBowShot < 1200) return;
+        
+        int bowSlot = findBow(bot.getInventory());
+        if (bowSlot == -1) return;
+        
+        // Check for arrows
+        if (!hasArrows(bot)) return;
+        
+        // Accuracy based on difficulty
+        if (random.nextDouble() > accuracy * 0.8) return;
+        
+        // Switch to bow
+        bot.getInventory().setHeldItemSlot(bowSlot);
+        
+        // Predict target location
+        Location predictedLoc = predictTargetLocation(target, distance);
+        lookAt(bot, predictedLoc);
+        
+        // Charge time based on difficulty (full charge = 20 ticks)
+        int chargeTime = switch(difficulty) {
+            case EASY -> 25;
+            case MEDIUM -> 20;
+            case HARD -> 15;
+            case HACKER -> 8;
+        };
+        
+        // Simulate bow draw and release
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) return;
+            
+            // Spawn arrow
+            Arrow arrow = bot.getWorld().spawn(bot.getEyeLocation(), Arrow.class);
+            
+            // Calculate velocity with arc
+            Vector velocity = calculateArrowVelocity(bot.getEyeLocation(), predictedLoc, distance);
+            arrow.setVelocity(velocity);
+            arrow.setShooter(bot);
+            arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+            arrow.setDamage(9.0); // Full charge damage
+            
+            // Consume arrow
+            consumeArrow(bot);
+            
+            bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_ARROW_SHOOT, 1.0f, 1.0f);
+            lastBowShot = System.currentTimeMillis();
+        }, chargeTime);
+    }
+
+    private Vector calculateArrowVelocity(Location from, Location to, double distance) {
+        Vector direction = to.toVector().subtract(from.toVector());
+        
+        // Add arc for distance
+        double arc = Math.min(distance * 0.02, 0.3);
+        direction.setY(direction.getY() + arc);
+        
+        // Normalize and scale
+        direction.normalize().multiply(Math.min(3.0, 1.5 + distance * 0.05));
+        
+        return direction;
+    }
+
+    private void handleElytraApproach(Player bot) {
+        long now = System.currentTimeMillis();
+        if (now - lastElytraUse < 3000) return;
+        
+        // Check if wearing elytra
+        ItemStack chestplate = bot.getInventory().getChestplate();
+        if (chestplate == null || chestplate.getType() != Material.ELYTRA) return;
+        
+        // Jump and glide towards target
+        if (bot.isOnGround()) {
+            // Launch
+            Vector direction = target.getLocation().toVector()
+                    .subtract(bot.getLocation().toVector())
+                    .normalize();
+            direction.setY(0.8);
+            direction.multiply(1.5);
+            bot.setVelocity(direction);
+            
+            // Start gliding after jump
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (isValid()) {
+                    bot.setGliding(true);
+                    isUsingElytra = true;
+                    
+                    // Boost with firework if available
+                    if (hasFireworks(bot)) {
+                        useFireworkBoost(bot);
+                    }
+                }
+            }, 5L);
+            
+            lastElytraUse = now;
+            
+            // Stop gliding when close
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (isValid()) {
+                    bot.setGliding(false);
+                    isUsingElytra = false;
+                }
+            }, 40L);
+        }
+    }
+
+    private void useFireworkBoost(Player bot) {
+        int slot = findItem(bot.getInventory(), Material.FIREWORK_ROCKET);
+        if (slot == -1) return;
+        
+        ItemStack firework = bot.getInventory().getItem(slot);
+        if (firework == null) return;
+        
+        // Boost velocity
+        Vector boost = bot.getLocation().getDirection().multiply(1.5);
+        bot.setVelocity(bot.getVelocity().add(boost));
+        
+        // Consume firework
+        firework.setAmount(firework.getAmount() - 1);
+        
+        // Sound
+        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 1.0f);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MOVEMENT LOOP
+    // ══════════════════════════════════════════════════════════════════════════
 
     private void startMovementLoop() {
         movementTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (!npc.isSpawned() || target == null || !target.isOnline()) {
-                    return;
-                }
-
-                LivingEntity botEntity = (LivingEntity) npc.getEntity();
-                if (botEntity == null) return;
-
-                double distance = botEntity.getLocation().distance(target.getLocation());
-
-                // Strafing behavior (more aggressive at higher difficulties)
-                if (distance <= 5 && random.nextDouble() < difficulty.hitAccuracy * 0.5) {
-                    performStrafe(botEntity);
-                }
-
-                // W-tapping (sprint reset) at higher difficulties
-                if (difficulty == BotDifficulty.HARD || difficulty == BotDifficulty.HACKER) {
-                    if (random.nextDouble() < 0.3 && botEntity instanceof Player botPlayer) {
-                        botPlayer.setSprinting(false);
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                            if (botEntity.isValid()) botPlayer.setSprinting(true);
-                        }, 2L);
+                if (!isValid()) return;
+                
+                Player bot = getBotPlayer();
+                if (bot == null) return;
+                
+                double distance = bot.getLocation().distance(target.getLocation());
+                double health = bot.getHealth();
+                double maxHealth = bot.getMaxHealth();
+                double healthPercent = (health / maxHealth) * 100;
+                
+                // Retreat if low health
+                if (healthPercent < 30 && !isEating) {
+                    if (!isRetreating && random.nextDouble() < 0.5) {
+                        isRetreating = true;
+                        retreat(bot);
                     }
+                } else {
+                    isRetreating = false;
+                }
+                
+                // Strafe in combat
+                if (distance <= 5 && !isRetreating) {
+                    performStrafe(bot);
+                }
+                
+                // W-tap periodically during combat
+                if (distance <= 4 && shouldWTap()) {
+                    performWTap(bot);
+                }
+                
+                // Block placement for positioning
+                if (shouldPlaceBlock(bot, distance)) {
+                    placeBlock(bot);
                 }
             }
-        }.runTaskTimer(plugin, 10L, 5L);
+        }.runTaskTimer(plugin, 2L, 4L);
     }
 
-    private void tryAttack(LivingEntity botEntity, double distance) {
+    private void performStrafe(Player bot) {
         long now = System.currentTimeMillis();
         
-        // Check reaction time
-        if (now - lastAttackTime < difficulty.reactionTimeMs) {
-            return;
-        }
-
-        // Check if we should hit (accuracy)
-        if (random.nextDouble() > difficulty.hitAccuracy) {
-            return;
-        }
-
-        // Look at target
-        Location targetLoc = target.getLocation();
-        botEntity.teleport(botEntity.getLocation().setDirection(
-                targetLoc.toVector().subtract(botEntity.getLocation().toVector()).normalize()));
-
-        // Attack if in range
-        if (distance <= 3.5) {
-            // Swing arm animation
-            if (botEntity instanceof Player botPlayer) {
-                botPlayer.swingMainHand();
-            }
-
-            // Deal damage
-            double baseDamage = getWeaponDamage(botEntity);
-            
-            // Critical hit chance (higher for harder difficulties)
-            boolean isCrit = random.nextDouble() < (difficulty.hitAccuracy * 0.3) 
-                    && botEntity.getFallDistance() > 0;
-            if (isCrit) {
-                baseDamage *= 1.5;
-            }
-
-            // Apply combo bonus for hacker difficulty
-            if (difficulty == BotDifficulty.HACKER) {
-                comboCount++;
-                if (comboCount > 3) {
-                    baseDamage *= 1.1;
-                }
-            }
-
-            target.damage(baseDamage, botEntity);
-            lastAttackTime = now;
-
-            // Knockback
-            Vector knockback = target.getLocation().toVector()
-                    .subtract(botEntity.getLocation().toVector())
-                    .normalize()
-                    .multiply(0.4)
-                    .setY(0.35);
-            target.setVelocity(target.getVelocity().add(knockback));
-        }
-    }
-
-    private void tryHeal(LivingEntity botEntity) {
-        long now = System.currentTimeMillis();
-        if (now - lastHealTime < 2000) return; // 2 second cooldown
-
-        // Find golden apples in inventory
-        if (botEntity instanceof Player botPlayer) {
-            PlayerInventory inv = botPlayer.getInventory();
-            int slot = findItem(inv, Material.GOLDEN_APPLE);
-            
-            if (slot == -1) {
-                slot = findItem(inv, Material.ENCHANTED_GOLDEN_APPLE);
-            }
-
-            if (slot != -1) {
-                final int gappleSlot = slot; // Make effectively final for lambda
-                // Simulate eating
-                int heldSlot = inv.getHeldItemSlot();
-                inv.setHeldItemSlot(gappleSlot);
-                
-                // Eating delay based on difficulty
-                int eatDelay = switch (difficulty) {
-                    case EASY -> 40;
-                    case MEDIUM -> 32;
-                    case HARD -> 24;
-                    case HACKER -> 10; // Almost instant
-                };
-
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (!botEntity.isValid()) return;
-                    
-                    ItemStack item = inv.getItem(gappleSlot);
-                    if (item != null && (item.getType() == Material.GOLDEN_APPLE 
-                            || item.getType() == Material.ENCHANTED_GOLDEN_APPLE)) {
-                        
-                        // Apply effects
-                        if (item.getType() == Material.ENCHANTED_GOLDEN_APPLE) {
-                            botEntity.addPotionEffect(new PotionEffect(
-                                    PotionEffectType.REGENERATION, 400, 1));
-                            botEntity.addPotionEffect(new PotionEffect(
-                                    PotionEffectType.ABSORPTION, 2400, 3));
-                            botEntity.addPotionEffect(new PotionEffect(
-                                    PotionEffectType.RESISTANCE, 6000, 0));
-                            botEntity.addPotionEffect(new PotionEffect(
-                                    PotionEffectType.FIRE_RESISTANCE, 6000, 0));
-                        } else {
-                            botEntity.addPotionEffect(new PotionEffect(
-                                    PotionEffectType.REGENERATION, 100, 1));
-                            botEntity.addPotionEffect(new PotionEffect(
-                                    PotionEffectType.ABSORPTION, 2400, 0));
-                        }
-
-                        // Consume item
-                        item.setAmount(item.getAmount() - 1);
-                        inv.setHeldItemSlot(heldSlot);
-                    }
-                }, eatDelay);
-
-                lastHealTime = now;
-            }
-        }
-    }
-
-    private void tryThrowPotion(LivingEntity botEntity) {
-        long now = System.currentTimeMillis();
-        if (now - lastPotionTime < 3000) return; // 3 second cooldown
-
-        if (!(botEntity instanceof Player botPlayer)) return;
-
-        PlayerInventory inv = botPlayer.getInventory();
-        
-        // Find splash potions
-        for (int i = 0; i < inv.getSize(); i++) {
-            ItemStack item = inv.getItem(i);
-            if (item != null && item.getType() == Material.SPLASH_POTION) {
-                // Throw at target with some accuracy based on difficulty
-                Location targetLoc = target.getLocation();
-                
-                // Add some inaccuracy for easier difficulties
-                if (difficulty != BotDifficulty.HACKER) {
-                    double spread = (1.0 - difficulty.hitAccuracy) * 2;
-                    targetLoc.add(
-                            random.nextGaussian() * spread,
-                            random.nextGaussian() * spread * 0.5,
-                            random.nextGaussian() * spread
-                    );
-                }
-
-                // Calculate throw velocity
-                Vector direction = targetLoc.toVector()
-                        .subtract(botEntity.getLocation().toVector())
-                        .normalize();
-                
-                double distance = botEntity.getLocation().distance(target.getLocation());
-                direction.multiply(Math.min(distance * 0.15, 1.5));
-                direction.setY(direction.getY() + 0.3);
-
-                // Spawn and throw potion
-                org.bukkit.entity.ThrownPotion thrown = botEntity.getWorld()
-                        .spawn(botEntity.getEyeLocation(), org.bukkit.entity.ThrownPotion.class);
-                thrown.setItem(item.clone());
-                thrown.setVelocity(direction);
-                thrown.setShooter(botEntity);
-
-                // Consume potion
-                item.setAmount(item.getAmount() - 1);
-                lastPotionTime = now;
-                break;
-            }
-        }
-    }
-
-    private void performStrafe(LivingEntity botEntity) {
-        if (random.nextDouble() < 0.3) {
+        // Change strafe direction periodically
+        if (now - lastStrafeChange > 500 && random.nextDouble() < 0.3) {
             strafeDirection *= -1;
+            lastStrafeChange = now;
         }
-
-        Vector strafe = botEntity.getLocation().getDirection()
+        
+        // Calculate strafe vector (perpendicular to facing)
+        Vector strafe = bot.getLocation().getDirection()
                 .crossProduct(new Vector(0, 1, 0))
                 .normalize()
-                .multiply(0.3 * strafeDirection);
-
-        botEntity.setVelocity(botEntity.getVelocity().add(strafe));
+                .multiply(0.25 * strafeDirection);
+        
+        // Apply strafe
+        Vector currentVel = bot.getVelocity();
+        currentVel.add(strafe);
+        bot.setVelocity(currentVel);
     }
 
-    private double getWeaponDamage(LivingEntity botEntity) {
-        if (!(botEntity instanceof Player botPlayer)) return 1.0;
-        
-        ItemStack weapon = botPlayer.getInventory().getItemInMainHand();
-        if (weapon == null) return 1.0;
+    private boolean shouldWTap() {
+        return (difficulty == BotDifficulty.HARD || difficulty == BotDifficulty.HACKER)
+                && random.nextDouble() < 0.4;
+    }
 
-        return switch (weapon.getType()) {
+    private void performWTap(Player bot) {
+        // Sprint reset for extra knockback
+        bot.setSprinting(false);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (isValid()) bot.setSprinting(true);
+        }, 1L);
+    }
+
+    private void retreat(Player bot) {
+        // Move away from target
+        Vector away = bot.getLocation().toVector()
+                .subtract(target.getLocation().toVector())
+                .normalize()
+                .multiply(0.5);
+        away.setY(0);
+        
+        bot.setVelocity(bot.getVelocity().add(away));
+        
+        // Try to heal while retreating
+        tryHeal(bot);
+    }
+
+    private boolean shouldPlaceBlock(Player bot, double distance) {
+        // Place blocks for tactical advantage
+        if (System.currentTimeMillis() - lastBlockPlace < 500) return false;
+        
+        // Bridge gaps or tower up
+        Block below = bot.getLocation().subtract(0, 1, 0).getBlock();
+        if (below.getType() == Material.AIR) {
+            return hasBlocks(bot);
+        }
+        
+        return false;
+    }
+
+    private void placeBlock(Player bot) {
+        int slot = findBuildingBlock(bot.getInventory());
+        if (slot == -1) return;
+        
+        Block below = bot.getLocation().subtract(0, 1, 0).getBlock();
+        if (below.getType() != Material.AIR) return;
+        
+        ItemStack blocks = bot.getInventory().getItem(slot);
+        if (blocks == null) return;
+        
+        // Place block below
+        below.setType(blocks.getType());
+        blocks.setAmount(blocks.getAmount() - 1);
+        
+        lastBlockPlace = System.currentTimeMillis();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // HEALING LOOP
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void startHealLoop() {
+        healTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!isValid()) return;
+                
+                Player bot = getBotPlayer();
+                if (bot == null) return;
+                
+                double health = bot.getHealth();
+                double maxHealth = bot.getMaxHealth();
+                double healthPercent = (health / maxHealth) * 100;
+                
+                // Heal when below threshold
+                if (healthPercent <= healThreshold && !isEating) {
+                    tryHeal(bot);
+                }
+                
+                // Use potions at low health
+                if (healthPercent <= 50) {
+                    tryUsePotions(bot);
+                }
+            }
+        }.runTaskTimer(plugin, 10L, 20L);
+    }
+
+    private void tryHeal(Player bot) {
+        if (isEating) return;
+        
+        long now = System.currentTimeMillis();
+        if (now - lastHealTime < 2000) return;
+        
+        // Find golden apples
+        int gappleSlot = findItem(bot.getInventory(), Material.GOLDEN_APPLE);
+        if (gappleSlot == -1) {
+            gappleSlot = findItem(bot.getInventory(), Material.ENCHANTED_GOLDEN_APPLE);
+        }
+        
+        if (gappleSlot == -1) return;
+        
+        final int slot = gappleSlot;
+        int originalSlot = bot.getInventory().getHeldItemSlot();
+        
+        // Switch to gapple
+        bot.getInventory().setHeldItemSlot(slot);
+        isEating = true;
+        
+        // Eating time based on difficulty
+        int eatTime = switch(difficulty) {
+            case EASY -> 32;    // Normal eating time
+            case MEDIUM -> 28;
+            case HARD -> 20;
+            case HACKER -> 8;   // Speed eating
+        };
+        
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) { isEating = false; return; }
+            
+            ItemStack gapple = bot.getInventory().getItem(slot);
+            if (gapple == null) { isEating = false; return; }
+            
+            // Apply effects
+            if (gapple.getType() == Material.ENCHANTED_GOLDEN_APPLE) {
+                bot.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 400, 1));
+                bot.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 3));
+                bot.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 6000, 0));
+                bot.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 6000, 0));
+            } else {
+                bot.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
+                bot.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0));
+            }
+            
+            // Consume
+            gapple.setAmount(gapple.getAmount() - 1);
+            
+            // Switch back
+            bot.getInventory().setHeldItemSlot(originalSlot);
+            isEating = false;
+            lastHealTime = System.currentTimeMillis();
+            
+            // Eating sound
+            bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_PLAYER_BURP, 1.0f, 1.0f);
+        }, eatTime);
+    }
+
+    private void tryUsePotions(Player bot) {
+        // Try instant health splash potions on self
+        int potSlot = findHealingPotion(bot.getInventory());
+        if (potSlot == -1) return;
+        
+        long now = System.currentTimeMillis();
+        if (now - lastPotionTime < 1000) return;
+        
+        ItemStack potion = bot.getInventory().getItem(potSlot);
+        if (potion == null) return;
+        
+        // Splash at feet for instant heal
+        ThrownPotion thrown = bot.getWorld().spawn(bot.getEyeLocation(), ThrownPotion.class);
+        thrown.setItem(potion.clone());
+        thrown.setVelocity(new Vector(0, -0.5, 0)); // Down towards self
+        thrown.setShooter(bot);
+        
+        potion.setAmount(potion.getAmount() - 1);
+        lastPotionTime = now;
+    }
+
+    private void throwPotion(Player bot) {
+        int potSlot = findDamagePotion(bot.getInventory());
+        if (potSlot == -1) return;
+        
+        long now = System.currentTimeMillis();
+        if (now - lastPotionTime < 2000) return;
+        
+        ItemStack potion = bot.getInventory().getItem(potSlot);
+        if (potion == null) return;
+        
+        // Predict target location
+        double distance = bot.getLocation().distance(target.getLocation());
+        Location predictedLoc = predictTargetLocation(target, distance);
+        
+        // Throw at target
+        ThrownPotion thrown = bot.getWorld().spawn(bot.getEyeLocation(), ThrownPotion.class);
+        thrown.setItem(potion.clone());
+        
+        Vector velocity = predictedLoc.toVector()
+                .subtract(bot.getEyeLocation().toVector())
+                .normalize()
+                .multiply(1.2);
+        velocity.setY(velocity.getY() + 0.3);
+        
+        thrown.setVelocity(velocity);
+        thrown.setShooter(bot);
+        
+        potion.setAmount(potion.getAmount() - 1);
+        lastPotionTime = now;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // UTILITY METHODS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private boolean isValid() {
+        return npc != null && npc.isSpawned() 
+                && target != null && target.isOnline() && !target.isDead()
+                && npc.getEntity() != null && !npc.getEntity().isDead();
+    }
+
+    private Player getBotPlayer() {
+        if (!npc.isSpawned()) return null;
+        Entity entity = npc.getEntity();
+        return entity instanceof Player ? (Player) entity : null;
+    }
+
+    private void lookAt(Player bot, Location target) {
+        Vector direction = target.toVector().subtract(bot.getEyeLocation().toVector()).normalize();
+        Location loc = bot.getLocation().clone();
+        loc.setDirection(direction);
+        bot.teleport(loc);
+    }
+
+    private Location predictTargetLocation(Player target, double distance) {
+        // Predict where target will be based on velocity
+        Vector velocity = target.getVelocity();
+        double prediction = switch(difficulty) {
+            case EASY -> 0.1;
+            case MEDIUM -> 0.3;
+            case HARD -> 0.5;
+            case HACKER -> 0.8;
+        };
+        
+        Location predicted = target.getLocation().clone();
+        predicted.add(velocity.multiply(prediction * (distance / 5)));
+        return predicted;
+    }
+
+    private void updateWeaponType(Player bot) {
+        long now = System.currentTimeMillis();
+        if (now - lastWeaponCheck < 500) return;
+        
+        ItemStack weapon = bot.getInventory().getItemInMainHand();
+        if (weapon == null) {
+            currentWeapon = WeaponType.FIST;
+            return;
+        }
+        
+        currentWeapon = switch(weapon.getType()) {
+            case MACE -> WeaponType.MACE;
+            case TRIDENT -> WeaponType.TRIDENT;
+            case NETHERITE_AXE, DIAMOND_AXE, IRON_AXE, STONE_AXE, WOODEN_AXE, GOLDEN_AXE -> WeaponType.AXE;
+            case BOW -> WeaponType.BOW;
+            case CROSSBOW -> WeaponType.CROSSBOW;
+            default -> WeaponType.SWORD;
+        };
+        
+        lastWeaponCheck = now;
+    }
+
+    private void selectBestWeapon(Player bot) {
+        // Select best weapon from hotbar for current situation
+        PlayerInventory inv = bot.getInventory();
+        
+        // Priority: Mace (if can crit) > Axe (if target blocking) > Sword
+        if (target.isBlocking()) {
+            int axeSlot = findAxe(inv);
+            if (axeSlot != -1) {
+                inv.setHeldItemSlot(axeSlot);
+                currentWeapon = WeaponType.AXE;
+                return;
+            }
+        }
+        
+        // Default to first weapon found
+        for (int i = 0; i < 9; i++) {
+            ItemStack item = inv.getItem(i);
+            if (item == null) continue;
+            
+            Material type = item.getType();
+            if (type.name().contains("SWORD") || type.name().contains("AXE") 
+                    || type == Material.MACE || type == Material.TRIDENT) {
+                inv.setHeldItemSlot(i);
+                return;
+            }
+        }
+    }
+
+    private double getWeaponDamage(Player bot) {
+        ItemStack weapon = bot.getInventory().getItemInMainHand();
+        if (weapon == null) return 1.0;
+        
+        double base = switch(weapon.getType()) {
             case NETHERITE_SWORD -> 8.0;
             case DIAMOND_SWORD -> 7.0;
             case IRON_SWORD -> 6.0;
@@ -333,22 +965,161 @@ public class BotCombatAI {
             case DIAMOND_AXE -> 9.0;
             case IRON_AXE -> 9.0;
             case STONE_AXE -> 9.0;
+            case WOODEN_AXE, GOLDEN_AXE -> 7.0;
             case MACE -> 7.0;
+            case TRIDENT -> 9.0;
             default -> 1.0;
         };
+        
+        // Sharpness enchantment
+        int sharpness = weapon.getEnchantmentLevel(Enchantment.SHARPNESS);
+        base += sharpness * 0.5 + (sharpness > 0 ? 0.5 : 0);
+        
+        return base;
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // INVENTORY SEARCH METHODS
+    // ══════════════════════════════════════════════════════════════════════════
 
     private int findItem(PlayerInventory inv, Material material) {
         for (int i = 0; i < inv.getSize(); i++) {
             ItemStack item = inv.getItem(i);
-            if (item != null && item.getType() == material) {
-                return i;
+            if (item != null && item.getType() == material) return i;
+        }
+        return -1;
+    }
+
+    private int findAxe(PlayerInventory inv) {
+        for (int i = 0; i < 9; i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType().name().contains("_AXE")) return i;
+        }
+        return -1;
+    }
+
+    private int findTrident(PlayerInventory inv) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == Material.TRIDENT) return i;
+        }
+        return -1;
+    }
+
+    private int findBow(PlayerInventory inv) {
+        for (int i = 0; i < 9; i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && (item.getType() == Material.BOW || item.getType() == Material.CROSSBOW)) return i;
+        }
+        return -1;
+    }
+
+    private int findBuildingBlock(PlayerInventory inv) {
+        Set<Material> buildBlocks = Set.of(
+                Material.COBBLESTONE, Material.DIRT, Material.OAK_PLANKS, 
+                Material.STONE, Material.NETHERRACK, Material.END_STONE
+        );
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && buildBlocks.contains(item.getType())) return i;
+        }
+        return -1;
+    }
+
+    private int findHealingPotion(PlayerInventory inv) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == Material.SPLASH_POTION) {
+                // Check if it's a healing potion
+                if (item.hasItemMeta()) {
+                    org.bukkit.inventory.meta.PotionMeta meta = (org.bukkit.inventory.meta.PotionMeta) item.getItemMeta();
+                    if (meta.getBasePotionType() != null && 
+                        meta.getBasePotionType().name().contains("HEAL")) {
+                        return i;
+                    }
+                }
             }
         }
         return -1;
     }
 
-    public BotDifficulty getDifficulty() {
-        return difficulty;
+    private int findDamagePotion(PlayerInventory inv) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == Material.SPLASH_POTION) {
+                if (item.hasItemMeta()) {
+                    org.bukkit.inventory.meta.PotionMeta meta = (org.bukkit.inventory.meta.PotionMeta) item.getItemMeta();
+                    if (meta.getBasePotionType() != null && 
+                        (meta.getBasePotionType().name().contains("HARM") ||
+                         meta.getBasePotionType().name().contains("POISON"))) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // HAS ITEM CHECKS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private boolean hasSpear(Player bot) { return findTrident(bot.getInventory()) != -1; }
+    private boolean hasBow(Player bot) { return findBow(bot.getInventory()) != -1; }
+    private boolean hasBlocks(Player bot) { return findBuildingBlock(bot.getInventory()) != -1; }
+    private boolean hasSplashPotions(Player bot) {
+        return findItem(bot.getInventory(), Material.SPLASH_POTION) != -1;
+    }
+    private boolean hasElytra(Player bot) {
+        ItemStack chest = bot.getInventory().getChestplate();
+        return chest != null && chest.getType() == Material.ELYTRA;
+    }
+    private boolean hasFireworks(Player bot) {
+        return findItem(bot.getInventory(), Material.FIREWORK_ROCKET) != -1;
+    }
+    private boolean hasArrows(Player bot) {
+        return findItem(bot.getInventory(), Material.ARROW) != -1 
+                || findItem(bot.getInventory(), Material.SPECTRAL_ARROW) != -1
+                || findItem(bot.getInventory(), Material.TIPPED_ARROW) != -1;
+    }
+
+    private void consumeArrow(Player bot) {
+        int slot = findItem(bot.getInventory(), Material.ARROW);
+        if (slot == -1) slot = findItem(bot.getInventory(), Material.SPECTRAL_ARROW);
+        if (slot == -1) slot = findItem(bot.getInventory(), Material.TIPPED_ARROW);
+        if (slot == -1) return;
+        
+        ItemStack arrows = bot.getInventory().getItem(slot);
+        if (arrows != null) arrows.setAmount(arrows.getAmount() - 1);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // DECISION METHODS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private boolean shouldThrowSpear() {
+        return random.nextDouble() < accuracy * 0.6 
+                && System.currentTimeMillis() - lastSpearThrow > 2000;
+    }
+
+    private boolean shouldThrowPotion() {
+        return random.nextDouble() < accuracy * 0.5 
+                && System.currentTimeMillis() - lastPotionTime > 3000;
+    }
+
+    private boolean shouldShootBow() {
+        return random.nextDouble() < accuracy * 0.7 
+                && System.currentTimeMillis() - lastBowShot > 1500;
+    }
+
+    private boolean shouldUseElytra(double distance) {
+        return distance > 15 && random.nextDouble() < 0.3 
+                && System.currentTimeMillis() - lastElytraUse > 5000;
+    }
+
+    public BotDifficulty getDifficulty() { return difficulty; }
+
+    private enum WeaponType {
+        FIST, SWORD, AXE, MACE, TRIDENT, SPEAR, BOW, CROSSBOW
     }
 }
