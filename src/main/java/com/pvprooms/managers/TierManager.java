@@ -326,15 +326,25 @@ public class TierManager {
 
     // ── Rankings ──────────────────────────────────────────────────────────
 
-    /** Top N jugadores por puntuación total. Desempata por ELO (mayor primero). */
+    /** Top N jugadores por puntuación total. Incluye jugadores con ELO aunque no tengan tier points. */
     public List<PlayerRank> getTopPlayers(int limit) {
-        return pointsByKit.keySet().stream()
+        // Combine players from both TierManager and EloManager
+        Set<UUID> allPlayers = new HashSet<>(pointsByKit.keySet());
+        
+        // Add all players from EloManager (those who have played ELO matches)
+        for (String uuidStr : plugin.getEloManager().getEloMap().keySet()) {
+            try {
+                allPlayers.add(UUID.fromString(uuidStr));
+            } catch (IllegalArgumentException ignored) {}
+        }
+        
+        return allPlayers.stream()
                 .map(uuid -> new PlayerRank(uuid, getTotalScore(uuid), null, -1, getElo(uuid)))
-                .filter(r -> r.score() > 0)
                 .sorted((a, b) -> {
-                    int cmp = Integer.compare(b.score(), a.score()); // Higher score first
+                    // First by score (higher first), then by ELO (higher first)
+                    int cmp = Integer.compare(b.score(), a.score());
                     if (cmp != 0) return cmp;
-                    return Integer.compare(b.elo(), a.elo()); // Higher ELO first as tiebreaker
+                    return Integer.compare(b.elo(), a.elo());
                 })
                 .limit(limit)
                 .collect(Collectors.toList());
