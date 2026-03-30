@@ -541,7 +541,13 @@ async function fetchStats(){
 }
 
 async function fetchKits(){
-  try{ kits=await(await fetch(`${API}/api/kits`)).json(); buildTabs(); }catch{}
+  try{
+    const res = await fetch(`${API}/api/kits`);
+    if(res.ok){
+      kits = await res.json();
+      if(kits && kits.length > 0) buildTabs();
+    }
+  }catch(e){ console.warn('fetchKits error:', e); }
 }
 
 async function fetchTop(kit){
