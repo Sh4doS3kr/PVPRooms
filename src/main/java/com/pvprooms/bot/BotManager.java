@@ -87,13 +87,29 @@ public class BotManager {
             return false;
         }
 
+        // Get spawn locations FIRST
+        Location spawn1 = template.getSpawn1(instanceWorld);
+        Location spawn2 = template.getSpawn2(instanceWorld);
+        
+        // Force load ALL chunks in the arena area (critical for preventing void falls)
+        int minX = Math.min(spawn1.getBlockX(), spawn2.getBlockX()) - 32;
+        int maxX = Math.max(spawn1.getBlockX(), spawn2.getBlockX()) + 32;
+        int minZ = Math.min(spawn1.getBlockZ(), spawn2.getBlockZ()) - 32;
+        int maxZ = Math.max(spawn1.getBlockZ(), spawn2.getBlockZ()) + 32;
+        
+        for (int x = minX >> 4; x <= maxX >> 4; x++) {
+            for (int z = minZ >> 4; z <= maxZ >> 4; z++) {
+                instanceWorld.getChunkAt(x, z).load(true);
+                instanceWorld.getChunkAt(x, z).setForceLoaded(true);
+            }
+        }
+
         // Create bot NPC
         NPCRegistry registry = CitizensAPI.getNPCRegistry();
         String botName = getBotName(difficulty);
         NPC bot = registry.createNPC(EntityType.PLAYER, botName);
         
         // Spawn bot at spawn2
-        Location spawn2 = template.getSpawn2(instanceWorld);
         bot.spawn(spawn2);
 
         // Store bot reference
@@ -105,21 +121,6 @@ public class BotManager {
         // Create bot duel tracking
         BotDuel botDuel = new BotDuel(uuid, bot.getId(), kitName, difficulty, instanceWorldName, template);
         activeBotDuels.put(uuid, botDuel);
-
-        // Get spawn1 location (spawn2 already defined above)
-        Location spawn1 = template.getSpawn1(instanceWorld);
-        
-        // Load chunks BEFORE teleporting (critical to prevent falling through world)
-        spawn1.getChunk().load(true);
-        spawn2.getChunk().load(true);
-        
-        // Also load surrounding chunks for safety
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                instanceWorld.getChunkAt(spawn1.getBlockX() / 16 + dx, spawn1.getBlockZ() / 16 + dz).load(true);
-                instanceWorld.getChunkAt(spawn2.getBlockX() / 16 + dx, spawn2.getBlockZ() / 16 + dz).load(true);
-            }
-        }
         
         // Small delay to ensure chunks are fully loaded before teleporting
         Bukkit.getScheduler().runTaskLater(plugin, () -> {

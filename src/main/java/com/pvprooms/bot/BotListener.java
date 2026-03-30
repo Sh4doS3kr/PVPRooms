@@ -89,8 +89,22 @@ public class BotListener implements Listener {
                     // Player attacking their bot - allow it
                     event.setCancelled(false);
                     
-                    // Apply knockback to bot (NPCs don't receive knockback by default)
                     LivingEntity botEntity = (LivingEntity) bot.getEntity();
+                    
+                    // Check if this damage will kill the bot
+                    double finalDamage = event.getFinalDamage();
+                    double currentHealth = botEntity.getHealth();
+                    
+                    if (currentHealth - finalDamage <= 0) {
+                        // Bot will die - handle it manually since NPCDeathEvent may not fire
+                        event.setCancelled(true); // Cancel to prevent death animation issues
+                        plugin.getServer().getScheduler().runTask(plugin, () -> {
+                            plugin.getBotManager().onBotDeath(bot);
+                        });
+                        return;
+                    }
+                    
+                    // Apply knockback to bot (NPCs don't receive knockback by default)
                     Vector knockback = botEntity.getLocation().toVector()
                             .subtract(player.getLocation().toVector())
                             .normalize()
