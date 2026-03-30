@@ -4,6 +4,7 @@ import com.pvprooms.PvPRoomsPro;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -218,7 +219,7 @@ public class PartyGUI implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        String title = event.getView().title().toString();
+        String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
         
         if (!title.contains(GUI_TITLE) && !title.contains(INVITE_TITLE) 
                 && !title.contains(MATCH_TITLE) && !title.contains(KIT_SELECT_TITLE) 

@@ -11,6 +11,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 
+import java.util.UUID;
+
 /**
  * Handles combat events during duels.
  *
@@ -35,6 +37,28 @@ public class CombatListener implements Listener {
         if (!(event.getEntity() instanceof Player victim)) return;
 
         Player attacker = resolveAttacker(event.getDamager());
+
+        // Check if victim is in FFA match first
+        if (plugin.getDuelManager().isInFFA(victim.getUniqueId())) {
+            // Both must be in the same FFA match
+            if (attacker != null && plugin.getDuelManager().isInFFA(attacker.getUniqueId())) {
+                UUID victimMatch = plugin.getDuelManager().getFFAMatchId(victim.getUniqueId());
+                UUID attackerMatch = plugin.getDuelManager().getFFAMatchId(attacker.getUniqueId());
+                if (victimMatch != null && victimMatch.equals(attackerMatch)) {
+                    // Check if still frozen (countdown)
+                    if (plugin.getDuelManager().isFrozen(victim.getUniqueId()) || 
+                        plugin.getDuelManager().isFrozen(attacker.getUniqueId())) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                    // Allow FFA damage
+                    return;
+                }
+            }
+            // Attacker not in same FFA - cancel
+            event.setCancelled(true);
+            return;
+        }
 
         // Protect victim: must be in an active FIGHTING duel
         Duel victimDuel = plugin.getDuelManager().getDuelByPlayer(victim.getUniqueId());

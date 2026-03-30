@@ -49,6 +49,9 @@ public class TrimManager {
     private final List<String> materialKeys = new ArrayList<>();
     /** Ordered list of all valid TrimPattern keys from the Bukkit Registry. */
     private final List<String> patternKeys  = new ArrayList<>();
+    
+    /** Shared random instance for consistent randomness */
+    private final Random random = new Random();
 
     private static final List<String> LEGENDARY_PATTERNS = List.of(
             "silence", "vex", "spire", "shaper", "raiser", "host", "flow", "bolt"
@@ -303,8 +306,6 @@ public class TrimManager {
      * @return A random Trim object
      */
     public Trim randomTrimForPiece(ArmorPiece piece, boolean legendary) {
-        Random random = new Random();
-        
         // Choose pattern based on legendary flag
         List<String> availablePatterns = legendary ? LEGENDARY_PATTERNS : NORMAL_PATTERNS;
         String pattern = availablePatterns.get(random.nextInt(availablePatterns.size()));
@@ -321,8 +322,6 @@ public class TrimManager {
      * @return A random Trim object
      */
     public Trim randomTrim(boolean legendary) {
-        Random random = new Random();
-        
         // Choose pattern based on legendary flag
         List<String> availablePatterns = legendary ? LEGENDARY_PATTERNS : NORMAL_PATTERNS;
         String pattern = availablePatterns.get(random.nextInt(availablePatterns.size()));
