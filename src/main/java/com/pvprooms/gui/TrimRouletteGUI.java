@@ -326,41 +326,47 @@ public class TrimRouletteGUI {
     // ═══════════════════════════════════════════════════════════════════════════════
     
     public void openPreview(Player player, ArmorPiece piece, boolean legendary) {
-        Inventory inv = Bukkit.createInventory(null, 54, "§d§l" + piece.getDisplayName() + " §7- Posibles Trims");
+        // Get patterns and materials
+        List<String> patterns = legendary ? 
+            plugin.getTrimManager().getLegendaryPatternKeys() : 
+            plugin.getTrimManager().getNormalPatternKeys();
+        List<String> materials = plugin.getTrimManager().getMaterialKeys();
+        
+        // Calculate total combinations
+        int totalCombos = patterns.size() * materials.size();
+        
+        // Use largest possible inventory (54 slots, 45 usable for items)
+        Inventory inv = Bukkit.createInventory(null, 54, "§d§l" + piece.getDisplayName() + " §7- " + totalCombos + " Combinaciones");
         
         // Fill border
         ItemStack border = createBorderItem();
         for (int i = 0; i < 9; i++) inv.setItem(i, border);
         for (int i = 45; i < 54; i++) inv.setItem(i, border);
         
-        // Get patterns based on legendary flag
-        List<String> patterns = legendary ? 
-            plugin.getTrimManager().getLegendaryPatternKeys() : 
-            plugin.getTrimManager().getNormalPatternKeys();
-        List<String> materials = plugin.getTrimManager().getMaterialKeys();
-        
-        // Show all possible pattern+material combinations (sample)
+        // Show ALL possible pattern+material combinations
         int slot = 9;
+        outerLoop:
         for (String pattern : patterns) {
-            if (slot >= 45) break;
-            // Pick a random material for display
-            String material = materials.get(random.nextInt(materials.size()));
-            Trim trim = new Trim(material, pattern);
-            inv.setItem(slot, createTrimmedArmorItem(trim, piece, false));
-            slot++;
+            for (String material : materials) {
+                if (slot >= 45) break outerLoop;
+                Trim trim = new Trim(material, pattern);
+                inv.setItem(slot, createTrimmedArmorItem(trim, piece, false));
+                slot++;
+            }
         }
         
         // Info item
-        inv.setItem(4, createGlowItem(Material.BOOK, "§e§lPOSIBLES TRIMS",
+        inv.setItem(4, createGlowItem(Material.BOOK, "§e§lTODAS LAS COMBINACIONES",
             List.of(
-                "§7Estos son los trims que podrías",
-                "§7obtener al abrir esta crate.",
+                "§7Todas las combinaciones posibles",
+                "§7de patrón + material.",
                 "",
                 "§7Tipo: " + (legendary ? "§5§lLEGENDARIO" : "§b§lNORMAL"),
                 "§7Patrones: §f" + patterns.size(),
                 "§7Materiales: §f" + materials.size(),
+                "§7Combinaciones: §a" + totalCombos,
                 "",
-                "§aUsa una llave para abrir la crate!"
+                "§eUsa una llave para abrir la crate!"
             )));
         
         player.openInventory(inv);
