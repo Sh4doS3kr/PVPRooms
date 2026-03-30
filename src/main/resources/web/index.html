@@ -74,7 +74,7 @@
     <ul class="nav-links">
       <li><a class="nav-a" href="#main">Clasificación</a></li>
       <li><a class="nav-a" href="#stats">Estadísticas</a></li>
-      <li><a class="nav-a" href="https://mctiers.com/docs/v2" target="_blank">API Docs</a></li>
+      <li><a class="nav-a" href="#tierInfo">¿Cómo funciona?</a></li>
     </ul>
     <div class="nav-search-wrap">
       <div class="nav-search">
@@ -243,6 +243,39 @@
           </ul>
         </div>
 
+        <div class="info-box" id="tierInfo">
+          <h4>🔐 Sistema de Verificación de Tiers</h4>
+          <p style="margin-bottom:1rem;color:var(--sub);">Los tiers se obtienen de forma diferente según su nivel:</p>
+          
+          <div class="verification-grid">
+            <div class="verify-section verify-auto">
+              <h5>✅ Tiers Automáticos</h5>
+              <p>Se otorgan automáticamente al cumplir los requisitos:</p>
+              <ul>
+                <li><span class="req-tier lt5">LT5</span> <span class="req-tier ht5">HT5</span> <span class="req-tier lt4">LT4</span> <span class="req-tier ht4">HT4</span> <span class="req-tier lt3">LT3</span></li>
+              </ul>
+              <p class="verify-note">El sistema evalúa tus estadísticas en tiempo real y actualiza tu tier al instante.</p>
+            </div>
+            
+            <div class="verify-section verify-manual">
+              <h5>🏆 Tiers de Élite (Verificación)</h5>
+              <p>Requieren cumplir requisitos extra y verificación:</p>
+              <ul>
+                <li><span class="req-tier ht3">HT3</span> <span class="req-tier lt2">LT2</span> <span class="req-tier ht2">HT2</span> <span class="req-tier lt1">LT1</span> <span class="req-tier ht1">HT1</span></li>
+              </ul>
+              <p class="verify-note"><strong>Requisitos adicionales:</strong></p>
+              <ul class="verify-reqs">
+                <li>Mínimo <strong>5 victorias</strong> contra jugadores HT3+</li>
+                <li>Mantener el tier durante <strong>7 días</strong> consecutivos</li>
+                <li>Sin abandonos en las últimas <strong>20 partidas</strong></li>
+                <li>Revisión anti-boost por el sistema</li>
+              </ul>
+            </div>
+          </div>
+          
+          <p class="verify-footer">💡 Los tiers de élite son prestigiosos y demuestran habilidad real. ¡Esfuérzate para conseguirlos!</p>
+        </div>
+
         <div class="info-note">
           <strong>💡 Tip:</strong> Para subir rápido, mantén rachas de victorias, mejora tu KDR y juega contra rivales de tier superior. ¡El sistema recompensa la consistencia!
         </div>
@@ -379,52 +412,81 @@ function kitBadge(kitName, tierName, pts, highlight){
 
 /* ── Region detection ──────────────────────────────────────────── */
 const COUNTRY_NAMES = {
-  // Latinoamérica
+  // México y Centroamérica
   'mx':'México','gt':'Guatemala','bz':'Belice','sv':'El Salvador','hn':'Honduras',
-  'ni':'Nicaragua','cr':'Costa Rica','pa':'Panamá','cu':'Cuba','do':'Rep. Dominicana',
-  'ht':'Haití','jm':'Jamaica','pr':'Puerto Rico','tt':'Trinidad y Tobago','bb':'Barbados',
-  'bs':'Bahamas','gd':'Granada','lc':'Santa Lucía','vc':'San Vicente','ag':'Antigua y Barbuda',
-  'dm':'Dominica','kn':'San Cristóbal','aw':'Aruba','cw':'Curazao','sx':'San Martín',
+  'ni':'Nicaragua','cr':'Costa Rica','pa':'Panamá',
+  // Caribe - Antillas Mayores
+  'cu':'Cuba','do':'Rep. Dominicana','ht':'Haití','jm':'Jamaica','pr':'Puerto Rico',
+  // Caribe - Antillas Menores
+  'tt':'Trinidad y Tobago','bb':'Barbados','bs':'Bahamas','gd':'Granada','lc':'Santa Lucía',
+  'vc':'San Vicente','ag':'Antigua y Barbuda','dm':'Dominica','kn':'San Cristóbal y Nieves',
+  'ai':'Anguila','vg':'Islas Vírgenes GB','vi':'Islas Vírgenes US','ky':'Islas Caimán',
+  'tc':'Islas Turcas','ms':'Montserrat','mf':'San Martín FR','bl':'San Bartolomé',
+  'gp':'Guadalupe','mq':'Martinica','an':'Antillas Neerlandesas',
+  // Caribe - Territorios
+  'aw':'Aruba','cw':'Curazao','sx':'Sint Maarten','bq':'Bonaire',
+  // Sudamérica
   'co':'Colombia','ve':'Venezuela','ec':'Ecuador','pe':'Perú','bo':'Bolivia',
   'cl':'Chile','ar':'Argentina','uy':'Uruguay','py':'Paraguay','br':'Brasil',
-  'gy':'Guyana','sr':'Surinam','gf':'Guayana Francesa',
+  'gy':'Guyana','sr':'Surinam','gf':'Guayana Francesa','fk':'Islas Malvinas',
   // Norteamérica
-  'us':'Estados Unidos','ca':'Canadá',
-  // Europa
-  'es':'España','pt':'Portugal','ad':'Andorra','fr':'Francia','mc':'Mónaco',
+  'us':'Estados Unidos','ca':'Canadá','gl':'Groenlandia','bm':'Bermudas','pm':'San Pedro y Miquelón',
+  // Europa Occidental
+  'es':'España','pt':'Portugal','ad':'Andorra','gi':'Gibraltar','fr':'Francia','mc':'Mónaco',
   'it':'Italia','va':'Vaticano','sm':'San Marino','mt':'Malta','gb':'Reino Unido',
   'ie':'Irlanda','de':'Alemania','at':'Austria','ch':'Suiza','li':'Liechtenstein',
-  'be':'Bélgica','nl':'Países Bajos','lu':'Luxemburgo','dk':'Dinamarca','se':'Suecia',
-  'no':'Noruega','fi':'Finlandia','is':'Islandia','ee':'Estonia','lv':'Letonia',
-  'lt':'Lituania','pl':'Polonia','cz':'Chequia','sk':'Eslovaquia','hu':'Hungría',
-  'ro':'Rumanía','bg':'Bulgaria','hr':'Croacia','si':'Eslovenia','ba':'Bosnia',
-  'rs':'Serbia','me':'Montenegro','mk':'Macedonia','al':'Albania','gr':'Grecia',
-  'cy':'Chipre','tr':'Turquía','ru':'Rusia','ua':'Ucrania','by':'Bielorrusia',
-  'md':'Moldavia','ge':'Georgia','am':'Armenia','az':'Azerbaiyán',
-  // Asia
+  'be':'Bélgica','nl':'Países Bajos','lu':'Luxemburgo',
+  // Europa del Norte
+  'dk':'Dinamarca','se':'Suecia','no':'Noruega','fi':'Finlandia','is':'Islandia',
+  'fo':'Islas Feroe','ax':'Åland','sj':'Svalbard',
+  // Europa del Este
+  'ee':'Estonia','lv':'Letonia','lt':'Lituania','pl':'Polonia','cz':'Chequia',
+  'sk':'Eslovaquia','hu':'Hungría','ro':'Rumanía','bg':'Bulgaria','md':'Moldavia',
+  'ua':'Ucrania','by':'Bielorrusia','ru':'Rusia',
+  // Europa del Sur / Balcanes
+  'hr':'Croacia','si':'Eslovenia','ba':'Bosnia','rs':'Serbia','me':'Montenegro',
+  'xk':'Kosovo','mk':'Macedonia','al':'Albania','gr':'Grecia','cy':'Chipre','tr':'Turquía',
+  // Cáucaso
+  'ge':'Georgia','am':'Armenia','az':'Azerbaiyán',
+  // Asia Oriental
   'jp':'Japón','cn':'China','kr':'Corea del Sur','kp':'Corea del Norte','tw':'Taiwán',
-  'hk':'Hong Kong','mo':'Macao','mn':'Mongolia','th':'Tailandia','vn':'Vietnam',
-  'la':'Laos','kh':'Camboya','mm':'Myanmar','my':'Malasia','sg':'Singapur',
-  'id':'Indonesia','ph':'Filipinas','bn':'Brunéi','tl':'Timor Oriental',
+  'hk':'Hong Kong','mo':'Macao','mn':'Mongolia',
+  // Sudeste Asiático
+  'th':'Tailandia','vn':'Vietnam','la':'Laos','kh':'Camboya','mm':'Myanmar',
+  'my':'Malasia','sg':'Singapur','id':'Indonesia','ph':'Filipinas','bn':'Brunéi','tl':'Timor Oriental',
+  // Asia del Sur
   'in':'India','pk':'Pakistán','bd':'Bangladesh','np':'Nepal','bt':'Bután',
-  'lk':'Sri Lanka','mv':'Maldivas','af':'Afganistán','ir':'Irán','iq':'Irak',
-  'sy':'Siria','lb':'Líbano','jo':'Jordania','il':'Israel','ps':'Palestina',
-  'sa':'Arabia Saudita','ae':'Emiratos Árabes','qa':'Catar','kw':'Kuwait','bh':'Baréin',
-  'om':'Omán','ye':'Yemen','uz':'Uzbekistán','kz':'Kazajistán','tm':'Turkmenistán',
+  'lk':'Sri Lanka','mv':'Maldivas',
+  // Asia Central
+  'af':'Afganistán','uz':'Uzbekistán','kz':'Kazajistán','tm':'Turkmenistán',
   'kg':'Kirguistán','tj':'Tayikistán',
-  // África
-  'za':'Sudáfrica','eg':'Egipto','ma':'Marruecos','dz':'Argelia','tn':'Túnez',
-  'ly':'Libia','ng':'Nigeria','gh':'Ghana','ke':'Kenia','et':'Etiopía',
-  'tz':'Tanzania','ug':'Uganda','rw':'Ruanda','cd':'R.D. Congo','cg':'Congo',
-  'cm':'Camerún','ci':'Costa de Marfil','sn':'Senegal','ml':'Malí','bf':'Burkina Faso',
-  'ne':'Níger','td':'Chad','sd':'Sudán','ss':'Sudán del Sur','er':'Eritrea',
-  'dj':'Yibuti','so':'Somalia','ao':'Angola','mz':'Mozambique','zw':'Zimbabue',
-  'bw':'Botsuana','na':'Namibia','zm':'Zambia','mw':'Malaui','mg':'Madagascar',
-  'mu':'Mauricio','sc':'Seychelles',
+  // Oriente Medio
+  'ir':'Irán','iq':'Irak','sy':'Siria','lb':'Líbano','jo':'Jordania',
+  'il':'Israel','ps':'Palestina','sa':'Arabia Saudita','ae':'Emiratos Árabes',
+  'qa':'Catar','kw':'Kuwait','bh':'Baréin','om':'Omán','ye':'Yemen',
+  // África del Norte
+  'eg':'Egipto','ma':'Marruecos','dz':'Argelia','tn':'Túnez','ly':'Libia',
+  'eh':'Sáhara Occidental','mr':'Mauritania','sd':'Sudán','ss':'Sudán del Sur',
+  // África Occidental
+  'ng':'Nigeria','gh':'Ghana','sn':'Senegal','ci':'Costa de Marfil','ml':'Malí',
+  'bf':'Burkina Faso','ne':'Níger','gm':'Gambia','gw':'Guinea-Bisáu','gn':'Guinea',
+  'sl':'Sierra Leona','lr':'Liberia','tg':'Togo','bj':'Benín','cv':'Cabo Verde',
+  // África Central
+  'cm':'Camerún','td':'Chad','cf':'Rep. Centroafricana','cd':'R.D. Congo','cg':'Congo',
+  'ga':'Gabón','gq':'Guinea Ecuatorial','st':'Santo Tomé','ao':'Angola',
+  // África Oriental
+  'ke':'Kenia','et':'Etiopía','tz':'Tanzania','ug':'Uganda','rw':'Ruanda',
+  'bi':'Burundi','er':'Eritrea','dj':'Yibuti','so':'Somalia','mz':'Mozambique',
+  'mg':'Madagascar','mu':'Mauricio','sc':'Seychelles','km':'Comoras','yt':'Mayotte','re':'Reunión',
+  // África Austral
+  'za':'Sudáfrica','zw':'Zimbabue','bw':'Botsuana','na':'Namibia','zm':'Zambia',
+  'mw':'Malaui','ls':'Lesoto','sz':'Esuatini',
   // Oceanía
   'au':'Australia','nz':'Nueva Zelanda','fj':'Fiyi','pg':'Papúa Nueva Guinea',
-  'ws':'Samoa','to':'Tonga','vu':'Vanuatu','sb':'Islas Salomón','nc':'Nueva Caledonia',
-  'pf':'Polinesia Francesa','gu':'Guam'
+  'ws':'Samoa','as':'Samoa Americana','to':'Tonga','vu':'Vanuatu','sb':'Islas Salomón',
+  'nc':'Nueva Caledonia','pf':'Polinesia Francesa','gu':'Guam','mp':'Islas Marianas',
+  'pw':'Palaos','fm':'Micronesia','mh':'Islas Marshall','ki':'Kiribati','nr':'Nauru',
+  'tv':'Tuvalu','wf':'Wallis y Futuna','ck':'Islas Cook','nu':'Niue','tk':'Tokelau','nf':'Norfolk'
 };
 
 async function detectRegion(){
