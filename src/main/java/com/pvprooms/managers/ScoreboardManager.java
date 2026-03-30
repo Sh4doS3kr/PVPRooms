@@ -282,26 +282,11 @@ public class ScoreboardManager {
             }
         }
 
-        // Remove BELOW_NAME health from ALL scoreboards (prevents duplicate health bars)
-        // Main scoreboard
+        // Remove BELOW_NAME health from main scoreboard first (prevents duplicate health bars)
         Scoreboard mainBoard = Bukkit.getScoreboardManager().getMainScoreboard();
         Objective mainHealthObj = mainBoard.getObjective(DisplaySlot.BELOW_NAME);
         if (mainHealthObj != null) {
             try { mainHealthObj.unregister(); } catch (Exception ignored) {}
-        }
-        // Also try removing by common health objective names
-        for (String name : new String[]{"health", "Health", "showhealth", "hp", "hearts"}) {
-            Objective o = mainBoard.getObjective(name);
-            if (o != null) try { o.unregister(); } catch (Exception ignored) {}
-        }
-        
-        // Player's current scoreboard
-        Scoreboard playerBoard = player.getScoreboard();
-        if (playerBoard != null && playerBoard != mainBoard) {
-            Objective playerHealthObj = playerBoard.getObjective(DisplaySlot.BELOW_NAME);
-            if (playerHealthObj != null) {
-                try { playerHealthObj.unregister(); } catch (Exception ignored) {}
-            }
         }
 
         board = Bukkit.getScoreboardManager().getNewScoreboard();

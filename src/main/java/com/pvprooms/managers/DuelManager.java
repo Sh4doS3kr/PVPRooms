@@ -187,8 +187,8 @@ public class DuelManager {
                     plugin.getWallManager().animateOpen(
                             duel.getArenaTemplate().getName(), world);
 
-                    // Holograma de vida sobre cada jugador
-                    plugin.getHealthHologramManager().startHolograms(duel, world);
+                    // Health holograms disabled
+                    // plugin.getHealthHologramManager().startHolograms(duel, world);
 
                     // Mostrar scoreboard de duelo inmediatamente
                     plugin.getScoreboardManager().updateDuelScoreboard(p1, duel);
