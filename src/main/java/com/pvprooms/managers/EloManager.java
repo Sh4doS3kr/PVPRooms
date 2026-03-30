@@ -101,8 +101,16 @@ public class EloManager {
      * Returns the ELO for a player UUID, initializing to the configured default if absent.
      */
     public int getElo(UUID uuid) {
-        return eloMap.getOrDefault(uuid.toString(),
-                plugin.getConfig().getInt("elo.starting-elo", 1000));
+        String key = uuid.toString();
+        // Try with dashes first, then without (for backwards compatibility)
+        if (eloMap.containsKey(key)) {
+            return eloMap.get(key);
+        }
+        String keyNoDashes = key.replace("-", "");
+        if (eloMap.containsKey(keyNoDashes)) {
+            return eloMap.get(keyNoDashes);
+        }
+        return plugin.getConfig().getInt("elo.starting-elo", 1000);
     }
 
     /**
@@ -222,7 +230,13 @@ public class EloManager {
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
-        int idx = sorted.indexOf(uuid.toString());
+        String key = uuid.toString();
+        int idx = sorted.indexOf(key);
+        if (idx == -1) {
+            // Try without dashes
+            String keyNoDashes = key.replace("-", "");
+            idx = sorted.indexOf(keyNoDashes);
+        }
         return idx == -1 ? -1 : idx + 1;
     }
 
