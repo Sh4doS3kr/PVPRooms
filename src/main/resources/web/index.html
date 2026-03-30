@@ -379,14 +379,52 @@ function kitBadge(kitName, tierName, pts, highlight){
 
 /* ── Region detection ──────────────────────────────────────────── */
 const COUNTRY_NAMES = {
-  'es':'España','us':'Estados Unidos','mx':'México','ar':'Argentina','co':'Colombia',
-  'pe':'Perú','cl':'Chile','ve':'Venezuela','ec':'Ecuador','gt':'Guatemala',
-  'cu':'Cuba','bo':'Bolivia','do':'Rep. Dominicana','hn':'Honduras','py':'Paraguay',
-  'sv':'El Salvador','ni':'Nicaragua','cr':'Costa Rica','pa':'Panamá','uy':'Uruguay',
-  'pr':'Puerto Rico','br':'Brasil','pt':'Portugal','fr':'Francia','de':'Alemania',
-  'it':'Italia','gb':'Reino Unido','nl':'Países Bajos','be':'Bélgica','pl':'Polonia',
-  'ru':'Rusia','ua':'Ucrania','jp':'Japón','cn':'China','kr':'Corea del Sur',
-  'au':'Australia','ca':'Canadá','in':'India','za':'Sudáfrica'
+  // Latinoamérica
+  'mx':'México','gt':'Guatemala','bz':'Belice','sv':'El Salvador','hn':'Honduras',
+  'ni':'Nicaragua','cr':'Costa Rica','pa':'Panamá','cu':'Cuba','do':'Rep. Dominicana',
+  'ht':'Haití','jm':'Jamaica','pr':'Puerto Rico','tt':'Trinidad y Tobago','bb':'Barbados',
+  'bs':'Bahamas','gd':'Granada','lc':'Santa Lucía','vc':'San Vicente','ag':'Antigua y Barbuda',
+  'dm':'Dominica','kn':'San Cristóbal','aw':'Aruba','cw':'Curazao','sx':'San Martín',
+  'co':'Colombia','ve':'Venezuela','ec':'Ecuador','pe':'Perú','bo':'Bolivia',
+  'cl':'Chile','ar':'Argentina','uy':'Uruguay','py':'Paraguay','br':'Brasil',
+  'gy':'Guyana','sr':'Surinam','gf':'Guayana Francesa',
+  // Norteamérica
+  'us':'Estados Unidos','ca':'Canadá',
+  // Europa
+  'es':'España','pt':'Portugal','ad':'Andorra','fr':'Francia','mc':'Mónaco',
+  'it':'Italia','va':'Vaticano','sm':'San Marino','mt':'Malta','gb':'Reino Unido',
+  'ie':'Irlanda','de':'Alemania','at':'Austria','ch':'Suiza','li':'Liechtenstein',
+  'be':'Bélgica','nl':'Países Bajos','lu':'Luxemburgo','dk':'Dinamarca','se':'Suecia',
+  'no':'Noruega','fi':'Finlandia','is':'Islandia','ee':'Estonia','lv':'Letonia',
+  'lt':'Lituania','pl':'Polonia','cz':'Chequia','sk':'Eslovaquia','hu':'Hungría',
+  'ro':'Rumanía','bg':'Bulgaria','hr':'Croacia','si':'Eslovenia','ba':'Bosnia',
+  'rs':'Serbia','me':'Montenegro','mk':'Macedonia','al':'Albania','gr':'Grecia',
+  'cy':'Chipre','tr':'Turquía','ru':'Rusia','ua':'Ucrania','by':'Bielorrusia',
+  'md':'Moldavia','ge':'Georgia','am':'Armenia','az':'Azerbaiyán',
+  // Asia
+  'jp':'Japón','cn':'China','kr':'Corea del Sur','kp':'Corea del Norte','tw':'Taiwán',
+  'hk':'Hong Kong','mo':'Macao','mn':'Mongolia','th':'Tailandia','vn':'Vietnam',
+  'la':'Laos','kh':'Camboya','mm':'Myanmar','my':'Malasia','sg':'Singapur',
+  'id':'Indonesia','ph':'Filipinas','bn':'Brunéi','tl':'Timor Oriental',
+  'in':'India','pk':'Pakistán','bd':'Bangladesh','np':'Nepal','bt':'Bután',
+  'lk':'Sri Lanka','mv':'Maldivas','af':'Afganistán','ir':'Irán','iq':'Irak',
+  'sy':'Siria','lb':'Líbano','jo':'Jordania','il':'Israel','ps':'Palestina',
+  'sa':'Arabia Saudita','ae':'Emiratos Árabes','qa':'Catar','kw':'Kuwait','bh':'Baréin',
+  'om':'Omán','ye':'Yemen','uz':'Uzbekistán','kz':'Kazajistán','tm':'Turkmenistán',
+  'kg':'Kirguistán','tj':'Tayikistán',
+  // África
+  'za':'Sudáfrica','eg':'Egipto','ma':'Marruecos','dz':'Argelia','tn':'Túnez',
+  'ly':'Libia','ng':'Nigeria','gh':'Ghana','ke':'Kenia','et':'Etiopía',
+  'tz':'Tanzania','ug':'Uganda','rw':'Ruanda','cd':'R.D. Congo','cg':'Congo',
+  'cm':'Camerún','ci':'Costa de Marfil','sn':'Senegal','ml':'Malí','bf':'Burkina Faso',
+  'ne':'Níger','td':'Chad','sd':'Sudán','ss':'Sudán del Sur','er':'Eritrea',
+  'dj':'Yibuti','so':'Somalia','ao':'Angola','mz':'Mozambique','zw':'Zimbabue',
+  'bw':'Botsuana','na':'Namibia','zm':'Zambia','mw':'Malaui','mg':'Madagascar',
+  'mu':'Mauricio','sc':'Seychelles',
+  // Oceanía
+  'au':'Australia','nz':'Nueva Zelanda','fj':'Fiyi','pg':'Papúa Nueva Guinea',
+  'ws':'Samoa','to':'Tonga','vu':'Vanuatu','sb':'Islas Salomón','nc':'Nueva Caledonia',
+  'pf':'Polinesia Francesa','gu':'Guam'
 };
 
 async function detectRegion(){
