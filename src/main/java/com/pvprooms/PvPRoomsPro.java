@@ -222,7 +222,58 @@ public class PvPRoomsPro extends JavaPlugin {
         // Cancel all scheduled tasks owned by this plugin
         Bukkit.getScheduler().cancelTasks(this);
 
+        // Clean up all arena instance worlds (pvp_match_*)
+        cleanupArenaWorlds();
+
         getLogger().info("PvPRoomsPro disabled.");
+    }
+
+    /**
+     * Deletes all pvp_match_* arena world folders on shutdown.
+     */
+    private void cleanupArenaWorlds() {
+        File serverFolder = Bukkit.getWorldContainer();
+        File[] worldFolders = serverFolder.listFiles((dir, name) -> 
+            name.startsWith("pvp_match_") || name.startsWith("arena_bot_"));
+        
+        if (worldFolders == null || worldFolders.length == 0) {
+            return;
+        }
+
+        getLogger().info("[Cleanup] Eliminando " + worldFolders.length + " mundos de arena...");
+        
+        for (File worldFolder : worldFolders) {
+            // Unload world first if loaded
+            World world = Bukkit.getWorld(worldFolder.getName());
+            if (world != null) {
+                // Teleport any players out first
+                for (org.bukkit.entity.Player p : world.getPlayers()) {
+                    p.teleport(getLobbySpawn());
+                }
+                Bukkit.unloadWorld(world, false);
+            }
+            
+            // Delete folder recursively
+            deleteFolder(worldFolder);
+        }
+        
+        getLogger().info("[Cleanup] Limpieza de arenas completada.");
+    }
+
+    private void deleteFolder(File folder) {
+        if (folder == null || !folder.exists()) return;
+        
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    deleteFolder(file);
+                } else {
+                    file.delete();
+                }
+            }
+        }
+        folder.delete();
     }
 
     // ── Registration helpers ───────────────────────────────────────────────
