@@ -116,7 +116,7 @@ public class HealthHologramManager {
     }
 
     private double maxHp(Player player) {
-        var attr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        var attr = player.getAttribute(Attribute.MAX_HEALTH);
         return attr != null ? attr.getValue() : 20.0;
     }
 }

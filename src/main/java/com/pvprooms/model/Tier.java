@@ -3,35 +3,41 @@ package com.pvprooms.model;
 import org.bukkit.Material;
 
 /**
- * MCTiers official ranking system.
+ * MCTiers competitive ranking system.
+ *
+ * Sistema de puntos DIFÍCIL - requiere muchas victorias:
+ *   - Ganas ~8-12 puntos por victoria (según diferencia de tier)
+ *   - Pierdes ~6-10 puntos por derrota
+ *   - Necesitas ~15-25 victorias para subir cada tier
+ *   - Tiers Elite (LT2+) requieren verificación manual
  *
  * Order from lowest (ordinal 0) to highest (ordinal 10):
- *   0  UNRANKED — never played           pts < 0
- *   1  LT5      — Low Tier 5 (Beginner)  pts 0+
- *   2  HT5      — High Tier 5            pts 50+
- *   3  LT4      — Low Tier 4             pts 150+
- *   4  HT4      — High Tier 4            pts 300+
- *   5  LT3      — Low Tier 3             pts 500+
- *   6  HT3      — High Tier 3            pts 750+
- *   7  LT2      — Low Tier 2             pts 1100+
- *   8  HT2      — High Tier 2            pts 1500+
- *   9  LT1      — Low Tier 1             pts 2000+
- *  10  HT1      — High Tier 1 (Elite)    pts 2800+
+ *   0  UNRANKED — never played              pts < 0
+ *   1  LT5      — Low Tier 5 (Beginner)     pts 0+    (~0 wins)
+ *   2  HT5      — High Tier 5               pts 200+  (~20 wins)
+ *   3  LT4      — Low Tier 4                pts 500+  (~50 wins)
+ *   4  HT4      — High Tier 4               pts 900+  (~90 wins)
+ *   5  LT3      — Low Tier 3                pts 1400+ (~140 wins)
+ *   6  HT3      — High Tier 3               pts 2000+ (~200 wins)
+ *   7  LT2      — Low Tier 2 (Elite)        pts 3000+ (Verificación)
+ *   8  HT2      — High Tier 2 (Elite)       pts 4500+ (Verificación)
+ *   9  LT1      — Low Tier 1 (Elite)        pts 6500+ (Verificación)
+ *  10  HT1      — High Tier 1 (Elite)       pts 9000+ (Verificación)
  */
 public enum Tier {
 
     //                    minElo  minPts  display     colour    icon
     UNRANKED  (    0,    -1, "Unranked",  "§7",     Material.GRAY_CONCRETE),
     LT5       (  800,     0, "LT5",       "§9",     Material.LIGHT_BLUE_DYE),
-    HT5       (  900,    50, "HT5",       "§b",     Material.LIGHT_BLUE_CONCRETE),
-    LT4       ( 1000,   150, "LT4",       "§a",     Material.LIME_DYE),
-    HT4       ( 1100,   300, "HT4",       "§2",     Material.LIME_CONCRETE),
-    LT3       ( 1250,   500, "LT3",       "§e",     Material.YELLOW_DYE),
-    HT3       ( 1400,   750, "HT3",       "§6",     Material.ORANGE_CONCRETE),
-    LT2       ( 1600,  1100, "LT2",       "§c",     Material.ORANGE_DYE),
-    HT2       ( 1850,  1500, "HT2",       "§4",     Material.RED_CONCRETE),
-    LT1       ( 2150,  2000, "LT1",       "§d",     Material.PINK_DYE),
-    HT1       ( 2500,  2800, "HT1",       "§c§l",   Material.RED_DYE);
+    HT5       (  900,   200, "HT5",       "§b",     Material.LIGHT_BLUE_CONCRETE),
+    LT4       ( 1000,   500, "LT4",       "§a",     Material.LIME_DYE),
+    HT4       ( 1100,   900, "HT4",       "§2",     Material.LIME_CONCRETE),
+    LT3       ( 1250,  1400, "LT3",       "§e",     Material.YELLOW_DYE),
+    HT3       ( 1400,  2000, "HT3",       "§6",     Material.ORANGE_CONCRETE),
+    LT2       ( 1600,  3000, "LT2",       "§c",     Material.ORANGE_DYE),      // Elite - Verificación
+    HT2       ( 1850,  4500, "HT2",       "§4",     Material.RED_CONCRETE),    // Elite - Verificación
+    LT1       ( 2150,  6500, "LT1",       "§d",     Material.PINK_DYE),        // Elite - Verificación
+    HT1       ( 2500,  9000, "HT1",       "§c§l",   Material.RED_DYE);         // Elite - Verificación
 
     /** Minimum ELO required to reach this tier (ELO queue). */
     public final int      minElo;

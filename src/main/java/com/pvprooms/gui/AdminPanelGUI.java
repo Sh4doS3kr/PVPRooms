@@ -33,6 +33,7 @@ public class AdminPanelGUI {
     public static final int SLOT_FORCEEND      = 19;
     public static final int SLOT_RELOAD        = 27;
     public static final int SLOT_INFO          = 28;
+    public static final int SLOT_PRESET_KITS   = 29;
     public static final int SLOT_RESET_ALL     = 36;
     public static final int SLOT_CLOSE         = 49;
 
@@ -96,7 +97,17 @@ public class AdminPanelGUI {
                 List.of("&7Recarga config.yml sin reiniciar.", "", "&fUso: &e/admin reload")));
         inv.setItem(SLOT_INFO, btn(Material.WRITABLE_BOOK, "&b&lInfo del plugin",
                 List.of("&7Muestra versión y estado del plugin.", "", "&fUso: &e/admin info")));
-        for (int i = 29; i <= 35; i++) inv.setItem(i, sep());
+        inv.setItem(SLOT_PRESET_KITS, btn(Material.CHEST, "&6&l⚔ Instalar Kits Oficiales",
+                List.of("&7Instala los kits oficiales de PvP:", "",
+                        "&e• Sword &8- Classic 1.9+",
+                        "&e• AxePvP &8- Vanilla Axe combat", 
+                        "&e• Nethpot &8- Netherite + Potions",
+                        "&e• UHC &8- Ultra Hardcore",
+                        "&e• SMP &8- Survival full gear",
+                        "&e• Crystal &8- Crystal PvP",
+                        "&e• Mace &8- 1.21 Mace combat", "",
+                        "&aClick para instalar todos los kits")));
+        for (int i = 30; i <= 35; i++) inv.setItem(i, sep());
 
         // ── Row 4: Danger zone ───────────────────────────────────────────────
         inv.setItem(SLOT_RESET_ALL, btn(Material.BARRIER, "&4&l☠ RESETEAR TODO",

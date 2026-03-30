@@ -222,16 +222,17 @@
           <h4>📋 Requisitos por Tier</h4>
           <div class="tier-reqs">
             <div class="tier-req"><span class="req-tier lt5">LT5</span><span class="req-text">0+ pts · Sin requisitos</span></div>
-            <div class="tier-req"><span class="req-tier ht5">HT5</span><span class="req-text">50+ pts · Mínimo 10 partidas</span></div>
-            <div class="tier-req"><span class="req-tier lt4">LT4</span><span class="req-text">150+ pts · Winrate > 45%</span></div>
-            <div class="tier-req"><span class="req-tier ht4">HT4</span><span class="req-text">300+ pts · Winrate > 50% · KDR > 1.0</span></div>
-            <div class="tier-req"><span class="req-tier lt3">LT3</span><span class="req-text">500+ pts · Winrate > 52% · ELO > 1100</span></div>
-            <div class="tier-req"><span class="req-tier ht3">HT3</span><span class="req-text">750+ pts · Winrate > 55% · ELO > 1300 · KDR > 1.5</span></div>
-            <div class="tier-req"><span class="req-tier lt2">LT2</span><span class="req-text">1100+ pts · Winrate > 58% · ELO > 1500 · 3+ kits en HT4+</span></div>
-            <div class="tier-req"><span class="req-tier ht2">HT2</span><span class="req-text">1500+ pts · Winrate > 62% · ELO > 1800 · KDR > 2.0</span></div>
-            <div class="tier-req"><span class="req-tier lt1">LT1</span><span class="req-text">2000+ pts · Winrate > 65% · ELO > 2100 · 5+ kits en HT3+</span></div>
-            <div class="tier-req"><span class="req-tier ht1">HT1</span><span class="req-text">2800+ pts · Winrate > 70% · ELO > 2400 · KDR > 2.5 · Top 10 servidor</span></div>
+            <div class="tier-req"><span class="req-tier ht5">HT5</span><span class="req-text">200+ pts · Progreso automático</span></div>
+            <div class="tier-req"><span class="req-tier lt4">LT4</span><span class="req-text">500+ pts · Progreso automático</span></div>
+            <div class="tier-req"><span class="req-tier ht4">HT4</span><span class="req-text">900+ pts · Progreso automático</span></div>
+            <div class="tier-req"><span class="req-tier lt3">LT3</span><span class="req-text">1400+ pts · Progreso automático</span></div>
+            <div class="tier-req"><span class="req-tier ht3">HT3</span><span class="req-text">2000+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
+            <div class="tier-req"><span class="req-tier lt2">LT2</span><span class="req-text">3000+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
+            <div class="tier-req"><span class="req-tier ht2">HT2</span><span class="req-text">4500+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
+            <div class="tier-req"><span class="req-tier lt1">LT1</span><span class="req-text">6500+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
+            <div class="tier-req"><span class="req-tier ht1">HT1</span><span class="req-text">9000+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
           </div>
+          <p style="margin-top:0.75rem;font-size:0.85rem;color:#9ca3af;">⚠️ A partir de <strong style="color:#f97316">HT3</strong> se requiere verificación via ticket en <a href="https://discord.mlmc.lat" target="_blank" style="color:#60a5fa;">discord.mlmc.lat</a></p>
         </div>
 
         <div class="info-box warning">
@@ -263,7 +264,17 @@
               <ul>
                 <li><span class="req-tier ht3">HT3</span> <span class="req-tier lt2">LT2</span> <span class="req-tier ht2">HT2</span> <span class="req-tier lt1">LT1</span> <span class="req-tier ht1">HT1</span></li>
               </ul>
-              <p class="verify-note"><strong>Requisitos adicionales:</strong></p>
+              
+              <p class="verify-note" style="margin-top:1rem;"><strong>📋 Proceso de verificación via ticket:</strong></p>
+              <ol class="verify-reqs" style="list-style:decimal;padding-left:1.5rem;">
+                <li>Abre un ticket en <a href="https://discord.mlmc.lat" target="_blank" style="color:#60a5fa;text-decoration:underline;">discord.mlmc.lat</a></li>
+                <li>Se te asignará un <strong>Tester de tu nivel</strong> (HT3+)</li>
+                <li><strong>Debes GRABAR</strong> todo el test completo</li>
+                <li>El Tester te evaluará en partidas BO3/BO5</li>
+                <li>Según el resultado, se te asignará tu tier</li>
+              </ol>
+              
+              <p class="verify-note" style="margin-top:1rem;"><strong>✓ Requisitos adicionales:</strong></p>
               <ul class="verify-reqs">
                 <li>Mínimo <strong>5 victorias</strong> contra jugadores HT3+</li>
                 <li>Mantener el tier durante <strong>7 días</strong> consecutivos</li>
@@ -356,6 +367,11 @@ const KIT_ITEMS = {
   smpkit:'lava_bucket',smp:'lava_bucket',
   overall:'nether_star'
 };
+// Custom image URLs for specific kits
+const KIT_CUSTOM_URLS = {
+  spear:'https://minecraft.wiki/images/Netherite_Spear_JE1_BE2.png?8c3ba',
+  lanza:'https://minecraft.wiki/images/Netherite_Spear_JE1_BE2.png?8c3ba'
+};
 const REGION_CC = {EU:'eu',NA:'us',AS:'jp',SA:'br',OC:'au',AF:'za'};
 
 function slug(n){return(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-');}
@@ -364,7 +380,7 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function tc(t){return TIER_COLS[slug(t)]||'#8899bb';}
 function mcImg(name){return MC+(name||'diamond_sword')+'.png';}
 function tierImg(t){return mcImg(TIER_ITEMS[slug(t)]);}
-function kitImg(k){return mcImg(KIT_ITEMS[slug(k)]||'diamond_sword');}
+function kitImg(k){const s=slug(k);return KIT_CUSTOM_URLS[s]||mcImg(KIT_ITEMS[s]||'diamond_sword');}
 function regionCC(r){return REGION_CC[(r||'').toUpperCase()]||'eu';}
 function flagImg(cc,sz=18){
   const h = Math.round(sz*0.66);

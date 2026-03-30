@@ -34,12 +34,28 @@ import java.util.stream.Collectors;
  */
 public class TierManager {
 
-    // ── Constantes de puntos ──────────────────────────────────────────────
-    public static final int WIN_BASE         = 18;
-    public static final int LOSS_BASE        = 12;
-    public static final int TIER_DIFF_BONUS  = 4;   // por cada tier de diferencia
-    public static final int MIN_LOSS         = 5;
-    public static final int MAX_WIN          = 35;
+    // ══════════════════════════════════════════════════════════════════════
+    // SISTEMA DE PUNTOS COMPETITIVO
+    // ══════════════════════════════════════════════════════════════════════
+    // Base: ~10 puntos por victoria, ~8 por derrota
+    // Necesitas ~20 victorias NETAS para subir de LT5 a HT5
+    // Necesitas ~200+ victorias totales para llegar a HT3
+    // Tiers Elite (LT2+) requieren verificación manual via Discord
+    // ══════════════════════════════════════════════════════════════════════
+    
+    public static final int WIN_BASE         = 10;   // Puntos base por victoria
+    public static final int LOSS_BASE        = 8;    // Puntos base perdidos por derrota
+    public static final int TIER_DIFF_BONUS  = 3;    // Bonus por vencer a tier superior
+    public static final int MIN_LOSS         = 4;    // Mínimo que pierdes
+    public static final int MAX_WIN          = 20;   // Máximo que ganas
+    public static final int MIN_WIN          = 5;    // Mínimo que ganas
+    
+    // Bonus por rachas
+    public static final int STREAK_BONUS     = 2;    // Bonus extra por racha de 3+
+    public static final int MAX_STREAK_BONUS = 10;   // Máximo bonus por racha
+    
+    // Tracking de rachas
+    private final Map<UUID, Integer> winStreaks = new HashMap<>();
 
     private final PvPRoomsPro plugin;
     private final File dataFile;
@@ -110,8 +126,10 @@ public class TierManager {
 
     /**
      * Registra el resultado de un match BO3 completo.
-     * Ajusta puntos según diferencia de tier entre los jugadores.
-     * Si el ganador sube de rango, se le notifica con título y mensaje.
+     * Sistema competitivo complejo:
+     *   - Puntos base + bonus por tier difference
+     *   - Bonus por rachas de victorias
+     *   - Elite tiers (LT2+) tienen cap - requieren verificación manual
      */
     public void recordResult(UUID winnerUUID, UUID loserUUID, String kitName) {
         String kit = kitName.toLowerCase();
@@ -122,22 +140,84 @@ public class TierManager {
         Tier wTierBefore = Tier.fromPoints(wPts);
         Tier lTier       = Tier.fromPoints(lPts);
 
-        // tierDiff > 0 → ganador tenía tier menor que perdedor (upset)
-        int tierDiff   = lTier.ordinal() - wTierBefore.ordinal();
-        int winGain    = Math.min(WIN_BASE  + Math.max(0, tierDiff)  * TIER_DIFF_BONUS, MAX_WIN);
-        int lossDeduct = Math.max(LOSS_BASE - Math.max(0, -tierDiff) * TIER_DIFF_BONUS, MIN_LOSS);
-
+        // ═══════════════════════════════════════════════════════════════════
+        // CÁLCULO DE PUNTOS GANADOS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // tierDiff > 0 → ganador tenía tier menor que perdedor (upset = más puntos)
+        int tierDiff = lTier.ordinal() - wTierBefore.ordinal();
+        
+        // Base + bonus por vencer a tier superior
+        int winGain = WIN_BASE + Math.max(0, tierDiff) * TIER_DIFF_BONUS;
+        
+        // Actualizar racha del ganador
+        int currentStreak = winStreaks.getOrDefault(winnerUUID, 0) + 1;
+        winStreaks.put(winnerUUID, currentStreak);
+        
+        // Bonus por racha (a partir de 3 victorias seguidas)
+        if (currentStreak >= 3) {
+            int streakBonus = Math.min((currentStreak - 2) * STREAK_BONUS, MAX_STREAK_BONUS);
+            winGain += streakBonus;
+        }
+        
+        // Aplicar límites
+        winGain = Math.max(MIN_WIN, Math.min(winGain, MAX_WIN));
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // CÁLCULO DE PUNTOS PERDIDOS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // Pierdes menos si el oponente era de tier superior
+        int lossDeduct = LOSS_BASE - Math.max(0, -tierDiff) * TIER_DIFF_BONUS;
+        lossDeduct = Math.max(MIN_LOSS, lossDeduct);
+        
+        // Resetear racha del perdedor
+        winStreaks.put(loserUUID, 0);
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // CAP PARA TIERS ELITE (LT2+) - Requieren verificación manual
+        // ═══════════════════════════════════════════════════════════════════
         int newWPts = wPts + winGain;
+        
+        // Si el jugador alcanzaría LT2 (3000 pts), cap a 2999 sin verificación
+        // Los admins deben usar /admin settier para verificar jugadores elite
+        if (wTierBefore.ordinal() < Tier.LT2.ordinal() && newWPts >= Tier.LT2.minPoints) {
+            newWPts = Tier.LT2.minPoints - 1; // Cap justo debajo de LT2
+            Player winner = Bukkit.getPlayer(winnerUUID);
+            if (winner != null) {
+                winner.sendMessage(plugin.prefix() + "§d§l⚡ ¡HAS ALCANZADO EL LÍMITE DE HT3!");
+                winner.sendMessage(plugin.prefix() + "§7Para subir a §cTiers Elite §7(LT2+), necesitas:");
+                winner.sendMessage("§7  • Abrir ticket en §b§ndiscord.mlmc.lat");
+                winner.sendMessage("§7  • Verificación por un admin");
+            }
+        }
+        
         int newLPts = Math.max(0, lPts - lossDeduct);
 
         setPts(winnerUUID, kit, newWPts);
         setPts(loserUUID,  kit, newLPts);
         save();
 
-        // ── Notificar subida de rango al ganador ──────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // NOTIFICACIONES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        Player winner = Bukkit.getPlayer(winnerUUID);
+        Player loser = Bukkit.getPlayer(loserUUID);
         Tier wTierAfter = Tier.fromPoints(newWPts);
+        
+        // Mostrar puntos ganados/perdidos
+        if (winner != null) {
+            String streakMsg = currentStreak >= 3 ? " §6(Racha x" + currentStreak + ")" : "";
+            winner.sendMessage(plugin.prefix() + "§a+" + winGain + " puntos" + streakMsg + 
+                    " §8[§f" + newWPts + "§7/" + getNextTierPoints(wTierAfter) + "§8]");
+        }
+        if (loser != null) {
+            loser.sendMessage(plugin.prefix() + "§c-" + lossDeduct + " puntos §8[§f" + newLPts + "§8]");
+        }
+        
+        // Notificar subida de rango
         if (wTierAfter.ordinal() > wTierBefore.ordinal()) {
-            Player winner = Bukkit.getPlayer(winnerUUID);
             if (winner != null) {
                 String prefix = plugin.prefix();
                 winner.sendMessage(prefix + "§6§l▲ ¡SUBISTE DE RANGO!");
@@ -152,6 +232,26 @@ public class TierManager {
                         org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
             }
         }
+        
+        // Notificar bajada de rango
+        Tier lTierAfter = Tier.fromPoints(newLPts);
+        if (lTierAfter.ordinal() < lTier.ordinal() && loser != null) {
+            loser.sendMessage(plugin.prefix() + "§c§l▼ BAJASTE DE RANGO");
+            loser.sendMessage(plugin.prefix() + "  §8" + lTier.colour + lTier.displayName
+                    + " §8→ §r" + lTierAfter.colour + lTierAfter.displayName);
+        }
+    }
+    
+    /**
+     * Returns the points needed for the next tier.
+     */
+    private int getNextTierPoints(Tier currentTier) {
+        Tier[] tiers = Tier.values();
+        int nextOrdinal = currentTier.ordinal() + 1;
+        if (nextOrdinal < tiers.length) {
+            return tiers[nextOrdinal].minPoints;
+        }
+        return currentTier.minPoints; // Already max tier
     }
 
     private int effectivePts(UUID uuid, String kit) {
@@ -162,6 +262,15 @@ public class TierManager {
     private void setPts(UUID uuid, String kit, int points) {
         pointsByKit.computeIfAbsent(uuid, k -> new LinkedHashMap<>())
                    .put(kit, Math.max(0, points));
+    }
+
+    /**
+     * Sets a player's tier points directly (for admin verification of elite tiers).
+     * Elite tiers (LT2, HT2, LT1, HT1) require verification via Discord ticket.
+     */
+    public void setPoints(UUID uuid, String kitName, int points) {
+        setPts(uuid, kitName.toLowerCase(), points);
+        save();
     }
 
     // ── Consultas de tier ────────────────────────────────────────────────
@@ -185,41 +294,12 @@ public class TierManager {
                    .orElse(Tier.UNRANKED);
     }
 
-    /**
-     * Sincroniza los puntos del jugador para un kit basándose en su ELO.
-     * Se llama tras un duelo ELO para mantener TierManager coherente con el scoreboard.
-     * Solo sube puntos, nunca los reduce por sincronización.
-     */
-    public void syncFromElo(UUID uuid, String kitName, int elo) {
-        Tier eloTier = Tier.fromElo(elo);
-        if (eloTier == Tier.UNRANKED) return;
-        String kit   = kitName.toLowerCase();
-        int current  = effectivePts(uuid, kit);
-        int eloFloor = eloTier.minPoints; // puntos mínimos de ese tier
-        if (eloFloor > current) {
-            Tier before = Tier.fromPoints(current);
-            setPts(uuid, kit, eloFloor);
-            save();
-            // Notificar subida de rango si aplica
-            Tier after = Tier.fromPoints(eloFloor);
-            if (after.ordinal() > before.ordinal()) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
-                    String prefix = plugin.prefix();
-                    player.sendMessage(prefix + "§6§l▲ ¡SUBISTE DE RANGO!");
-                    player.sendMessage(prefix + "  §8" + before.colour + before.displayName
-                            + " §8→ §r" + after.colour + "§l" + after.displayName);
-                    player.sendTitle(
-                            ChatColor.translateAlternateColorCodes('&', "&6&l▲ SUBISTE DE RANGO"),
-                            ChatColor.translateAlternateColorCodes('&',
-                                    after.colour.replace("§", "&") + "&l" + after.displayName),
-                            10, 80, 20);
-                    player.playSound(player.getLocation(),
-                            org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
-                }
-            }
-        }
-    }
+    // ═══════════════════════════════════════════════════════════════════════
+    // NOTA: ELO y TIER son sistemas INDEPENDIENTES
+    // - Cola ELO → solo afecta ELO (EloManager)
+    // - Cola TIER → solo afecta puntos de tier (TierManager)
+    // NO sincronizar entre ellos
+    // ═══════════════════════════════════════════════════════════════════════
 
     /** Puntuación total = suma de tierScore() de cada kit jugado. */
     public int getTotalScore(UUID uuid) {

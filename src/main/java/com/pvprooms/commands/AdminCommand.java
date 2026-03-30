@@ -4,6 +4,8 @@ import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.ArenaTemplate;
 import com.pvprooms.model.Duel;
 import com.pvprooms.weapons.SpearItem;
+import com.pvprooms.util.PresetKits;
+import com.pvprooms.model.Tier;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -98,6 +100,9 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "info" -> handleInfo(sender);
             case "spear"     -> handleSpear(sender, args);
             case "resetall"  -> handleResetAll(sender, args);
+            case "createkit" -> handleCreateKit(sender, args);
+            case "settier"   -> handleSetTier(sender, args);
+            case "mc", "multiaccount" -> handleMultiaccount(sender, args);
             default -> sendHelp(sender);
         }
         return true;
@@ -131,6 +136,107 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendMessage(plugin.prefix() + "§c§lTus estadísticas han sido reseteadas por un administrador.");
             plugin.getScoreboardManager().restoreLobbyScoreboard(p);
+        }
+    }
+
+    // ── Create preset kit ─────────────────────────────────────────────────
+
+    private void handleCreateKit(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(plugin.prefix() + "§cUso: /admin createkit <nombre>");
+            sender.sendMessage(plugin.prefix() + "§7Kits disponibles: §esword, axepvp, nethpot, uhc, smp, crystal, mace, spear, all");
+            return;
+        }
+
+        String kitName = args[1].toLowerCase();
+
+        if (kitName.equals("all")) {
+            int count = PresetKits.installAllPresets(plugin);
+            sender.sendMessage(plugin.prefix() + "§a✔ Se han instalado §e" + count + " §akits oficiales.");
+            sender.sendMessage("§7  • §bSword §8- §7Classic 1.9+");
+            sender.sendMessage("§7  • §6AxePvP §8- §7Vanilla Axe combat");
+            sender.sendMessage("§7  • §dNethpot §8- §7Netherite Pot PvP");
+            sender.sendMessage("§7  • §eUHC §8- §7Ultra Hardcore");
+            sender.sendMessage("§7  • §2SMP §8- §7Survival full gear");
+            sender.sendMessage("§7  • §5Crystal §8- §7Crystal PvP");
+            sender.sendMessage("§7  • §8Mace §8- §71.21 Mace combat");
+            sender.sendMessage("§7  • §3Spear §8- §7Trident + Attribute Swap");
+            return;
+        }
+
+        if (PresetKits.installPreset(plugin, kitName)) {
+            sender.sendMessage(plugin.prefix() + "§a✔ Kit §e" + kitName + " §ainstalado correctamente.");
+            sender.sendMessage(plugin.prefix() + "§7Usa §e/queue §7para probarlo.");
+        } else {
+            sender.sendMessage(plugin.prefix() + "§cKit §e" + kitName + " §cno encontrado.");
+            sender.sendMessage(plugin.prefix() + "§7Kits disponibles: §esword, axepvp, nethpot, uhc, smp, crystal, mace, spear, all");
+        }
+    }
+
+    // ── Set Tier (Elite verification via Discord ticket) ──────────────────
+
+    private void handleSetTier(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            sender.sendMessage(plugin.prefix() + "§cUso: /admin settier <jugador> <tier> <kit>");
+            sender.sendMessage(plugin.prefix() + "§7Tiers: §eLT5, HT5, LT4, HT4, LT3, HT3, LT2, HT2, LT1, HT1");
+            sender.sendMessage("");
+            sender.sendMessage(plugin.prefix() + "§d§l⚡ TIERS ÉLITE (LT2+)");
+            sender.sendMessage("§7Los tiers §cLT2, HT2, LT1, HT1 §7son de élite.");
+            sender.sendMessage("§7Requieren verificación via ticket en:");
+            sender.sendMessage("§b§n discord.mlmc.lat");
+            return;
+        }
+
+        String playerName = args[1];
+        String tierName = args[2].toUpperCase();
+        String kitName = args[3].toLowerCase();
+
+        // Resolve player UUID
+        UUID uuid = resolveUUID(playerName);
+        if (uuid == null) {
+            sender.sendMessage(plugin.prefix() + "§cJugador §e" + playerName + " §cno encontrado.");
+            return;
+        }
+
+        // Parse tier
+        Tier tier;
+        try {
+            tier = Tier.valueOf(tierName);
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(plugin.prefix() + "§cTier §e" + tierName + " §cno válido.");
+            sender.sendMessage(plugin.prefix() + "§7Tiers: §eLT5, HT5, LT4, HT4, LT3, HT3, LT2, HT2, LT1, HT1");
+            return;
+        }
+
+        // Verify kit exists
+        if (!plugin.getKitManager().kitExists(kitName)) {
+            sender.sendMessage(plugin.prefix() + "§cKit §e" + kitName + " §cno existe.");
+            return;
+        }
+
+        // Calculate points needed for this tier
+        int points = tier.minPoints;
+        if (points < 0) points = 0;
+
+        // Set the tier points directly
+        plugin.getTierManager().setPoints(uuid, kitName, points);
+
+        // Notify
+        String tierDisplay = tier.formatted();
+        sender.sendMessage(plugin.prefix() + "§a✔ Tier de §e" + playerName + " §aen §e" + kitName + " §aestablecido a " + tierDisplay);
+        
+        // Check if elite tier
+        if (tier.ordinal() >= Tier.LT2.ordinal()) {
+            sender.sendMessage(plugin.prefix() + "§d⚡ §7Tier de élite asignado via verificación.");
+        }
+
+        // Notify player if online
+        Player target = Bukkit.getPlayer(uuid);
+        if (target != null) {
+            target.sendMessage(plugin.prefix() + "§d§l⚡ ¡TIER ÉLITE VERIFICADO!");
+            target.sendMessage(plugin.prefix() + "§7Tu tier en §e" + kitName + " §7ha sido establecido a " + tierDisplay);
+            target.sendMessage(plugin.prefix() + "§7Verificado por: §e" + sender.getName());
+            plugin.getScoreboardManager().restoreLobbyScoreboard(target);
         }
     }
 
@@ -416,26 +522,148 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§8§m══════════════════════════════");
     }
 
+    // ── Anti-Multiaccount ─────────────────────────────────────────────────
+
+    private void handleMultiaccount(CommandSender sender, String[] args) {
+        var antiMc = plugin.getAntiMultiaccount();
+        if (antiMc == null) {
+            sender.sendMessage(plugin.prefix() + "§cSistema anti-multicuenta no disponible.");
+            return;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage(plugin.prefix() + "§e/admin mc whitelist <ip|player> <valor> §8- §7Añadir a whitelist");
+            sender.sendMessage(plugin.prefix() + "§e/admin mc unwhitelist <ip|player> <valor> §8- §7Quitar de whitelist");
+            sender.sendMessage(plugin.prefix() + "§e/admin mc check <jugador> §8- §7Ver IP y cuentas asociadas");
+            sender.sendMessage(plugin.prefix() + "§e/admin mc list §8- §7Ver whitelist");
+            return;
+        }
+
+        switch (args[1].toLowerCase()) {
+            case "whitelist" -> {
+                if (args.length < 4) {
+                    sender.sendMessage(plugin.prefix() + "§cUso: /admin mc whitelist <ip|player> <valor>");
+                    return;
+                }
+                String type = args[2].toLowerCase();
+                String value = args[3];
+                
+                if (type.equals("ip")) {
+                    antiMc.whitelistIp(value);
+                    sender.sendMessage(plugin.prefix() + "§aIP §e" + value + " §aañadida a la whitelist.");
+                } else if (type.equals("player")) {
+                    Player target = Bukkit.getPlayer(value);
+                    if (target == null) {
+                        sender.sendMessage(plugin.prefix() + "§cJugador §e" + value + " §cno está online.");
+                        return;
+                    }
+                    antiMc.whitelistPlayer(target.getUniqueId());
+                    sender.sendMessage(plugin.prefix() + "§aJugador §e" + target.getName() + " §aañadido a la whitelist.");
+                } else {
+                    sender.sendMessage(plugin.prefix() + "§cTipo inválido. Usa: ip, player");
+                }
+            }
+            case "unwhitelist" -> {
+                if (args.length < 4) {
+                    sender.sendMessage(plugin.prefix() + "§cUso: /admin mc unwhitelist <ip|player> <valor>");
+                    return;
+                }
+                String type = args[2].toLowerCase();
+                String value = args[3];
+                
+                if (type.equals("ip")) {
+                    antiMc.unwhitelistIp(value);
+                    sender.sendMessage(plugin.prefix() + "§cIP §e" + value + " §celiminada de la whitelist.");
+                } else if (type.equals("player")) {
+                    Player target = Bukkit.getPlayer(value);
+                    if (target == null) {
+                        sender.sendMessage(plugin.prefix() + "§cJugador §e" + value + " §cno está online.");
+                        return;
+                    }
+                    antiMc.unwhitelistPlayer(target.getUniqueId());
+                    sender.sendMessage(plugin.prefix() + "§cJugador §e" + target.getName() + " §celiminado de la whitelist.");
+                } else {
+                    sender.sendMessage(plugin.prefix() + "§cTipo inválido. Usa: ip, player");
+                }
+            }
+            case "check" -> {
+                if (args.length < 3) {
+                    sender.sendMessage(plugin.prefix() + "§cUso: /admin mc check <jugador>");
+                    return;
+                }
+                Player target = Bukkit.getPlayer(args[2]);
+                if (target == null) {
+                    sender.sendMessage(plugin.prefix() + "§cJugador §e" + args[2] + " §cno está online.");
+                    return;
+                }
+                
+                String ip = antiMc.getPlayerIp(target);
+                sender.sendMessage(plugin.prefix() + "§eJugador: §f" + target.getName());
+                sender.sendMessage(plugin.prefix() + "§eIP: §f" + ip);
+                
+                var accounts = antiMc.getAccountsForIp(ip);
+                if (accounts.isEmpty()) {
+                    sender.sendMessage(plugin.prefix() + "§7No hay otras cuentas conocidas.");
+                } else {
+                    sender.sendMessage(plugin.prefix() + "§c⚠ Cuentas asociadas a esta IP (" + accounts.size() + "):");
+                    for (UUID uuid : accounts) {
+                        String name = Bukkit.getOfflinePlayer(uuid).getName();
+                        boolean online = Bukkit.getPlayer(uuid) != null;
+                        sender.sendMessage("§7  • §f" + (name != null ? name : uuid.toString().substring(0, 8)) 
+                                + (online ? " §a(online)" : " §8(offline)"));
+                    }
+                }
+            }
+            case "list" -> {
+                sender.sendMessage(plugin.prefix() + "§e=== Whitelist Anti-Multicuenta ===");
+                
+                var ips = antiMc.getWhitelistedIps();
+                if (ips.isEmpty()) {
+                    sender.sendMessage(plugin.prefix() + "§7IPs: §8(ninguna)");
+                } else {
+                    sender.sendMessage(plugin.prefix() + "§7IPs: §f" + String.join(", ", ips));
+                }
+                
+                var players = antiMc.getWhitelistedPlayers();
+                if (players.isEmpty()) {
+                    sender.sendMessage(plugin.prefix() + "§7Jugadores: §8(ninguno)");
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    for (UUID uuid : players) {
+                        String name = Bukkit.getOfflinePlayer(uuid).getName();
+                        if (sb.length() > 0) sb.append(", ");
+                        sb.append(name != null ? name : uuid.toString().substring(0, 8));
+                    }
+                    sender.sendMessage(plugin.prefix() + "§7Jugadores: §f" + sb);
+                }
+            }
+            default -> sender.sendMessage(plugin.prefix() + "§cSubcomando desconocido. Usa: whitelist, unwhitelist, check, list");
+        }
+    }
+
     // ── Help ──────────────────────────────────────────────────────────────
 
     private void sendHelp(CommandSender sender) {
         sender.sendMessage("§8§m══════════════════════════════════════");
         sender.sendMessage("§4§l  ⚙ Comandos de Administración");
         sender.sendMessage("§8§m══════════════════════════════════════");
-        sender.sendMessage("§e/adminpanel                        §8» §7Panel gráfico");
-        sender.sendMessage("§e/admin elo reset §f<jugador>        §8» §7Resetear ELO");
-        sender.sendMessage("§e/admin elo set §f<jugador> <valor>  §8» §7Establecer ELO");
-        sender.sendMessage("§e/admin elo get §f<jugador>          §8» §7Ver ELO");
-        sender.sendMessage("§e/admin elo resetall                §8» §7⚠ Resetear TODOS los ELO");
-        sender.sendMessage("§4/admin resetall confirm            §8» §c☠ BORRAR TODO (ELO+Tiers)");
-        sender.sendMessage("§e/admin kick §f<jugador>             §8» §7Sacar de cola/duelo");
-        sender.sendMessage("§e/admin forceend §f<jugador>         §8» §7Terminar duelo (empate)");
-        sender.sendMessage("§e/admin setupwall §f<id>             §8» §7Herramienta de muro");
-        sender.sendMessage("§e/admin setupwall §f<id> <bloque>    §8» §7Guardar muro");
-        sender.sendMessage("§e/admin config map §f[arena]         §8» §7Config del mapa (explosiones, bloques)");
-        sender.sendMessage("§e/admin travel §f<mundo>              §8» §7Teleportarse a un mundo");
-        sender.sendMessage("§e/admin reload                      §8» §7Recargar config");
-        sender.sendMessage("§e/admin info                        §8» §7Info del plugin");
+        sender.sendMessage("§e/adminpanel                        §8› §7Panel gráfico");
+        sender.sendMessage("§e/admin elo reset §f<jugador>        §8› §7Resetear ELO");
+        sender.sendMessage("§e/admin elo set §f<jugador> <valor>  §8› §7Establecer ELO");
+        sender.sendMessage("§e/admin elo get §f<jugador>          §8› §7Ver ELO");
+        sender.sendMessage("§e/admin elo resetall                §8› §7⚠ Resetear TODOS los ELO");
+        sender.sendMessage("§4/admin resetall confirm            §8› §c☠ BORRAR TODO (ELO+Tiers)");
+        sender.sendMessage("§e/admin kick §f<jugador>             §8› §7Sacar de cola/duelo");
+        sender.sendMessage("§e/admin forceend §f<jugador>         §8› §7Terminar duelo (empate)");
+        sender.sendMessage("§e/admin setupwall §f<id>             §8› §7Herramienta de muro");
+        sender.sendMessage("§e/admin setupwall §f<id> <bloque>    §8› §7Guardar muro");
+        sender.sendMessage("§e/admin config map §f[arena]         §8› §7Config del mapa (explosiones, bloques)");
+        sender.sendMessage("§e/admin travel §f<mundo>              §8› §7Teleportarse a un mundo");
+        sender.sendMessage("§e/admin createkit §f<nombre>          §8› §7Instalar kit oficial");
+        sender.sendMessage("§d/admin settier §f<user> <tier> <kit> §8› §7Verificar tier élite");
+        sender.sendMessage("§c/admin mc §f<whitelist|check|list>  §8› §7Anti-multicuenta");
+        sender.sendMessage("§e/admin reload                      §8› §7Recargar config");
+        sender.sendMessage("§e/admin info                        §8› §7Info del plugin");
         sender.sendMessage("§8§m══════════════════════════════════════");
     }
 
@@ -460,8 +688,64 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (label.equalsIgnoreCase("adminpanel")) return List.of();
 
         if (args.length == 1) {
-            return Arrays.asList("elo", "kick", "forceend", "setupwall", "config", "travel", "reload", "info").stream()
+            return Arrays.asList("elo", "kick", "forceend", "setupwall", "config", "travel", "createkit", "settier", "mc", "reload", "info").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+        // mc (multiaccount) tab completion
+        if (args[0].equalsIgnoreCase("mc")) {
+            if (args.length == 2) {
+                return Arrays.asList("whitelist", "unwhitelist", "check", "list").stream()
+                        .filter(s -> s.startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+            if (args.length == 3 && (args[1].equalsIgnoreCase("whitelist") || args[1].equalsIgnoreCase("unwhitelist"))) {
+                return Arrays.asList("ip", "player").stream()
+                        .filter(s -> s.startsWith(args[2].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+            if (args.length == 3 && args[1].equalsIgnoreCase("check")) {
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(n -> n.toLowerCase().startsWith(args[2].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+            if (args.length == 4 && args[2].equalsIgnoreCase("player")) {
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(n -> n.toLowerCase().startsWith(args[3].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+        }
+        // settier tab completion: /admin settier <player> <tier> <kit>
+        if (args[0].equalsIgnoreCase("settier")) {
+            if (args.length == 2) {
+                // Player names
+                String partial = args[1].toLowerCase();
+                List<String> names = new ArrayList<>();
+                Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(n -> n.toLowerCase().startsWith(partial))
+                        .forEach(names::add);
+                return names;
+            }
+            if (args.length == 3) {
+                // Tier names
+                return Arrays.asList("LT5", "HT5", "LT4", "HT4", "LT3", "HT3", "LT2", "HT2", "LT1", "HT1").stream()
+                        .filter(s -> s.toLowerCase().startsWith(args[2].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+            if (args.length == 4) {
+                // Kit names
+                String partial = args[3].toLowerCase();
+                return plugin.getKitManager().getKitNames().stream()
+                        .filter(k -> k.toLowerCase().startsWith(partial))
+                        .collect(Collectors.toList());
+            }
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("createkit")) {
+            return Arrays.asList("sword", "axepvp", "nethpot", "uhc", "smp", "crystal", "mace", "spear", "all").stream()
+                    .filter(s -> s.startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("elo")) {

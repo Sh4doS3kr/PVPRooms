@@ -120,8 +120,8 @@ public class DuelManager {
 
         // Notificar emparejamiento
         String modeTag = bo3 ? " §8[§bBO3§8]" : "";
-        p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
-        p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8» §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
+        p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
+        p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
 
         // Start countdown
         startCountdown(duel, instanceWorld);
@@ -267,14 +267,10 @@ public class DuelManager {
                 plugin.getTierManager().recordResult(winnerUUID, loserUUID, duel.getKitName());
                 announceResultTier(p1, p2, winnerUUID, loserUUID, duel.getKitName());
             } else {
-                // ELO mode: update ELO, then sync TierManager so both systems agree
+                // ELO mode: ONLY update ELO, NOT tier points
+                // ELO and Tier are independent systems
                 int[] changes = plugin.getEloManager().processResult(
                         winnerUUID, winnerName, loserUUID, loserName);
-                // Sync TierManager from new ELO — keeps web page and scoreboard consistent
-                plugin.getTierManager().syncFromElo(winnerUUID, duel.getKitName(),
-                        plugin.getEloManager().getElo(winnerUUID));
-                plugin.getTierManager().syncFromElo(loserUUID, duel.getKitName(),
-                        plugin.getEloManager().getElo(loserUUID));
                 announceResult(p1, p2, winnerUUID, loserUUID, duel.getKitName(), changes[0], changes[1]);
             }
         }
@@ -496,7 +492,7 @@ public class DuelManager {
     }
 
     private void healPlayer(Player player) {
-        var maxHealthAttr = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        var maxHealthAttr = player.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealthAttr != null) {
             player.setHealth(maxHealthAttr.getValue());
         }
@@ -573,7 +569,7 @@ public class DuelManager {
                     + "§a§l¡VICTORIA! §avs §e" + loserName
                     + "  §8[§bTIER §e" + kitName + "§8]  "
                     + wTier.colour + wTier.displayName
-                    + "  §8» §7" + pts + " pts");
+                    + "  §8› §7" + pts + " pts");
             winner.sendMessage(plugin.prefix() + "§7Insignia: " + wTitle.formatted());
             sendTitle(winner, "§a§l¡VICTORIA!", wTier.colour + wTier.displayName, 80);
         }
@@ -583,7 +579,7 @@ public class DuelManager {
                     + "§c§lDERROTA §cvs §e" + winnerName
                     + "  §8[§bTIER §e" + kitName + "§8]  "
                     + lTier.colour + lTier.displayName
-                    + "  §8» §7" + pts + " pts");
+                    + "  §8› §7" + pts + " pts");
             loser.sendMessage(plugin.prefix() + "§7Insignia: " + lTitle.formatted());
             sendTitle(loser, "§c§lDERROTA", lTier.colour + lTier.displayName, 80);
         }

@@ -131,7 +131,7 @@ public class QueueManager {
     public String getQueuedKit(UUID uuid) {
         String key = playerKitMap.get(uuid);
         if (key == null) return null;
-        return key.startsWith("TIER:") ? key.replace("TIER:", "") + " §7[TIER]" : key;
+        return key.startsWith("TIER:") ? key.replace("TIER:", "") + " §8›7[TIER]" : key;
     }
 
     public boolean isInTierQueue(UUID uuid) {

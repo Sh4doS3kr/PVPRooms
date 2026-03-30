@@ -12,7 +12,10 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Command to place physical trim crates in the world.
@@ -21,10 +24,16 @@ import java.util.List;
 public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
 
     private final PvPRoomsPro plugin;
+    
+    // Players in setup mode: UUID -> {piece, legendary}
+    private static final Map<UUID, SetupData> setupMode = new HashMap<>();
 
     public PhysicalCrateCommand(PvPRoomsPro plugin) {
         this.plugin = plugin;
     }
+    
+    /** Data for players in setup mode */
+    public record SetupData(ArmorPiece piece, boolean legendary) {}
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -58,6 +67,38 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         // Handle "helmetblock" subcommand
         if (type.equals("helmetblock")) {
             giveHelmetBlock(player);
+            return true;
+        }
+        
+        // Handle "colocar" subcommand - enter setup mode
+        if (type.equals("colocar")) {
+            if (args.length < 2) {
+                player.sendMessage(plugin.prefix() + "§cUso: /crate colocar <pieza> [legendary]");
+                player.sendMessage(plugin.prefix() + "§7Piezas: helmet, chestplate, leggings, boots");
+                return true;
+            }
+            ArmorPiece piece = ArmorPiece.fromName(args[1].toLowerCase());
+            if (piece == null) {
+                player.sendMessage(plugin.prefix() + "§cPieza inválida. Usa: helmet, chestplate, leggings, boots");
+                return true;
+            }
+            boolean legendary = args.length >= 3 && args[2].equalsIgnoreCase("legendary");
+            
+            setupMode.put(player.getUniqueId(), new SetupData(piece, legendary));
+            player.sendMessage(plugin.prefix() + "§a§l¡MODO COLOCACIÓN ACTIVADO!");
+            player.sendMessage(plugin.prefix() + "§7Haz §eclick derecho §7en un bloque para convertirlo en una §dCrate de " + piece.getDisplayName() + 
+                (legendary ? " §5§lLEGENDARIA" : ""));
+            player.sendMessage(plugin.prefix() + "§7Escribe §c/crate cancelar §7para salir del modo colocación.");
+            return true;
+        }
+        
+        // Handle "cancelar" subcommand - exit setup mode
+        if (type.equals("cancelar")) {
+            if (setupMode.remove(player.getUniqueId()) != null) {
+                player.sendMessage(plugin.prefix() + "§cModo colocación cancelado.");
+            } else {
+                player.sendMessage(plugin.prefix() + "§7No estabas en modo colocación.");
+            }
             return true;
         }
 
@@ -129,7 +170,7 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
         if (args.length == 1) {
-            return List.of("normal", "themed", "key", "helmetblock");
+            return List.of("normal", "themed", "key", "helmetblock", "colocar", "cancelar");
         }
         if (args.length == 2) {
             return List.of("helmet", "chestplate", "leggings", "boots");
@@ -139,12 +180,30 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         }
         return List.of();
     }
+    
+    // ══════════════════════════════════════════════════════════════════════
+    // Setup mode utilities
+    // ══════════════════════════════════════════════════════════════════════
+    
+    public static boolean isInSetupMode(UUID playerId) {
+        return setupMode.containsKey(playerId);
+    }
+    
+    public static SetupData getSetupData(UUID playerId) {
+        return setupMode.get(playerId);
+    }
+    
+    public static void exitSetupMode(UUID playerId) {
+        setupMode.remove(playerId);
+    }
 
     private void sendHelp(Player p) {
         p.sendMessage("§5§m          §r §dCrates Físicas §5§m          ");
         p.sendMessage("§7/crate §f<tipo> <pieza> [legendary]");
         p.sendMessage("§7/crate §fkey §8- Da llave de crate (admin)");
         p.sendMessage("§7/crate §fhelmetblock §8- Da bloque de trims de casco (admin)");
+        p.sendMessage("§7/crate §fcolocar <pieza> [legendary] §8- Modo colocación");
+        p.sendMessage("§7/crate §fcancelar §8- Cancela modo colocación");
         p.sendMessage("");
         p.sendMessage("§7Tipos:");
         p.sendMessage("§f• §7normal §8- Crate normal (cyan)");

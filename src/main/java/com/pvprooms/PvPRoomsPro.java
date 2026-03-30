@@ -27,6 +27,7 @@ import com.pvprooms.listeners.LobbyListener;
 import com.pvprooms.listeners.ChatListener;
 import com.pvprooms.api.TierApiServer;
 import com.pvprooms.listeners.SpearListener;
+import com.pvprooms.listeners.AttributeSwapListener;
 import com.pvprooms.managers.TierManager;
 import com.pvprooms.model.TrimCrate;
 import com.pvprooms.model.PhysicalTrimCrate;
@@ -86,6 +87,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private PartyManager partyManager;
     private com.pvprooms.gui.ProfileGUI profileGUI;
     private com.pvprooms.gui.PartyGUI partyGUI;
+    private com.pvprooms.listeners.AntiMultiaccountListener antiMultiaccountListener;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -285,12 +287,17 @@ public class PvPRoomsPro extends JavaPlugin {
         pm.registerEvents(new PlayerListener(this), this);
         pm.registerEvents(new CombatListener(this), this);
         pm.registerEvents(new SpearListener(this), this);
+        pm.registerEvents(new AttributeSwapListener(this), this);
         pm.registerEvents(new TrimGUIListener(this), this);
         pm.registerEvents(new KitTrimGUIListener(this), this);
         pm.registerEvents(new TrimCrateListener(this), this);
         pm.registerEvents(new PhysicalTrimCrateListener(this), this);
         pm.registerEvents(new LobbyListener(this), this);
         pm.registerEvents(new ChatListener(this), this);
+        
+        // Anti-multiaccount system
+        antiMultiaccountListener = new com.pvprooms.listeners.AntiMultiaccountListener(this);
+        pm.registerEvents(antiMultiaccountListener, this);
     }
 
     // ── Lobby world setup ──────────────────────────────────────────────────
@@ -365,5 +372,6 @@ public class PvPRoomsPro extends JavaPlugin {
     public PartyManager          getPartyManager()            { return partyManager; }
     public com.pvprooms.gui.ProfileGUI getProfileGUI()        { return profileGUI; }
     public com.pvprooms.gui.PartyGUI getPartyGUI()            { return partyGUI; }
+    public com.pvprooms.listeners.AntiMultiaccountListener getAntiMultiaccount() { return antiMultiaccountListener; }
     public String                getServerRegion()           { return serverRegion; }
 }

@@ -276,6 +276,19 @@ public class InventoryListener implements Listener {
                 player.closeInventory();
                 player.performCommand("admin info");
             }
+            case AdminPanelGUI.SLOT_PRESET_KITS -> {
+                player.closeInventory();
+                int count = com.pvprooms.util.PresetKits.installAllPresets(plugin);
+                player.sendMessage(plugin.prefix() + "§a✔ Se han instalado §e" + count + " §akits oficiales:");
+                player.sendMessage("§7  • §bSword §8- §7Classic 1.9+");
+                player.sendMessage("§7  • §6AxePvP §8- §7Vanilla Axe combat");
+                player.sendMessage("§7  • §dNethpot §8- §7Netherite + Potions");
+                player.sendMessage("§7  • §eUHC §8- §7Ultra Hardcore");
+                player.sendMessage("§7  • §2SMP §8- §7Survival full gear");
+                player.sendMessage("§7  • §5Crystal §8- §7Crystal PvP");
+                player.sendMessage("§7  • §8Mace §8- §71.21 Mace combat");
+                player.sendMessage(plugin.prefix() + "§7Usa §e/queue §7para probarlos.");
+            }
             case AdminPanelGUI.SLOT_CLOSE ->
                 player.closeInventory();
             default -> { /* separator or info slot — do nothing */ }

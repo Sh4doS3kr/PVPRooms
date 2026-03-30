@@ -44,8 +44,14 @@ public class LeaderboardHologramManager implements Listener {
         this.plugin = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "holograms.yml");
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        load();
-        startRefreshTask();
+        
+        // Delay loading until worlds are fully loaded (prevents entities not spawning)
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            loadFromConfig();
+            spawnAllHolograms();
+            startRefreshTask();
+            plugin.getLogger().info("[Holograms] Cargados " + holograms.size() + " hologramas.");
+        }, 40L); // 2 seconds delay
     }
 
     @EventHandler
@@ -386,8 +392,13 @@ public class LeaderboardHologramManager implements Listener {
                 lines.add("&9◆ LT5 &8→ &b◆ HT5");
                 lines.add("&a◆ LT4 &8→ &2◆ HT4");
                 lines.add("&e◆ LT3 &8→ &6◆ HT3");
+                lines.add(" ");
+                lines.add("&d&l⚡ TIERS ÉLITE &d&l⚡");
                 lines.add("&c◆ LT2 &8→ &4◆ HT2");
                 lines.add("&d◆ LT1 &8→ &c&l◆ HT1");
+                lines.add(" ");
+                lines.add("&7Verificación via ticket:");
+                lines.add("&b&ndiscord.mlmc.lat");
             }
             
             case INFO_KITS -> {
@@ -451,34 +462,45 @@ public class LeaderboardHologramManager implements Listener {
     }
 
     private void startRefreshTask() {
+        // Cancel existing task if any
+        if (refreshTask != null) {
+            refreshTask.cancel();
+        }
+        // Refresh every 10 seconds
         refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, this::refreshAllHolograms, 20L * 10, 20L * 10);
     }
 
     private void refreshAllHolograms() {
         for (HoloData holo : holograms.values()) {
+            // Skip custom holograms (they don't need refresh)
             if (holo.type() == HoloType.CUSTOM) continue;
-            if (holo.refreshSeconds() <= 0) continue;
             
             Location loc = holo.location();
             if (loc == null || loc.getWorld() == null) continue;
             
-            // Skip if chunk is not loaded (prevents duplication on chunk reload)
-            if (!loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) continue;
+            // Load chunk if needed to ensure hologram is visible
+            int chunkX = loc.getBlockX() >> 4;
+            int chunkZ = loc.getBlockZ() >> 4;
+            if (!loc.getWorld().isChunkLoaded(chunkX, chunkZ)) {
+                // Don't load chunk just for refresh, but mark for update when loaded
+                continue;
+            }
             
             // Remove old entities by tag near location
             removeHologramEntitiesNear(loc, 5.0);
             
-            // Spawn new
+            // Generate fresh lines with current data
             List<String> lines = generateLines(holo.type(), holo.subtype(), holo.lines());
             List<UUID> newEntities = spawnHologramLines(loc, lines);
             
+            // Update the hologram data with new entity UUIDs
             holograms.put(holo.id(), new HoloData(holo.id(), holo.type(), holo.subtype(), loc, holo.refreshSeconds(), holo.lines(), holo.customLines(), newEntities));
         }
     }
 
-    public void load() {
-        // Clean up ALL hologram entities IMMEDIATELY to prevent accumulation
-        removeAllHologramEntities();
+    /** Load hologram data from config WITHOUT spawning entities */
+    private void loadFromConfig() {
+        holograms.clear();
         
         if (!dataFile.exists()) return;
         
@@ -501,26 +523,58 @@ public class LeaderboardHologramManager implements Listener {
                 ConfigurationSection locSec = holoSec.getConfigurationSection("location");
                 if (locSec == null) continue;
                 
-                Location loc = new Location(
-                    Bukkit.getWorld(locSec.getString("world", "world")),
-                    locSec.getDouble("x"),
-                    locSec.getDouble("y"),
-                    locSec.getDouble("z")
-                );
+                String worldName = locSec.getString("world", "world");
+                double x = locSec.getDouble("x");
+                double y = locSec.getDouble("y");
+                double z = locSec.getDouble("z");
                 
-                if (loc.getWorld() == null) continue;
+                var world = Bukkit.getWorld(worldName);
+                if (world == null) {
+                    plugin.getLogger().warning("[Holograms] Mundo '" + worldName + "' no encontrado para holograma " + id);
+                    continue;
+                }
                 
-                List<String> lines = type == HoloType.CUSTOM ? customLines : generateLines(type, subtype, lineCount);
-                List<UUID> entities = spawnHologramLines(loc, lines);
+                Location loc = new Location(world, x, y, z);
                 
-                HoloData data = new HoloData(id, type, subtype, loc, refresh, lineCount, customLines, entities);
+                // Store data without entities (will spawn later)
+                HoloData data = new HoloData(id, type, subtype, loc, refresh, lineCount, customLines, new ArrayList<>());
                 holograms.put(id, data);
                 
                 if (id >= nextId) nextId = id + 1;
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load hologram " + key + ": " + e.getMessage());
+                plugin.getLogger().warning("[Holograms] Error cargando holograma " + key + ": " + e.getMessage());
             }
         }
+    }
+    
+    /** Spawn all holograms from loaded data */
+    private void spawnAllHolograms() {
+        // First clean up any existing hologram entities
+        removeAllHologramEntities();
+        
+        for (Map.Entry<Integer, HoloData> entry : holograms.entrySet()) {
+            HoloData holo = entry.getValue();
+            Location loc = holo.location();
+            
+            if (loc == null || loc.getWorld() == null) continue;
+            
+            // Load chunk if needed
+            if (!loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) {
+                loc.getWorld().loadChunk(loc.getBlockX() >> 4, loc.getBlockZ() >> 4);
+            }
+            
+            List<String> lines = holo.type() == HoloType.CUSTOM ? holo.customLines() : generateLines(holo.type(), holo.subtype(), holo.lines());
+            List<UUID> entities = spawnHologramLines(loc, lines);
+            
+            // Update with entity UUIDs
+            holograms.put(holo.id(), new HoloData(holo.id(), holo.type(), holo.subtype(), loc, holo.refreshSeconds(), holo.lines(), holo.customLines(), entities));
+        }
+    }
+    
+    /** Legacy method for compatibility */
+    public void load() {
+        loadFromConfig();
+        spawnAllHolograms();
     }
 
     public void save() {

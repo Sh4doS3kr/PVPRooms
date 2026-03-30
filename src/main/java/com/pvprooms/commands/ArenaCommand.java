@@ -107,8 +107,8 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
                 String modoStr = existsOnDisk ? "§acargado desde disco" : "§acreado como mundo vacío";
                 player.sendMessage(plugin.prefix() + "§aMundo §e" + name + " §a" + modoStr + " y registrado como arena.");
                 player.sendMessage(plugin.prefix() + "§7Ahora establece los spawns:");
-                player.sendMessage(plugin.prefix() + "§e  /arena setspawn1 " + name + " §8» §7Párate en el spawn 1 y ejecútalo");
-                player.sendMessage(plugin.prefix() + "§e  /arena setspawn2 " + name + " §8» §7Párate en el spawn 2 y ejecútalo");
+                player.sendMessage(plugin.prefix() + "§e  /arena setspawn1 " + name + " §8› §7Párate en el spawn 1 y ejecútalo");
+                player.sendMessage(plugin.prefix() + "§e  /arena setspawn2 " + name + " §8› §7Párate en el spawn 2 y ejecútalo");
             }
             case "setspawn1" -> {
                 if (args.length < 2) { player.sendMessage(plugin.prefix() + "§cUso: /arena setspawn1 <nombre>"); return true; }
@@ -168,12 +168,12 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§8§m══════════════════════════════");
         player.sendMessage("§6§l  ⚔ Comandos de Arena");
         player.sendMessage("§8§m══════════════════════════════");
-        player.sendMessage("§e/arena create §f<nombre>    §8» §7Crear mundo y teleportarse");
-        player.sendMessage("§e/arena setspawn1 §f<nombre> §8» §7Establecer spawn 1");
-        player.sendMessage("§e/arena setspawn2 §f<nombre> §8» §7Establecer spawn 2");
-        player.sendMessage("§e/arena delete §f<nombre>    §8» §7Eliminar arena");
-        player.sendMessage("§e/arena list                 §8» §7Listar arenas");
-        player.sendMessage("§e/arena info §f<nombre>      §8» §7Ver detalles");
+        player.sendMessage("§e/arena create §f<nombre>    §8› §7Crear mundo y teleportarse");
+        player.sendMessage("§e/arena setspawn1 §f<nombre> §8› §7Establecer spawn 1");
+        player.sendMessage("§e/arena setspawn2 §f<nombre> §8› §7Establecer spawn 2");
+        player.sendMessage("§e/arena delete §f<nombre>    §8› §7Eliminar arena");
+        player.sendMessage("§e/arena list                 §8› §7Listar arenas");
+        player.sendMessage("§e/arena info §f<nombre>      §8› §7Ver detalles");
         player.sendMessage("§8§m══════════════════════════════");
     }
 

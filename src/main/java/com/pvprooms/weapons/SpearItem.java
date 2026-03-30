@@ -64,7 +64,7 @@ public class SpearItem {
 
         // ── Attack damage ── Paper 1.21: NamespacedKey + EquipmentSlotGroup
         meta.addAttributeModifier(
-                Attribute.GENERIC_ATTACK_DAMAGE,
+                Attribute.ATTACK_DAMAGE,
                 new AttributeModifier(
                         new NamespacedKey(plugin, "spear_dmg"),
                         damage,
@@ -75,7 +75,7 @@ public class SpearItem {
 
         // ── Attack speed ──
         meta.addAttributeModifier(
-                Attribute.GENERIC_ATTACK_SPEED,
+                Attribute.ATTACK_SPEED,
                 new AttributeModifier(
                         new NamespacedKey(plugin, "spear_spd"),
                         speedBonus,
@@ -112,7 +112,7 @@ public class SpearItem {
     public static double getAttackDamage(ItemStack item) {
         if (!isSpear(item)) return 1.0;
         Collection<AttributeModifier> mods =
-                item.getItemMeta().getAttributeModifiers(Attribute.GENERIC_ATTACK_DAMAGE);
+                item.getItemMeta().getAttributeModifiers(Attribute.ATTACK_DAMAGE);
         if (mods == null) return 1.0;
         double bonus = mods.stream().mapToDouble(AttributeModifier::getAmount).sum();
         return 1.0 + bonus;

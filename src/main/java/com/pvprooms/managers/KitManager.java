@@ -134,6 +134,22 @@ public class KitManager {
     }
 
     /**
+     * Creates a new kit programmatically from arrays.
+     * Used by PresetKits to install official kit configurations.
+     */
+    public void createKit(String name, ItemStack[] armor, ItemStack[] inventory, Material icon) {
+        // Build full contents array (36 slots)
+        ItemStack[] contents = new ItemStack[36];
+        if (inventory != null) {
+            System.arraycopy(inventory, 0, contents, 0, Math.min(inventory.length, 36));
+        }
+        
+        Kit kit = new Kit(name, contents, armor, null);
+        kit.setIconMaterial(icon);
+        kits.put(name.toLowerCase(), kit);
+    }
+
+    /**
      * Overwrites an existing kit's contents from an admin's current inventory.
      *
      * @return false if the kit does not exist.

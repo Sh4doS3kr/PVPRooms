@@ -131,13 +131,13 @@ public class KitCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§8§m══════════════════════════════");
         player.sendMessage("§6§l  ⚔ Comandos de Kit");
         player.sendMessage("§8§m══════════════════════════════");
-        player.sendMessage("§e/kit create §f<nombre>       §8» §7Crear kit del inventario");
-        player.sendMessage("§e/kit edit §f<nombre>         §8» §7Editar kit en panel GUI");
-        player.sendMessage("§e/kit editicon §f<nombre>     §8» §7Cambiar icono al item en mano");
-        player.sendMessage("§e/kit connect §f<kit> <arena> §8» §7Vincular kit a arena");
-        player.sendMessage("§e/kit connect §f<kit> none    §8» §7Desvincular (arena aleatoria)");
-        player.sendMessage("§e/kit delete §f<nombre>       §8» §7Eliminar kit");
-        player.sendMessage("§e/kit list                   §8» §7Listar todos los kits");
+        player.sendMessage("§e/kit create §f<nombre>       §8› §7Crear kit del inventario");
+        player.sendMessage("§e/kit edit §f<nombre>         §8› §7Editar kit en panel GUI");
+        player.sendMessage("§e/kit editicon §f<nombre>     §8› §7Cambiar icono al item en mano");
+        player.sendMessage("§e/kit connect §f<kit> <arena> §8› §7Vincular kit a arena");
+        player.sendMessage("§e/kit connect §f<kit> none    §8› §7Desvincular (arena aleatoria)");
+        player.sendMessage("§e/kit delete §f<nombre>       §8› §7Eliminar kit");
+        player.sendMessage("§e/kit list                   §8› §7Listar todos los kits");
         player.sendMessage("§8§m══════════════════════════════");
     }
 

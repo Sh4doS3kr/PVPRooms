@@ -70,6 +70,7 @@ public class ProfileGUI implements Listener {
 
         // Kit tiers row (slots 37-43)
         inv.setItem(37, createKitTiersItem(uuid));
+        inv.setItem(43, createEliteTiersInfoItem());
 
         // Decorative items
         inv.setItem(10, createItem(Material.PURPLE_STAINED_GLASS_PANE, " "));
@@ -372,6 +373,70 @@ public class ProfileGUI implements Listener {
         }
         lore.add(Component.empty());
 
+        meta.lore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createEliteTiersInfoItem() {
+        ItemStack item = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("🏆 Tiers de Élite (Verificación)", NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true)
+                .decoration(TextDecoration.ITALIC, false));
+        
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.empty());
+        lore.add(Component.text("Requieren cumplir requisitos extra y verificación:", NamedTextColor.GRAY)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.empty());
+        
+        // Tier badges
+        lore.add(Component.text(" HT3 ", NamedTextColor.GOLD)
+                .append(Component.text(" LT2 ", NamedTextColor.RED))
+                .append(Component.text(" HT2 ", NamedTextColor.DARK_RED))
+                .append(Component.text(" LT1 ", NamedTextColor.LIGHT_PURPLE))
+                .append(Component.text(" HT1 ", NamedTextColor.DARK_PURPLE))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.empty());
+        
+        // Process explanation
+        lore.add(Component.text("📋 Proceso de verificación:", NamedTextColor.YELLOW)
+                .decoration(TextDecoration.BOLD, true)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("1. Abre ticket en ", NamedTextColor.WHITE)
+                .append(Component.text("discord.mlmc.lat", NamedTextColor.AQUA)
+                        .decoration(TextDecoration.UNDERLINED, true))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("2. Se te asignará un Tester de tu nivel", NamedTextColor.WHITE)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("3. Debes GRABAR el test completo", NamedTextColor.WHITE)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("4. El Tester evalúa tu nivel y decide tu tier", NamedTextColor.WHITE)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.empty());
+        
+        // Requirements
+        lore.add(Component.text("✓ Requisitos adicionales:", NamedTextColor.GREEN)
+                .decoration(TextDecoration.BOLD, true)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("• Mínimo ", NamedTextColor.GRAY)
+                .append(Component.text("5 victorias", NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true))
+                .append(Component.text(" contra jugadores HT3+", NamedTextColor.GRAY))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("• Mantener el tier durante ", NamedTextColor.GRAY)
+                .append(Component.text("7 días", NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true))
+                .append(Component.text(" consecutivos", NamedTextColor.GRAY))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("• Sin abandonos en las últimas ", NamedTextColor.GRAY)
+                .append(Component.text("20 partidas", NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true))
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("• Revisión anti-boost por el sistema", NamedTextColor.GRAY)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.empty());
+        lore.add(Component.text("⚡ ¡Los mejores jugadores del servidor!", NamedTextColor.LIGHT_PURPLE)
+                .decoration(TextDecoration.ITALIC, true));
+        
         meta.lore(lore);
         item.setItemMeta(meta);
         return item;
