@@ -58,16 +58,68 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
 
         String type = args[0].toLowerCase();
         
-        // Handle "key" subcommand - requires piece argument
+        // Handle "key" subcommand - /crate key <piece> OR /crate key give <user> <piece> OR /crate key giveall <piece>
         if (type.equals("key")) {
             if (args.length < 2) {
                 player.sendMessage(plugin.prefix() + "§cUso: /crate key <pieza>");
-                player.sendMessage(plugin.prefix() + "§7Piezas: helmet, chestplate, leggings, boots");
+                player.sendMessage(plugin.prefix() + "§cUso: /crate key give <usuario> <pieza>");
+                player.sendMessage(plugin.prefix() + "§cUso: /crate key giveall <pieza>");
                 return true;
             }
-            ArmorPiece keyPiece = ArmorPiece.fromName(args[1].toLowerCase());
+            
+            String subCmd = args[1].toLowerCase();
+            
+            // /crate key give <user> <piece>
+            if (subCmd.equals("give")) {
+                if (args.length < 4) {
+                    player.sendMessage(plugin.prefix() + "§cUso: /crate key give <usuario> <pieza>");
+                    return true;
+                }
+                Player target = plugin.getServer().getPlayer(args[2]);
+                if (target == null) {
+                    player.sendMessage(plugin.prefix() + "§cJugador no encontrado.");
+                    return true;
+                }
+                ArmorPiece keyPiece = ArmorPiece.fromName(args[3].toLowerCase());
+                if (keyPiece == null) {
+                    player.sendMessage(plugin.prefix() + "§cPieza inválida. Usa: helmet, chestplate, leggings, boots");
+                    return true;
+                }
+                giveKeyTo(target, keyPiece);
+                player.sendMessage(plugin.prefix() + "§aDiste una §6" + keyPiece.getDisplayName() + " Key §aa §e" + target.getName());
+                return true;
+            }
+            
+            // /crate key giveall <piece>
+            if (subCmd.equals("giveall")) {
+                if (args.length < 3) {
+                    player.sendMessage(plugin.prefix() + "§cUso: /crate key giveall <pieza>");
+                    return true;
+                }
+                ArmorPiece keyPiece = ArmorPiece.fromName(args[2].toLowerCase());
+                if (keyPiece == null) {
+                    player.sendMessage(plugin.prefix() + "§cPieza inválida. Usa: helmet, chestplate, leggings, boots");
+                    return true;
+                }
+                int count = 0;
+                for (Player online : plugin.getServer().getOnlinePlayers()) {
+                    giveKeyTo(online, keyPiece);
+                    count++;
+                }
+                // Broadcast to all players
+                for (Player online : plugin.getServer().getOnlinePlayers()) {
+                    online.sendMessage(plugin.prefix() + "§a§l¡KEYALL! §eTodos han recibido una §6" + keyPiece.getDisplayName() + " Key§e!");
+                }
+                player.sendMessage(plugin.prefix() + "§a§lKEYALL completado. §f" + count + " §ajugadores recibieron una §6" + keyPiece.getDisplayName() + " Key");
+                return true;
+            }
+            
+            // /crate key <piece> (give to self)
+            ArmorPiece keyPiece = ArmorPiece.fromName(subCmd);
             if (keyPiece == null) {
                 player.sendMessage(plugin.prefix() + "§cPieza inválida. Usa: helmet, chestplate, leggings, boots");
+                player.sendMessage(plugin.prefix() + "§7O usa: /crate key give <usuario> <pieza>");
+                player.sendMessage(plugin.prefix() + "§7O usa: /crate key giveall <pieza>");
                 return true;
             }
             giveKey(player, keyPiece);
@@ -146,11 +198,17 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** Gives a piece-specific crate key to the player */
+    /** Gives a piece-specific crate key to the player (with message) */
     private void giveKey(Player player, ArmorPiece piece) {
         ItemStack key = createCrateKey(piece);
         player.getInventory().addItem(key);
         player.sendMessage(plugin.prefix() + "§aRecibiste una §6" + piece.getDisplayName() + " Key§a. Úsala para abrir crates de " + piece.getDisplayName() + ".");
+    }
+    
+    /** Gives a piece-specific crate key to a target player (silent, for keyall) */
+    private void giveKeyTo(Player target, ArmorPiece piece) {
+        ItemStack key = createCrateKey(piece);
+        target.getInventory().addItem(key);
     }
 
     /** Gives a helmet trim block to the player */
@@ -200,10 +258,24 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
             return List.of("normal", "themed", "key", "helmetblock", "colocar", "cancelar");
         }
         if (args.length == 2) {
+            if (args[0].equalsIgnoreCase("key")) {
+                return List.of("helmet", "chestplate", "leggings", "boots", "give", "giveall");
+            }
             return List.of("helmet", "chestplate", "leggings", "boots");
         }
         if (args.length == 3) {
+            if (args[0].equalsIgnoreCase("key") && args[1].equalsIgnoreCase("give")) {
+                return null; // Player names
+            }
+            if (args[0].equalsIgnoreCase("key") && args[1].equalsIgnoreCase("giveall")) {
+                return List.of("helmet", "chestplate", "leggings", "boots");
+            }
             return List.of("legendary");
+        }
+        if (args.length == 4) {
+            if (args[0].equalsIgnoreCase("key") && args[1].equalsIgnoreCase("give")) {
+                return List.of("helmet", "chestplate", "leggings", "boots");
+            }
         }
         return List.of();
     }
@@ -227,30 +299,18 @@ public class PhysicalCrateCommand implements CommandExecutor, TabCompleter {
     private void sendHelp(Player p) {
         p.sendMessage("§5§m          §r §dCrates Físicas §5§m          ");
         p.sendMessage("§7/crate §f<tipo> <pieza> [legendary]");
-        p.sendMessage("§7/crate §fkey <pieza> §8- Da llave específica (admin)");
-        p.sendMessage("§7/crate §fhelmetblock §8- Da bloque de trims de casco (admin)");
+        p.sendMessage("§7/crate §fkey <pieza> §8- Da llave a ti mismo");
+        p.sendMessage("§7/crate §fkey give <usuario> <pieza> §8- Da llave a jugador");
+        p.sendMessage("§7/crate §fkey giveall <pieza> §8- Da llave a TODOS (keyall)");
+        p.sendMessage("§7/crate §fhelmetblock §8- Da bloque de trims de casco");
         p.sendMessage("§7/crate §fcolocar <pieza> [legendary] §8- Modo colocación");
         p.sendMessage("§7/crate §fcancelar §8- Cancela modo colocación");
         p.sendMessage("");
-        p.sendMessage("§7Tipos:");
-        p.sendMessage("§f• §7normal §8- Crate normal (cyan)");
-        p.sendMessage("§f• §7themed §8- Crate temática (amarilla)");
-        p.sendMessage("§f• §7helmetblock §8- Bloque especial de casco (oro)");
-        p.sendMessage("");
-        p.sendMessage("§7Piezas:");
-        p.sendMessage("§f• §7helmet §8- Casco");
-        p.sendMessage("§f• §7chestplate §8- Pechera");
-        p.sendMessage("§f• §7leggings §8- Pantalones");
-        p.sendMessage("§f• §7boots §8- Botas");
-        p.sendMessage("");
-        p.sendMessage("§7Opcional:");
-        p.sendMessage("§f• §7legendary §8- Hace la crate legendaria (púrpura)");
+        p.sendMessage("§7Piezas: §fhelmet, chestplate, leggings, boots");
         p.sendMessage("");
         p.sendMessage("§eEjemplos:");
-        p.sendMessage("§7/crate normal helmet");
-        p.sendMessage("§7/crate themed chestplate");
-        p.sendMessage("§7/crate normal boots legendary");
         p.sendMessage("§7/crate key chestplate");
-        p.sendMessage("§7/crate helmetblock");
+        p.sendMessage("§7/crate key give Notch helmet");
+        p.sendMessage("§7/crate key giveall boots §8(evento keyall)");
     }
 }

@@ -5,6 +5,7 @@ import com.pvprooms.gui.TrimGUI;
 import com.pvprooms.gui.TrimGUIHolder;
 import com.pvprooms.model.ArmorPiece;
 import com.pvprooms.model.Trim;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -140,6 +141,13 @@ public class TrimGUIListener implements Listener {
                 player.sendMessage(plugin.prefix() + "§aTrim de §f" + piece.getDisplayName() + " §aeliminado.");
             }
             gui.openMain(player);
+            return;
+        }
+
+        // BLOCK LOCKED TRIMS (BARRIER = locked)
+        var clicked = player.getOpenInventory().getItem(slot);
+        if (clicked != null && clicked.getType() == Material.BARRIER) {
+            player.sendMessage(plugin.prefix() + "§c¡Este patrón está bloqueado! Usa crates para desbloquearlo.");
             return;
         }
 
