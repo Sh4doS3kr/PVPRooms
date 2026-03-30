@@ -273,16 +273,16 @@ public class LeaderboardHologramManager implements Listener {
         switch (type) {
             case TOP_GENERAL, TOP_KIT, TOP_ELO, TOP_WINS, TOP_STREAK, TOP_KDR -> {
                 String title = switch(type) {
-                    case TOP_GENERAL -> "&5&l⚔ TOP PLAYERS";
-                    case TOP_KIT -> "&5&l⚔ TOP " + (subtype != null ? subtype.toUpperCase() : "KIT");
-                    case TOP_ELO -> "&6&l★ TOP ELO";
-                    case TOP_WINS -> "&a&l✓ TOP WINS";
-                    case TOP_STREAK -> "&c&l🔥 TOP STREAK";
-                    case TOP_KDR -> "&e&l⚡ TOP K/D";
-                    default -> "&5&l⚔ LEADERBOARD";
+                    case TOP_GENERAL -> "&6&l⚔ &e&lTOP PLAYERS";
+                    case TOP_KIT -> "&6&l⚔ &e&lTOP " + (subtype != null ? subtype.toUpperCase() : "KIT");
+                    case TOP_ELO -> "&6&l★ &e&lTOP ELO";
+                    case TOP_WINS -> "&a&l✓ &2&lTOP WINS";
+                    case TOP_STREAK -> "&c&l🔥 &4&lTOP STREAK";
+                    case TOP_KDR -> "&e&l⚡ &6&lTOP K/D";
+                    default -> "&6&l⚔ &e&lLEADERBOARD";
                 };
                 lines.add(title);
-                lines.add("&8&m                              ");
+                lines.add(" ");
                 
                 // Get top players based on type
                 int rank = 1;
@@ -342,98 +342,78 @@ public class LeaderboardHologramManager implements Listener {
                         }
                     }
                 }
-                lines.add("&8&m                              ");
+                if (lines.size() <= 2) {
+                    lines.add("&7Sin jugadores aún");
+                }
             }
             
             case STATS_ONLINE -> {
-                lines.add("&a&l⬤ ONLINE");
-                lines.add("&8&m              ");
-                lines.add("&7Players: &a" + Bukkit.getOnlinePlayers().size());
-                lines.add("&8&m              ");
+                lines.add("&a&l⬤ &2&lONLINE");
+                lines.add("&a" + Bukkit.getOnlinePlayers().size() + " &7jugadores");
             }
             
             case STATS_DUELS -> {
-                lines.add("&c&l⚔ ACTIVE DUELS");
-                lines.add("&8&m              ");
+                lines.add("&c&l⚔ &4&lDUELOS");
                 int duels = plugin.getDuelManager() != null ? plugin.getDuelManager().getActiveDuels().size() : 0;
-                lines.add("&7Duels: &c" + duels);
-                lines.add("&8&m              ");
+                lines.add("&c" + duels + " &7en curso");
             }
             
             case STATS_QUEUE -> {
-                lines.add("&e&l⏳ QUEUE");
-                lines.add("&8&m              ");
+                lines.add("&e&l⏳ &6&lCOLA");
                 int queue = plugin.getQueueManager() != null ? plugin.getQueueManager().getTotalQueued() : 0;
-                lines.add("&7In queue: &e" + queue);
-                lines.add("&8&m              ");
+                lines.add("&e" + queue + " &7esperando");
             }
             
             case INFO_WELCOME -> {
-                lines.add("&5&l✦ BIENVENIDO ✦");
-                lines.add("&8&m                    ");
-                lines.add("&7¡Bienvenido al servidor!");
+                lines.add("&5&l✦ &d&lBIENVENIDO &5&l✦");
+                lines.add(" ");
                 lines.add("&7Usa &e/queue &7para jugar");
-                lines.add("&7Usa &e/stats &7para ver tu perfil");
-                lines.add("&8&m                    ");
+                lines.add("&7Usa &e/stats &7para tu perfil");
             }
             
             case INFO_RULES -> {
-                lines.add("&c&l✖ REGLAS ✖");
-                lines.add("&8&m                    ");
+                lines.add("&c&l✖ &4&lREGLAS &c&l✖");
+                lines.add(" ");
                 lines.add("&71. No hacks ni cheats");
                 lines.add("&72. No insultar");
                 lines.add("&73. No teaming en FFA");
                 lines.add("&74. Respeta a todos");
-                lines.add("&8&m                    ");
             }
             
             case INFO_RANKS -> {
-                lines.add("&5&l★ SISTEMA MCTiers ★");
-                lines.add("&8&m                    ");
-                lines.add("&7◆ Unranked &8- 0 pts");
-                lines.add("&9◆ LT5 &7- 0+ pts");
-                lines.add("&b◆ HT5 &7- 50+ pts");
-                lines.add("&a◆ LT4 &7- 150+ pts");
-                lines.add("&2◆ HT4 &7- 300+ pts");
-                lines.add("&e◆ LT3 &7- 500+ pts");
-                lines.add("&6◆ HT3 &7- 750+ pts");
-                lines.add("&c◆ LT2 &7- 1100+ pts");
-                lines.add("&4◆ HT2 &7- 1500+ pts");
-                lines.add("&d◆ LT1 &7- 2000+ pts");
-                lines.add("&c&l◆ HT1 &7- 2800+ pts");
-                lines.add("&8&m                    ");
+                lines.add("&6&l★ &e&lSISTEMA TIERS &6&l★");
+                lines.add(" ");
+                lines.add("&9◆ LT5 &8→ &b◆ HT5");
+                lines.add("&a◆ LT4 &8→ &2◆ HT4");
+                lines.add("&e◆ LT3 &8→ &6◆ HT3");
+                lines.add("&c◆ LT2 &8→ &4◆ HT2");
+                lines.add("&d◆ LT1 &8→ &c&l◆ HT1");
             }
             
             case INFO_KITS -> {
-                lines.add("&e&l⚔ KITS DISPONIBLES ⚔");
-                lines.add("&8&m                    ");
+                lines.add("&e&l⚔ &6&lKITS &e&l⚔");
+                lines.add(" ");
                 if (plugin.getKitManager() != null) {
                     plugin.getKitManager().getKitNames().forEach(k -> 
                         lines.add("&7• &f" + k)
                     );
                 }
-                lines.add("&8&m                    ");
             }
             
             case INFO_COMMANDS -> {
-                lines.add("&b&l✎ COMANDOS ✎");
-                lines.add("&8&m                    ");
-                lines.add("&e/queue &7- Unirse a cola");
-                lines.add("&e/stats &7- Ver estadísticas");
-                lines.add("&e/leaderboard &7- Rankings");
-                lines.add("&e/duel <player> &7- Retar");
-                lines.add("&e/spectate &7- Ver partidas");
-                lines.add("&8&m                    ");
+                lines.add("&b&l✎ &3&lCOMANDOS &b&l✎");
+                lines.add(" ");
+                lines.add("&e/queue &7- Jugar");
+                lines.add("&e/stats &7- Estadísticas");
+                lines.add("&e/duel &7- Retar");
             }
             
             case INFO_ELO -> {
-                lines.add("&6&l★ SISTEMA ELO ★");
-                lines.add("&8&m                    ");
-                lines.add("&7ELO inicial: &f1000");
-                lines.add("&7Ganas: &a+15 a +30 ELO");
-                lines.add("&7Pierdes: &c-10 a -25 ELO");
-                lines.add("&7Basado en tu rival");
-                lines.add("&8&m                    ");
+                lines.add("&6&l★ &e&lSISTEMA ELO &6&l★");
+                lines.add(" ");
+                lines.add("&7Inicial: &f1000 ELO");
+                lines.add("&7Ganas: &a+15 a +30");
+                lines.add("&7Pierdes: &c-10 a -25");
             }
             
             default -> {
@@ -471,7 +451,7 @@ public class LeaderboardHologramManager implements Listener {
     }
 
     private void startRefreshTask() {
-        refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, this::refreshAllHolograms, 20L * 30, 20L * 30);
+        refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, this::refreshAllHolograms, 20L * 10, 20L * 10);
     }
 
     private void refreshAllHolograms() {
