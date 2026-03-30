@@ -238,6 +238,36 @@ public class PhysicalTrimCrateListener implements Listener {
         // Prevent clicking during roulette animation
         if (event.getInventory().getHolder() instanceof TrimRouletteGUI.TrimRouletteHolder holder) {
             event.setCancelled(true);
+            return;
+        }
+        
+        // Handle preview GUI clicks (pagination)
+        if (event.getInventory().getHolder() instanceof TrimRouletteGUI.PreviewHolder holder) {
+            event.setCancelled(true);
+            
+            if (!(event.getWhoClicked() instanceof Player player)) return;
+            
+            int slot = event.getRawSlot();
+            
+            // Close button
+            if (slot == 49) {
+                TrimRouletteGUI.removePreviewData(player.getUniqueId());
+                player.closeInventory();
+                return;
+            }
+            
+            // Previous page (slot 45)
+            if (slot == 45 && holder.getPage() > 0) {
+                plugin.getTrimRouletteGUI().openPreview(player, holder.getPiece(), holder.isLegendary(), holder.getPage() - 1);
+                return;
+            }
+            
+            // Next page (slot 53)
+            TrimRouletteGUI.PreviewData data = TrimRouletteGUI.getPreviewData(player.getUniqueId());
+            if (slot == 53 && data != null && holder.getPage() < data.getTotalPages() - 1) {
+                plugin.getTrimRouletteGUI().openPreview(player, holder.getPiece(), holder.isLegendary(), holder.getPage() + 1);
+                return;
+            }
         }
     }
 }
