@@ -21,7 +21,11 @@ import java.lang.reflect.Method;
 public class ChatListener implements Listener {
 
     private final PvPRoomsPro plugin;
-    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
+    // Use ampersand serializer with hex color support
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.builder()
+            .character('&')
+            .hexColors()
+            .build();
 
     public ChatListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -38,12 +42,14 @@ public class ChatListener implements Listener {
         String prefix = getLuckPermsPrefix(player);
 
         // Build the formatted message
-        // Format: [prefix] username >> message
+        // Format: [prefix] (space) username >> message
         Component formatted = Component.empty();
 
-        // Add prefix if exists (with colors from LuckPerms)
+        // Add prefix if exists (with colors from LuckPerms, supports hex)
         if (prefix != null && !prefix.isEmpty()) {
             formatted = formatted.append(LEGACY.deserialize(prefix));
+            // Add 1 space between prefix and username
+            formatted = formatted.append(Component.text(" "));
         }
 
         // Add username (white, no bold)
