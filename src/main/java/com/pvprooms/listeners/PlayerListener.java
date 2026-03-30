@@ -137,6 +137,24 @@ public class PlayerListener implements Listener {
         Player dead = event.getEntity();
         UUID uuid = dead.getUniqueId();
 
+        // Check if in FFA match first
+        if (plugin.getDuelManager().isInFFA(uuid)) {
+            event.setDeathMessage(null);
+            event.getDrops().clear();
+            event.setDroppedExp(0);
+            event.setKeepInventory(true);
+            event.setKeepLevel(true);
+            
+            Player killer = dead.getKiller();
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (dead.isDead()) {
+                    dead.spigot().respawn();
+                }
+                plugin.getDuelManager().handleFFADeath(dead, killer);
+            }, 1L);
+            return;
+        }
+
         Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
         if (duel == null || duel.getState() != Duel.State.FIGHTING) return;
 

@@ -232,6 +232,24 @@ public class PartyGUI implements Listener {
         var pm = plugin.getPartyManager();
         UUID uuid = player.getUniqueId();
 
+        // Handle match config menu FIRST (before main menu switch)
+        if (title.contains(MATCH_TITLE)) {
+            handleMatchConfigClick(player, clicked);
+            return;
+        }
+
+        // Handle kit select menu
+        if (title.contains(KIT_SELECT_TITLE)) {
+            handleKitSelectClick(player, clicked);
+            return;
+        }
+
+        // Handle arena select menu  
+        if (title.contains(ARENA_SELECT_TITLE)) {
+            handleArenaSelectClick(player, clicked);
+            return;
+        }
+
         // Handle invite menu
         if (title.contains(INVITE_TITLE)) {
             if (clicked.getType() == Material.ARROW) {
@@ -255,7 +273,9 @@ public class PartyGUI implements Listener {
             return;
         }
 
-        // Handle main menu
+        // Handle main menu (GUI_TITLE)
+        if (!title.contains(GUI_TITLE)) return;
+        
         Material type = clicked.getType();
 
         switch (type) {
@@ -300,21 +320,6 @@ public class PartyGUI implements Listener {
                     openMatchConfigMenu(player);
                 }
             }
-        }
-
-        // Handle match config menu
-        if (title.contains(MATCH_TITLE)) {
-            handleMatchConfigClick(player, clicked);
-        }
-
-        // Handle kit select menu
-        if (title.contains(KIT_SELECT_TITLE)) {
-            handleKitSelectClick(player, clicked);
-        }
-
-        // Handle arena select menu  
-        if (title.contains(ARENA_SELECT_TITLE)) {
-            handleArenaSelectClick(player, clicked);
         }
     }
 
@@ -477,6 +482,7 @@ public class PartyGUI implements Listener {
         }
 
         // Check all members are online and not in duel/queue
+        List<Player> participants = new ArrayList<>();
         for (UUID memberUUID : members) {
             Player member = Bukkit.getPlayer(memberUUID);
             if (member == null || !member.isOnline()) {
@@ -491,22 +497,25 @@ public class PartyGUI implements Listener {
                 player.sendMessage(plugin.prefix() + "§c" + member.getName() + " está en cola.");
                 return;
             }
+            participants.add(member);
         }
 
         player.closeInventory();
 
-        // Announce to all members
-        for (UUID memberUUID : members) {
-            Player member = Bukkit.getPlayer(memberUUID);
-            if (member != null) {
-                member.sendMessage(plugin.prefix() + "§a¡Partida FFA iniciada! Kit: §e" + kitName);
-                member.sendMessage(plugin.prefix() + "§7Jugadores: §f" + members.size());
-            }
+        // Get arena
+        String arenaName = selectedArena.getOrDefault(leaderUUID, "Aleatoria");
+        var arenaManager = plugin.getArenaManager();
+        var arena = arenaName.equals("Aleatoria") ? 
+            arenaManager.getRandomArena() : 
+            arenaManager.getArena(arenaName);
+        
+        if (arena == null) {
+            player.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles.");
+            return;
         }
 
-        // TODO: Create actual FFA arena instance and teleport players
-        // For now, just announce
-        player.sendMessage(plugin.prefix() + "§e[FFA] Sistema en desarrollo. Próximamente...");
+        // Start FFA match
+        plugin.getDuelManager().startFFAMatch(participants, kitName, arena);
         
         // Clean up selections
         selectedKit.remove(leaderUUID);

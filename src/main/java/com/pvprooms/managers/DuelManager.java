@@ -625,6 +625,222 @@ public class DuelManager {
         );
     }
 
+    // ── FFA (Free For All) Match ───────────────────────────────────────────
+    
+    /** Active FFA matches: match ID -> set of participant UUIDs */
+    private final Map<UUID, Set<UUID>> ffaMatches = new ConcurrentHashMap<>();
+    /** Player UUID -> FFA match ID */
+    private final Map<UUID, UUID> playerFFAMap = new ConcurrentHashMap<>();
+    /** FFA match ID -> instance world name */
+    private final Map<UUID, String> ffaWorlds = new ConcurrentHashMap<>();
+    /** FFA match ID -> kit name */
+    private final Map<UUID, String> ffaKits = new ConcurrentHashMap<>();
+    
+    /**
+     * Starts a FFA match with multiple players.
+     */
+    public void startFFAMatch(List<Player> participants, String kitName, ArenaTemplate arena) {
+        if (participants.size() < 2) return;
+        
+        UUID matchId = UUID.randomUUID();
+        String matchIdShort = matchId.toString().replace("-", "").substring(0, 10);
+        String instanceWorldName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchIdShort;
+        
+        // Create world instance
+        World instanceWorld = plugin.getArenaInstanceManager().createInstance(arena, matchIdShort);
+        if (instanceWorld == null) {
+            for (Player p : participants) {
+                p.sendMessage(plugin.prefix() + "§cError al crear la arena. Contacta a un admin.");
+            }
+            return;
+        }
+        
+        // Register match
+        Set<UUID> participantUUIDs = ConcurrentHashMap.newKeySet();
+        for (Player p : participants) {
+            participantUUIDs.add(p.getUniqueId());
+            playerFFAMap.put(p.getUniqueId(), matchId);
+        }
+        ffaMatches.put(matchId, participantUUIDs);
+        ffaWorlds.put(matchId, instanceWorldName);
+        ffaKits.put(matchId, kitName);
+        
+        // Prepare and teleport all players
+        Location spawn1 = arena.getSpawn1(instanceWorld);
+        Location spawn2 = arena.getSpawn2(instanceWorld);
+        Location center = spawn1.clone().add(spawn2).multiply(0.5);
+        
+        int i = 0;
+        double radius = 5.0;
+        for (Player p : participants) {
+            saveSnapshot(p);
+            preparePlayer(p);
+            
+            // Spread players in a circle around center
+            double angle = (2 * Math.PI * i) / participants.size();
+            Location spawnLoc = center.clone().add(
+                Math.cos(angle) * radius, 
+                0, 
+                Math.sin(angle) * radius
+            );
+            spawnLoc.setY(spawn1.getY());
+            p.teleport(spawnLoc);
+            
+            plugin.getKitManager().applyKit(p, kitName);
+            plugin.getScoreboardManager().clearScoreboard(p);
+            i++;
+        }
+        
+        // Announce
+        for (Player p : participants) {
+            p.sendMessage(plugin.prefix() + "§a§l¡FFA INICIADO! §7Kit: §e" + kitName);
+            p.sendMessage(plugin.prefix() + "§7Jugadores: §f" + participants.size() + " §8| §7Último en pie gana!");
+        }
+        
+        // Start countdown
+        startFFACountdown(matchId, participants, instanceWorld, arena);
+    }
+    
+    private void startFFACountdown(UUID matchId, List<Player> participants, World world, ArenaTemplate arena) {
+        int seconds = plugin.getConfig().getInt("duels.countdown", 5);
+        
+        // Freeze all players
+        for (Player p : participants) {
+            frozenPlayers.add(p.getUniqueId());
+        }
+        
+        new BukkitRunnable() {
+            int remaining = seconds;
+            
+            @Override
+            public void run() {
+                Set<UUID> alive = ffaMatches.get(matchId);
+                if (alive == null) {
+                    cancel();
+                    return;
+                }
+                
+                List<Player> onlinePlayers = new ArrayList<>();
+                for (UUID uuid : alive) {
+                    Player p = Bukkit.getPlayer(uuid);
+                    if (p != null && p.isOnline()) onlinePlayers.add(p);
+                }
+                
+                if (onlinePlayers.size() < 2) {
+                    for (UUID uuid : alive) frozenPlayers.remove(uuid);
+                    cancel();
+                    endFFAMatch(matchId, onlinePlayers.isEmpty() ? null : onlinePlayers.get(0));
+                    return;
+                }
+                
+                if (remaining > 0) {
+                    for (Player p : onlinePlayers) {
+                        sendTitle(p, "§e§l" + remaining, "§7¡Prepárate para el FFA!");
+                        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.8f + (1.0f / seconds) * (seconds - remaining));
+                    }
+                    remaining--;
+                } else {
+                    // Unfreeze and start
+                    for (UUID uuid : alive) frozenPlayers.remove(uuid);
+                    
+                    for (Player p : onlinePlayers) {
+                        sendTitle(p, "§c§l¡PELEA!", "§7Último en pie gana");
+                        p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.2f);
+                        p.sendMessage(plugin.prefix() + "§c§l¡COMIENZA EL FFA!");
+                    }
+                    
+                    plugin.getWallManager().animateOpen(arena.getName(), world);
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+    
+    /** Called when a player dies in FFA */
+    public void handleFFADeath(Player dead, Player killer) {
+        UUID deadUUID = dead.getUniqueId();
+        UUID matchId = playerFFAMap.get(deadUUID);
+        if (matchId == null) return;
+        
+        Set<UUID> alive = ffaMatches.get(matchId);
+        if (alive == null) return;
+        
+        alive.remove(deadUUID);
+        playerFFAMap.remove(deadUUID);
+        
+        // Restore and teleport out
+        restorePlayer(dead);
+        dead.teleport(plugin.getLobbySpawn());
+        
+        dead.sendMessage(plugin.prefix() + "§c¡Has sido eliminado del FFA!");
+        if (killer != null) {
+            dead.sendMessage(plugin.prefix() + "§7Eliminado por: §c" + killer.getName());
+        }
+        
+        // Announce to remaining
+        for (UUID uuid : alive) {
+            Player p = Bukkit.getPlayer(uuid);
+            if (p != null) {
+                p.sendMessage(plugin.prefix() + "§c" + dead.getName() + " §7ha sido eliminado. §fQuedan §e" + alive.size() + " §fjugadores.");
+                if (killer != null && p.equals(killer)) {
+                    p.sendMessage(plugin.prefix() + "§a+1 Kill §7- Eliminaste a §c" + dead.getName());
+                }
+            }
+        }
+        
+        // Check for winner
+        if (alive.size() == 1) {
+            UUID winnerUUID = alive.iterator().next();
+            Player winner = Bukkit.getPlayer(winnerUUID);
+            endFFAMatch(matchId, winner);
+        }
+    }
+    
+    private void endFFAMatch(UUID matchId, Player winner) {
+        Set<UUID> participants = ffaMatches.remove(matchId);
+        String worldName = ffaWorlds.remove(matchId);
+        String kitName = ffaKits.remove(matchId);
+        
+        if (participants != null) {
+            for (UUID uuid : participants) {
+                playerFFAMap.remove(uuid);
+                frozenPlayers.remove(uuid);
+                Player p = Bukkit.getPlayer(uuid);
+                if (p != null) {
+                    restorePlayer(p);
+                    p.teleport(plugin.getLobbySpawn());
+                    
+                    if (winner != null) {
+                        if (p.equals(winner)) {
+                            sendTitle(p, "§6§l¡VICTORIA!", "§7¡Has ganado el FFA!");
+                            p.sendMessage(plugin.prefix() + "§6§l¡GANASTE EL FFA! §a¡Felicidades!");
+                            p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+                        } else {
+                            p.sendMessage(plugin.prefix() + "§e" + winner.getName() + " §7ha ganado el FFA.");
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Delete world instance
+        if (worldName != null) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                plugin.getArenaInstanceManager().destroyInstance(worldName);
+            }, 60L);
+        }
+    }
+    
+    /** Check if player is in a FFA match */
+    public boolean isInFFA(UUID uuid) {
+        return playerFFAMap.containsKey(uuid);
+    }
+    
+    /** Get FFA match ID for a player */
+    public UUID getFFAMatchId(UUID uuid) {
+        return playerFFAMap.get(uuid);
+    }
+
     // ── Inner class: Player snapshot ───────────────────────────────────────
 
     /**
