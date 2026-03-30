@@ -52,15 +52,24 @@ public class BotListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         
         if (plugin.getBotManager().isInBotDuel(player.getUniqueId())) {
-            // Cancel death message for bot duels
+            // Cancel death completely to prevent death screen
+            event.setCancelled(true);
             event.setDeathMessage(null);
+            event.getDrops().clear();
+            event.setDroppedExp(0);
             
-            // Handle bot duel loss
+            // Immediately heal and respawn player to prevent death screen
+            player.setHealth(player.getMaxHealth());
+            player.setFoodLevel(20);
+            player.setSaturation(20f);
+            player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
+            
+            // Handle bot duel loss (teleport to lobby, etc.)
             plugin.getBotManager().onPlayerDeath(player);
         }
     }
