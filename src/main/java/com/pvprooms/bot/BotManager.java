@@ -7,6 +7,7 @@ import net.citizensnpcs.api.npc.NPC;
 import net.citizensnpcs.api.npc.NPCRegistry;
 import net.citizensnpcs.api.trait.trait.Equipment;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.EntityType;
@@ -102,55 +103,96 @@ public class BotManager {
             return false;
         }
 
-        // Get spawn locations FIRST
+        // Get spawn locations from template for the instance world
         Location spawn1 = template.getSpawn1(instanceWorld);
         Location spawn2 = template.getSpawn2(instanceWorld);
         
-        // Force load ALL chunks in the arena area (critical for preventing void falls)
-        int minX = Math.min(spawn1.getBlockX(), spawn2.getBlockX()) - 32;
-        int maxX = Math.max(spawn1.getBlockX(), spawn2.getBlockX()) + 32;
-        int minZ = Math.min(spawn1.getBlockZ(), spawn2.getBlockZ()) - 32;
-        int maxZ = Math.max(spawn1.getBlockZ(), spawn2.getBlockZ()) + 32;
+        // Validate spawn locations
+        if (spawn1 == null || spawn2 == null) {
+            player.sendMessage(plugin.prefix() + "§cError: Spawns no configurados en la arena.");
+            plugin.getArenaInstanceManager().destroyInstance(instanceWorldName);
+            return false;
+        }
+        
+        plugin.getLogger().info("[BotDuel] Arena: " + template.getName() + 
+                ", Spawn1: " + spawn1.getBlockX() + "," + spawn1.getBlockY() + "," + spawn1.getBlockZ() +
+                ", Spawn2: " + spawn2.getBlockX() + "," + spawn2.getBlockY() + "," + spawn2.getBlockZ());
+        
+        // Force load chunks at spawn points FIRST (most critical)
+        spawn1.getChunk().load(true);
+        spawn1.getChunk().setForceLoaded(true);
+        spawn2.getChunk().load(true);
+        spawn2.getChunk().setForceLoaded(true);
+        
+        // Load surrounding chunks for the arena area
+        int minX = Math.min(spawn1.getBlockX(), spawn2.getBlockX()) - 16;
+        int maxX = Math.max(spawn1.getBlockX(), spawn2.getBlockX()) + 16;
+        int minZ = Math.min(spawn1.getBlockZ(), spawn2.getBlockZ()) - 16;
+        int maxZ = Math.max(spawn1.getBlockZ(), spawn2.getBlockZ()) + 16;
         
         for (int x = minX >> 4; x <= maxX >> 4; x++) {
             for (int z = minZ >> 4; z <= maxZ >> 4; z++) {
-                instanceWorld.getChunkAt(x, z).load(true);
-                instanceWorld.getChunkAt(x, z).setForceLoaded(true);
+                Chunk chunk = instanceWorld.getChunkAt(x, z);
+                chunk.load(true);
+                chunk.setForceLoaded(true);
             }
         }
 
-        // Create bot NPC
-        NPCRegistry registry = CitizensAPI.getNPCRegistry();
-        String botName = getBotName(difficulty);
-        NPC bot = registry.createNPC(EntityType.PLAYER, botName);
-        
-        // Spawn bot at spawn2
-        bot.spawn(spawn2);
+        // Store spawn locations for later use (capture them now while world is valid)
+        final Location finalSpawn1 = spawn1.clone();
+        final Location finalSpawn2 = spawn2.clone();
 
-        // Store bot reference
-        playerBots.put(uuid, bot);
-
-        // Give bot the kit equipment
-        equipBot(bot, kitName);
-
-        // Create bot duel tracking
-        BotDuel botDuel = new BotDuel(uuid, bot.getId(), kitName, difficulty, instanceWorldName, template);
+        // Create bot duel tracking FIRST (bot ID will be set later)
+        BotDuel botDuel = new BotDuel(uuid, -1, kitName, difficulty, instanceWorldName, template);
         activeBotDuels.put(uuid, botDuel);
-        
-        // Small delay to ensure chunks are fully loaded before teleporting
+
+        // Delay bot and player spawn to ensure chunks are fully loaded
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) {
                 endBotDuel(uuid, false);
                 return;
             }
             
-            // Prepare player (clear inventory, heal, etc.)
+            // Re-validate world exists
+            World world = Bukkit.getWorld(instanceWorldName);
+            if (world == null) {
+                player.sendMessage(plugin.prefix() + "§cError: El mundo de la arena no existe.");
+                endBotDuel(uuid, false);
+                return;
+            }
+            
+            // Update spawn locations with current world reference
+            Location playerSpawn = new Location(world, finalSpawn1.getX(), finalSpawn1.getY(), finalSpawn1.getZ(),
+                    finalSpawn1.getYaw(), finalSpawn1.getPitch());
+            Location botSpawn = new Location(world, finalSpawn2.getX(), finalSpawn2.getY(), finalSpawn2.getZ(),
+                    finalSpawn2.getYaw(), finalSpawn2.getPitch());
+            
+            // Force load spawn chunks again
+            playerSpawn.getChunk().load(true);
+            botSpawn.getChunk().load(true);
+            
+            // Create and spawn bot NPC
+            NPCRegistry registry = CitizensAPI.getNPCRegistry();
+            String botName = getBotName(difficulty);
+            NPC bot = registry.createNPC(EntityType.PLAYER, botName);
+            bot.spawn(botSpawn);
+            
+            // Store bot reference
+            playerBots.put(uuid, bot);
+            botDuel.setBotNpcId(bot.getId());
+            
+            // Give bot the kit equipment
+            equipBot(bot, kitName);
+            
+            // Prepare player
             player.getInventory().clear();
             player.setHealth(player.getMaxHealth());
             player.setFoodLevel(20);
             player.setSaturation(20f);
             player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
-            player.teleport(spawn1);
+            
+            // Teleport player
+            player.teleport(playerSpawn);
 
             // Give player kit
             plugin.getKitManager().applyKit(player, kitName);
@@ -160,7 +202,7 @@ public class BotManager {
             player.sendMessage(plugin.prefix() + "§7Kit: §e" + kitName + " §7| §cNo afecta ELO/Tier");
 
             startCountdown(player, bot, botDuel);
-        }, 10L); // 0.5 second delay for chunk loading
+        }, 40L); // 2 second delay for proper chunk loading
 
         return true;
     }
@@ -469,7 +511,7 @@ public class BotManager {
 
     public static class BotDuel {
         public final UUID playerUUID;
-        public final int botNpcId;
+        public int botNpcId;  // Not final - set after bot creation
         public final String kitName;
         public final BotDifficulty difficulty;
         public final String instanceWorldName;
@@ -491,6 +533,10 @@ public class BotManager {
 
         public void setAI(BotCombatAI ai) {
             this.ai = ai;
+        }
+        
+        public void setBotNpcId(int id) {
+            this.botNpcId = id;
         }
 
         public long getElapsedSeconds() {
