@@ -1,6 +1,7 @@
 package com.pvprooms;
 
 import com.pvprooms.commands.*;
+import com.pvprooms.commands.VerifyCommand;
 import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.commands.TrimCommand;
 import com.pvprooms.commands.PhysicalCrateCommand;
@@ -26,6 +27,7 @@ import com.pvprooms.listeners.PhysicalTrimCrateListener;
 import com.pvprooms.listeners.LobbyListener;
 import com.pvprooms.listeners.ChatListener;
 import com.pvprooms.api.TierApiServer;
+import com.pvprooms.api.TicketManager;
 import com.pvprooms.listeners.SpearListener;
 import com.pvprooms.listeners.AttributeSwapListener;
 import com.pvprooms.bot.BotManager;
@@ -78,6 +80,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private HealthHologramManager healthHologramManager;
     private TierManager tierManager;
     private TierApiServer tierApiServer;
+    private TicketManager ticketManager;
     private PersonalKitManager personalKitManager;
     private TrimManager trimManager;
     private TrimGUI trimGUI;
@@ -135,6 +138,7 @@ public class PvPRoomsPro extends JavaPlugin {
         partyGUI                = new com.pvprooms.gui.PartyGUI(this);
         botManager              = new BotManager(this);
         botPracticeGUI          = new BotPracticeGUI(this);
+        ticketManager           = new TicketManager(this);
         SpearItem.init(this);
         TrimCrate.init(this);
         PhysicalTrimCrate.init(this);
@@ -340,6 +344,8 @@ public class PvPRoomsPro extends JavaPlugin {
 
         AdminNpcHoloCommand adminNpcHoloCmd = new AdminNpcHoloCommand(this);
         // Admin command already registered, just add NPC/Holo subcommands via the existing /admin
+
+        getCommand("verificar").setExecutor(new VerifyCommand(this));
     }
 
     private void registerListeners() {
@@ -442,4 +448,5 @@ public class PvPRoomsPro extends JavaPlugin {
     public String                getServerRegion()           { return serverRegion; }
     public BotManager            getBotManager()              { return botManager; }
     public BotPracticeGUI        getBotPracticeGUI()          { return botPracticeGUI; }
+    public TicketManager         getTicketManager()           { return ticketManager; }
 }

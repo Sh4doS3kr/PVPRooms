@@ -9,6 +9,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -23,6 +24,18 @@ import java.util.concurrent.Executors;
  *   GET /api/kits              → lista de kits
  *   GET /api/player/{nombre}   → datos de un jugador
  *   GET /api/stats             → estadísticas del servidor
+ *   POST /api/auth/register    → iniciar registro (devuelve código)
+ *   POST /api/auth/login       → login con username
+ *   POST /api/auth/logout      → logout
+ *   GET /api/auth/me           → datos del usuario logueado
+ *   POST /api/tickets          → crear ticket
+ *   GET /api/tickets           → listar tickets
+ *   GET /api/tickets/{id}      → obtener ticket
+ *   POST /api/tickets/{id}/message → enviar mensaje
+ *   POST /api/tickets/{id}/status  → actualizar estado (staff)
+ *   GET /api/tickets/timeslots → horarios disponibles
+ *   GET /api/admin/users       → listar usuarios (admin)
+ *   POST /api/admin/users/{name}/role → cambiar rol (admin)
  */
 public class TierApiServer {
 
@@ -42,7 +55,17 @@ public class TierApiServer {
             server.createContext("/api/kits",   this::handleKits);
             server.createContext("/api/player", this::handlePlayer);
             server.createContext("/api/stats",  this::handleStats);
-            server.createContext("/",           this::handleRoot);
+            // Auth endpoints
+            server.createContext("/api/auth/register", this::handleRegister);
+            server.createContext("/api/auth/login",    this::handleLogin);
+            server.createContext("/api/auth/logout",   this::handleLogout);
+            server.createContext("/api/auth/me",       this::handleMe);
+            // Ticket endpoints
+            server.createContext("/api/tickets/timeslots", this::handleTimeSlots);
+            server.createContext("/api/tickets",       this::handleTickets);
+            // Admin endpoints
+            server.createContext("/api/admin/users",   this::handleAdminUsers);
+            server.createContext("/",                  this::handleRoot);
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
             plugin.getLogger().info("[TierAPI] Servidor web iniciado → http://0.0.0.0:" + port);
@@ -253,8 +276,8 @@ public class TierApiServer {
 
     private void cors(HttpExchange ex) {
         ex.getResponseHeaders().set("Access-Control-Allow-Origin",  "*");
-        ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
-        ex.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+        ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        ex.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     }
 
     /** Handles OPTIONS preflight. Returns true if it was a preflight (caller should return). */
@@ -287,5 +310,352 @@ public class TierApiServer {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // AUTH HANDLERS
+    // ══════════════════════════════════════════════════════════════════════
+
+    private void handleRegister(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "Method not allowed");
+            return;
+        }
+
+        Map<String, String> body = parseJsonBody(ex);
+        String username = body.get("username");
+        if (username == null || username.isBlank()) {
+            sendError(ex, 400, "Username requerido");
+            return;
+        }
+
+        // Check if already registered
+        if (plugin.getTicketManager().getUser(username) != null) {
+            sendError(ex, 409, "Usuario ya registrado. Usa 'Iniciar Sesión'.");
+            return;
+        }
+
+        // Start registration - generate code
+        String code = plugin.getTicketManager().startRegistration(username);
+        if (code == null) {
+            sendError(ex, 409, "Usuario ya registrado");
+            return;
+        }
+
+        sendJson(ex, "{\"success\":true,\"code\":\"" + code + "\",\"message\":\"Entra al servidor y usa: /verificar " + code + "\"}");
+    }
+
+    private void handleLogin(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "Method not allowed");
+            return;
+        }
+
+        Map<String, String> body = parseJsonBody(ex);
+        String username = body.get("username");
+        if (username == null || username.isBlank()) {
+            sendError(ex, 400, "Username requerido");
+            return;
+        }
+
+        // Check if user exists
+        TicketManager.WebUser user = plugin.getTicketManager().getUser(username);
+        if (user == null) {
+            sendError(ex, 404, "Usuario no registrado. Regístrate primero.");
+            return;
+        }
+
+        // Create session
+        String token = plugin.getTicketManager().login(username);
+        sendJson(ex, "{\"success\":true,\"token\":\"" + token + "\",\"user\":" + userJson(user) + "}");
+    }
+
+    private void handleLogout(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        
+        String token = getAuthToken(ex);
+        if (token != null) {
+            plugin.getTicketManager().logout(token);
+        }
+        sendJson(ex, "{\"success\":true}");
+    }
+
+    private void handleMe(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        String token = getAuthToken(ex);
+        TicketManager.WebUser user = plugin.getTicketManager().getUserBySession(token);
+        if (user == null) {
+            sendError(ex, 401, "No autenticado");
+            return;
+        }
+
+        sendJson(ex, userJson(user));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TICKET HANDLERS
+    // ══════════════════════════════════════════════════════════════════════
+
+    private void handleTimeSlots(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        List<TicketManager.TimeSlot> slots = plugin.getTicketManager().getTimeSlots();
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < slots.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("{\"value\":\"").append(esc(slots.get(i).value))
+              .append("\",\"display\":\"").append(esc(slots.get(i).display)).append("\"}");
+        }
+        sb.append("]");
+        sendJson(ex, sb.toString());
+    }
+
+    private void handleTickets(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        String token = getAuthToken(ex);
+        TicketManager.WebUser user = plugin.getTicketManager().getUserBySession(token);
+        
+        String path = ex.getRequestURI().getPath();
+        String[] parts = path.split("/");
+
+        // POST /api/tickets - create new ticket
+        if (ex.getRequestMethod().equalsIgnoreCase("POST") && parts.length == 3) {
+            if (user == null) { sendError(ex, 401, "No autenticado"); return; }
+            
+            Map<String, String> body = parseJsonBody(ex);
+            String kit = body.get("kit");
+            String date = body.get("date");
+            String timeSlot = body.get("timeSlot");
+            String notes = body.getOrDefault("notes", "");
+
+            if (kit == null || date == null || timeSlot == null) {
+                sendError(ex, 400, "Faltan campos requeridos (kit, date, timeSlot)");
+                return;
+            }
+
+            TicketManager.Ticket ticket = plugin.getTicketManager().createTicket(
+                    user.name, kit, date, timeSlot, notes);
+            if (ticket == null) {
+                sendError(ex, 500, "Error al crear ticket");
+                return;
+            }
+
+            sendJson(ex, ticketJson(ticket));
+            return;
+        }
+
+        // GET /api/tickets - list tickets
+        if (ex.getRequestMethod().equalsIgnoreCase("GET") && parts.length == 3) {
+            if (user == null) { sendError(ex, 401, "No autenticado"); return; }
+
+            List<TicketManager.Ticket> tickets;
+            if (user.role.equals("admin") || user.role.equals("tester")) {
+                tickets = plugin.getTicketManager().getAllTickets();
+            } else {
+                tickets = plugin.getTicketManager().getTicketsForUser(user.name);
+            }
+
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < tickets.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(ticketJson(tickets.get(i)));
+            }
+            sb.append("]");
+            sendJson(ex, sb.toString());
+            return;
+        }
+
+        // /api/tickets/{id}...
+        if (parts.length >= 4) {
+            String ticketId = parts[3];
+            TicketManager.Ticket ticket = plugin.getTicketManager().getTicket(ticketId);
+            
+            if (ticket == null) {
+                sendError(ex, 404, "Ticket no encontrado");
+                return;
+            }
+
+            // Check access
+            if (user == null) { sendError(ex, 401, "No autenticado"); return; }
+            boolean isOwner = ticket.username.equalsIgnoreCase(user.name);
+            boolean isStaff = user.role.equals("admin") || user.role.equals("tester");
+            if (!isOwner && !isStaff) {
+                sendError(ex, 403, "Sin acceso a este ticket");
+                return;
+            }
+
+            // GET /api/tickets/{id}
+            if (ex.getRequestMethod().equalsIgnoreCase("GET") && parts.length == 4) {
+                sendJson(ex, ticketJson(ticket));
+                return;
+            }
+
+            // POST /api/tickets/{id}/message
+            if (ex.getRequestMethod().equalsIgnoreCase("POST") && parts.length == 5 && parts[4].equals("message")) {
+                Map<String, String> body = parseJsonBody(ex);
+                String message = body.get("message");
+                if (message == null || message.isBlank()) {
+                    sendError(ex, 400, "Mensaje requerido");
+                    return;
+                }
+
+                plugin.getTicketManager().addMessage(ticketId, user.name, message, isStaff);
+                sendJson(ex, "{\"success\":true}");
+                return;
+            }
+
+            // POST /api/tickets/{id}/status (staff only)
+            if (ex.getRequestMethod().equalsIgnoreCase("POST") && parts.length == 5 && parts[4].equals("status")) {
+                if (!isStaff) { sendError(ex, 403, "Solo staff"); return; }
+                
+                Map<String, String> body = parseJsonBody(ex);
+                String status = body.get("status");
+                if (status == null) {
+                    sendError(ex, 400, "Status requerido");
+                    return;
+                }
+
+                plugin.getTicketManager().updateTicketStatus(ticketId, status, user.name);
+                sendJson(ex, "{\"success\":true}");
+                return;
+            }
+        }
+
+        sendError(ex, 404, "Endpoint no encontrado");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ADMIN HANDLERS
+    // ══════════════════════════════════════════════════════════════════════
+
+    private void handleAdminUsers(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        String token = getAuthToken(ex);
+        TicketManager.WebUser user = plugin.getTicketManager().getUserBySession(token);
+        
+        if (user == null || !user.role.equals("admin")) {
+            sendError(ex, 403, "Solo administradores");
+            return;
+        }
+
+        String path = ex.getRequestURI().getPath();
+        String[] parts = path.split("/");
+
+        // GET /api/admin/users - list all users
+        if (ex.getRequestMethod().equalsIgnoreCase("GET") && parts.length == 4) {
+            List<TicketManager.WebUser> users = plugin.getTicketManager().getAllUsers();
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < users.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(userJson(users.get(i)));
+            }
+            sb.append("]");
+            sendJson(ex, sb.toString());
+            return;
+        }
+
+        // POST /api/admin/users/{name}/role
+        if (ex.getRequestMethod().equalsIgnoreCase("POST") && parts.length == 6 && parts[5].equals("role")) {
+            String targetUser = parts[4];
+            Map<String, String> body = parseJsonBody(ex);
+            String newRole = body.get("role");
+            
+            if (newRole == null || (!newRole.equals("user") && !newRole.equals("tester") && !newRole.equals("admin"))) {
+                sendError(ex, 400, "Rol inválido (user, tester, admin)");
+                return;
+            }
+
+            if (plugin.getTicketManager().setUserRole(targetUser, newRole)) {
+                sendJson(ex, "{\"success\":true}");
+            } else {
+                sendError(ex, 404, "Usuario no encontrado");
+            }
+            return;
+        }
+
+        sendError(ex, 404, "Endpoint no encontrado");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // JSON HELPERS
+    // ══════════════════════════════════════════════════════════════════════
+
+    private String userJson(TicketManager.WebUser user) {
+        return "{\"uuid\":\"" + user.uuid + "\""
+                + ",\"name\":\"" + esc(user.name) + "\""
+                + ",\"role\":\"" + esc(user.role) + "\"}";
+    }
+
+    private String ticketJson(TicketManager.Ticket t) {
+        StringBuilder msgs = new StringBuilder("[");
+        for (int i = 0; i < t.messages.size(); i++) {
+            if (i > 0) msgs.append(",");
+            TicketManager.ChatMessage m = t.messages.get(i);
+            msgs.append("{\"author\":\"").append(esc(m.author))
+                .append("\",\"message\":\"").append(esc(m.message))
+                .append("\",\"isStaff\":").append(m.isStaff)
+                .append(",\"timestamp\":").append(m.timestamp).append("}");
+        }
+        msgs.append("]");
+
+        return "{\"id\":\"" + esc(t.id) + "\""
+                + ",\"username\":\"" + esc(t.username) + "\""
+                + ",\"uuid\":\"" + t.uuid + "\""
+                + ",\"kit\":\"" + esc(t.kit) + "\""
+                + ",\"date\":\"" + esc(t.date) + "\""
+                + ",\"timeSlot\":\"" + esc(t.timeSlot) + "\""
+                + ",\"notes\":\"" + esc(t.notes) + "\""
+                + ",\"status\":\"" + esc(t.status) + "\""
+                + ",\"assignedTo\":\"" + esc(t.assignedTo) + "\""
+                + ",\"createdAt\":" + t.createdAt
+                + ",\"messages\":" + msgs + "}";
+    }
+
+    private Map<String, String> parseJsonBody(HttpExchange ex) throws IOException {
+        Map<String, String> result = new HashMap<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line);
+            String json = sb.toString().trim();
+            
+            // Simple JSON parser for flat objects
+            if (json.startsWith("{") && json.endsWith("}")) {
+                json = json.substring(1, json.length() - 1);
+                String[] pairs = json.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                for (String pair : pairs) {
+                    String[] kv = pair.split(":", 2);
+                    if (kv.length == 2) {
+                        String key = kv[0].trim().replace("\"", "");
+                        String value = kv[1].trim();
+                        if (value.startsWith("\"") && value.endsWith("\"")) {
+                            value = value.substring(1, value.length() - 1);
+                        }
+                        result.put(key, value);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private String getAuthToken(HttpExchange ex) {
+        String auth = ex.getRequestHeaders().getFirst("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return auth.substring(7);
+        }
+        return null;
     }
 }
