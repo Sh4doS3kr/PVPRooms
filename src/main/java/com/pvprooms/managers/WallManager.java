@@ -216,9 +216,20 @@ public class WallManager {
 
     /** Opens ALL configured walls for the arena simultaneously. */
     public void animateOpen(String arenaName, World world) {
+        plugin.getLogger().info("[Walls] animateOpen called for arena: '" + arenaName + "' in world: " + (world != null ? world.getName() : "null"));
+        plugin.getLogger().info("[Walls] Available arenas in walls map: " + walls.keySet());
+        
         Map<String, WallConfig> arenaWalls = walls.get(arenaName.toLowerCase());
-        if (arenaWalls == null || arenaWalls.isEmpty()) return;
-        for (WallConfig cfg : arenaWalls.values()) animateSingleOpen(cfg, world);
+        if (arenaWalls == null || arenaWalls.isEmpty()) {
+            plugin.getLogger().warning("[Walls] No walls found for arena: " + arenaName.toLowerCase());
+            return;
+        }
+        
+        plugin.getLogger().info("[Walls] Found " + arenaWalls.size() + " wall(s) for arena " + arenaName);
+        for (WallConfig cfg : arenaWalls.values()) {
+            plugin.getLogger().info("[Walls] Opening wall with " + cfg.getBlocks().size() + " blocks");
+            animateSingleOpen(cfg, world);
+        }
     }
 
     /**

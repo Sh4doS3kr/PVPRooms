@@ -193,9 +193,13 @@ public class BotManager {
                     
                     // Open arena wall (like in regular duels)
                     World instanceWorld = Bukkit.getWorld(botDuel.instanceWorldName);
+                    plugin.getLogger().info("[BotDuel] Opening walls - Template: " + botDuel.template.getName() + 
+                            ", World: " + botDuel.instanceWorldName + ", WorldExists: " + (instanceWorld != null));
                     if (instanceWorld != null) {
                         plugin.getWallManager().animateOpen(
                                 botDuel.template.getName(), instanceWorld);
+                    } else {
+                        plugin.getLogger().warning("[BotDuel] Instance world is NULL! Cannot open walls.");
                     }
                     
                     // Show bot duel scoreboard
