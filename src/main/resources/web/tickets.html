@@ -668,12 +668,13 @@ async function init() {
     return;
   }
   
-  // Try cached user
+  // Try cached user first for faster UI
   const cached = localStorage.getItem('currentUser');
   if (cached) {
     try {
       currentUser = JSON.parse(cached);
       updateUserUI();
+      loadKitsAndSlots();
     } catch (e) {}
   }
   
@@ -686,7 +687,7 @@ async function init() {
       currentUser = await res.json();
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
       updateUserUI();
-      loadKitsAndSlots();
+      if (!cached) loadKitsAndSlots();
       loadMyTickets();
     } else {
       localStorage.removeItem('authToken');
@@ -695,6 +696,12 @@ async function init() {
     }
   } catch (e) {
     console.error('Auth failed:', e);
+    // If server is down, still try to work with cached data
+    if (cached) {
+      loadKitsAndSlots();
+    } else {
+      window.location.href = '/login.html';
+    }
   }
 }
 
@@ -800,13 +807,25 @@ async function submitTicket() {
 
 // Load my tickets
 async function loadMyTickets() {
+  const container = document.getElementById('ticketsList');
+  
+  if (!authToken) {
+    container.innerHTML = '<div class="no-tickets">Debes iniciar sesión para ver tus tickets.</div>';
+    return;
+  }
+  
   try {
     const res = await fetch(API + '/tickets', {
       headers: { 'Authorization': 'Bearer ' + authToken }
     });
+    
+    if (!res.ok) {
+      container.innerHTML = '<div class="no-tickets">No se pudieron cargar los tickets. Inicia sesión de nuevo.</div>';
+      return;
+    }
+    
     const tickets = await res.json();
     
-    const container = document.getElementById('ticketsList');
     if (tickets.length === 0) {
       container.innerHTML = '<div class="no-tickets">No tienes tickets. ¡Solicita tu test HT3+ ahora!</div>';
     } else {
@@ -826,6 +845,7 @@ async function loadMyTickets() {
     }
   } catch (e) {
     console.error('Failed to load tickets:', e);
+    container.innerHTML = '<div class="no-tickets">Error de conexión. Intenta de nuevo más tarde.</div>';
   }
 }
 
