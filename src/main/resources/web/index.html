@@ -76,6 +76,7 @@
       <li><a class="nav-a" href="#main">Clasificación</a></li>
       <li><a class="nav-a" href="#stats">Estadísticas</a></li>
       <li><a class="nav-a" href="#tierInfo">¿Cómo funciona?</a></li>
+      <li><a class="nav-a" href="/tickets.html">🎟 Tickets</a></li>
     </ul>
     <div class="nav-search-wrap">
       <div class="nav-search">
@@ -87,27 +88,18 @@
         <span class="srv-dot" id="srvDot"></span>
         <span id="srvStatus">Conectando…</span>
       </div>
-      <!-- Auth Button -->
-      <div class="auth-area" id="authArea">
-        <button class="auth-btn" id="authBtn" onclick="showAuthModal()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>Iniciar Sesión</span>
+      <!-- Auth nav button -->
+      <div style="position:relative" id="navAuthWrap">
+        <button id="navAuthBtn" onclick="navAuthClick()" style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:10px;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:600;color:var(--clr-text);transition:.2s" onmouseover="this.style.borderColor='var(--clr-accent)'" onmouseout="if(!_navOpen)this.style.borderColor='var(--clr-border)'">
+          <span id="navAuthTxt">Iniciar sesión</span>
         </button>
-      </div>
-      <!-- User Menu (hidden by default) -->
-      <div class="user-menu" id="userMenu" style="display:none;">
-        <button class="user-btn" onclick="toggleUserDropdown()">
-          <img id="userHead" class="user-head" src="" alt=""/>
-          <span id="userName">Usuario</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        <div class="user-dropdown" id="userDropdown">
-          <a href="/tickets.html">📋 Mis Tickets</a>
-          <a href="/tickets.html">✨ Solicitar Test HT3+</a>
-          <a href="/tickets.html" id="staffPanelLink" style="display:none;">⚙️ Panel Staff</a>
-          <a href="/tickets.html" id="adminPanelLink" style="display:none;">👑 Panel Admin</a>
-          <hr/>
-          <a href="#" onclick="logout(); return false;">🚪 Cerrar Sesión</a>
+        <div id="navAuthMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:var(--clr-card);border:1px solid var(--clr-border);border-radius:14px;padding:8px;min-width:200px;z-index:999;box-shadow:0 16px 48px rgba(0,0,0,.5)">
+          <div id="navAuthName" style="padding:8px 12px 4px;font-size:.75rem;font-weight:700;color:var(--clr-muted);letter-spacing:.06em;text-transform:uppercase">Cuenta</div>
+          <div style="height:1px;background:var(--clr-border);margin:6px 0"></div>
+          <a href="/tickets.html" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--clr-text);text-decoration:none;transition:.15s" onmouseover="this.style.background='var(--clr-bg)'" onmouseout="this.style.background=''">🎟 Mis Tickets</a>
+          <a id="navAdminLink" href="/admin.html" style="display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--clr-text);text-decoration:none;transition:.15s" onmouseover="this.style.background='var(--clr-bg)'" onmouseout="this.style.background=''">⚙️ Panel Staff</a>
+          <div style="height:1px;background:var(--clr-border);margin:6px 0"></div>
+          <div onclick="navLogout()" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:500;color:#f87171;transition:.15s" onmouseover="this.style.background='rgba(248,113,113,.05)'" onmouseout="this.style.background=''">🚪 Cerrar sesión</div>
         </div>
       </div>
     </div>
@@ -825,666 +817,60 @@ setInterval(measurePing, 2000);
 
 init();
 
-// ══════════════════════════════════════════════════════════════════════════
-// AUTH & TICKETS SYSTEM
-// ══════════════════════════════════════════════════════════════════════════
+// ── Nav auth button ───────────────────────────────────────────────────────
+var _navOpen = false;
+var _navUser = null;
 
-let currentUser = null;
-let authToken = localStorage.getItem('authToken');
-
-// Check if user is logged in on page load
-async function checkAuth() {
-  if (!authToken) return;
-  
-  // Try to use cached user first
-  const cachedUser = localStorage.getItem('currentUser');
-  if (cachedUser) {
-    try {
-      currentUser = JSON.parse(cachedUser);
-      showLoggedInState();
-    } catch (e) {}
-  }
-  
-  // Verify with server
+(async function initNavAuth() {
+  const t = localStorage.getItem('mt_token');
+  if (!t) return;
   try {
-    const res = await fetch(API + '/auth/me', {
-      headers: { 'Authorization': 'Bearer ' + authToken }
-    });
-    if (res.ok) {
-      currentUser = await res.json();
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      showLoggedInState();
-    } else {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
-      authToken = null;
-      currentUser = null;
-      document.getElementById('authArea').style.display = 'flex';
-      document.getElementById('userMenu').style.display = 'none';
+    const r = await fetch('/api/auth/me', { headers: { 'X-Token': t } });
+    if (!r.ok) return;
+    _navUser = await r.json();
+    const uuid = _navUser.uuid || '';
+    const faceUrl = uuid ? 'https://crafatar.com/avatars/' + uuid + '?size=32&overlay' : '';
+    const btn = document.getElementById('navAuthBtn');
+    btn.innerHTML = (faceUrl ? '<img src="' + faceUrl + '" onerror="this.style.display=\'none\'" style="width:24px;height:24px;border-radius:4px;image-rendering:pixelated" alt=""/>' : '') +
+      '<span>' + _navUser.username + '</span>';
+    document.getElementById('navAuthName').textContent = _navUser.username + ' · ' + (_navUser.role === 'admin' ? '⭐ Admin' : _navUser.role === 'tester' ? '🔬 Tester' : '👤 Usuario');
+    if (_navUser.role !== 'user') {
+      var al = document.getElementById('navAdminLink');
+      if (al) al.style.display = 'flex';
     }
-  } catch (e) { console.error('Auth check failed:', e); }
+  } catch(e) {}
+})();
+
+function navAuthClick() {
+  if (!_navUser) { window.location.href = '/tickets.html'; return; }
+  _navOpen = !_navOpen;
+  document.getElementById('navAuthMenu').style.display = _navOpen ? 'block' : 'none';
 }
 
-function showLoggedInState() {
-  document.getElementById('authArea').style.display = 'none';
-  document.getElementById('userMenu').style.display = 'flex';
-  document.getElementById('userHead').src = 'https://mc-heads.net/avatar/' + currentUser.name + '/32';
-  document.getElementById('userName').textContent = currentUser.name;
-  
-  // Show staff/admin links based on role
-  if (currentUser.role === 'tester' || currentUser.role === 'admin') {
-    document.getElementById('staffPanelLink').style.display = 'block';
-  }
-  if (currentUser.role === 'admin') {
-    document.getElementById('adminPanelLink').style.display = 'block';
-  }
-}
-
-function toggleUserDropdown() {
-  const dd = document.getElementById('userDropdown');
-  dd.classList.toggle('show');
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.user-menu')) {
-    document.getElementById('userDropdown')?.classList.remove('show');
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#navAuthWrap')) {
+    _navOpen = false;
+    var m = document.getElementById('navAuthMenu');
+    if (m) m.style.display = 'none';
   }
 });
 
-function showAuthModal() {
-  // Redirect to login page instead of modal
-  window.location.href = '/login.html';
+async function navLogout() {
+  const t = localStorage.getItem('mt_token');
+  if (t) await fetch('/api/auth/logout', { method:'POST', headers:{'X-Token':t,'Content-Type':'application/json'} }).catch(()=>{});
+  localStorage.removeItem('mt_token');
+  location.reload();
 }
-
-function hideAuthModal() {
-  document.getElementById('authModal').classList.remove('show');
-  document.getElementById('authUsername').value = '';
-  document.getElementById('authError').textContent = '';
-  document.getElementById('authStep1').style.display = 'block';
-  document.getElementById('authStep2').style.display = 'none';
-}
-
-async function startRegister() {
-  const username = document.getElementById('authUsername').value.trim();
-  if (!username) return;
-  
-  const errorEl = document.getElementById('authError');
-  errorEl.textContent = '';
-  
-  try {
-    const res = await fetch(API + '/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
-    });
-    const data = await res.json();
-    
-    if (res.ok) {
-      document.getElementById('verifyCode').textContent = data.code;
-      document.getElementById('authStep1').style.display = 'none';
-      document.getElementById('authStep2').style.display = 'block';
-    } else {
-      errorEl.textContent = data.error || 'Error al registrar';
-    }
-  } catch (e) {
-    errorEl.textContent = 'Error de conexión';
-  }
-}
-
-async function doLogin() {
-  const username = document.getElementById('authUsername').value.trim();
-  if (!username) return;
-  
-  const errorEl = document.getElementById('authError');
-  errorEl.textContent = '';
-  
-  try {
-    const res = await fetch(API + '/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
-    });
-    const data = await res.json();
-    
-    if (res.ok) {
-      authToken = data.token;
-      currentUser = data.user;
-      localStorage.setItem('authToken', authToken);
-      hideAuthModal();
-      showLoggedInState();
-    } else {
-      errorEl.textContent = data.error || 'Error al iniciar sesión';
-    }
-  } catch (e) {
-    errorEl.textContent = 'Error de conexión';
-  }
-}
-
-async function logout() {
-  try {
-    await fetch(API + '/auth/logout', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + authToken }
-    });
-  } catch (e) {}
-  
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('currentUser');
-  authToken = null;
-  currentUser = null;
-  document.getElementById('authArea').style.display = 'flex';
-  document.getElementById('userMenu').style.display = 'none';
-  document.getElementById('userDropdown').classList.remove('show');
-}
-
-// ── TICKETS ───────────────────────────────────────────────────────────────
-
-let ticketKits = [];
-let ticketTimeSlots = [];
-
-async function loadKitsAndSlots() {
-  try {
-    const [kitsRes, slotsRes] = await Promise.all([
-      fetch(API + '/kits'),
-      fetch(API + '/tickets/timeslots')
-    ]);
-    ticketKits = await kitsRes.json();
-    ticketTimeSlots = await slotsRes.json();
-  } catch (e) { console.error('Failed to load kits/slots:', e); }
-}
-
-function showNewTicketModal() {
-  if (!currentUser) { showAuthModal(); return; }
-  
-  // Populate kit select
-  const kitSelect = document.getElementById('ticketKit');
-  kitSelect.innerHTML = '<option value="">Selecciona un kit...</option>';
-  ticketKits.forEach(k => {
-    kitSelect.innerHTML += `<option value="${k}">${k.charAt(0).toUpperCase() + k.slice(1)}</option>`;
-  });
-  
-  // Populate time slots
-  const slotSelect = document.getElementById('ticketSlot');
-  slotSelect.innerHTML = '<option value="">Selecciona horario...</option>';
-  ticketTimeSlots.forEach(s => {
-    slotSelect.innerHTML += `<option value="${s.value}">${s.display}</option>`;
-  });
-  
-  // Set min date to tomorrow
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById('ticketDate').min = tomorrow.toISOString().split('T')[0];
-  
-  document.getElementById('newTicketModal').classList.add('show');
-  document.getElementById('userDropdown').classList.remove('show');
-}
-
-function hideNewTicketModal() {
-  document.getElementById('newTicketModal').classList.remove('show');
-}
-
-async function submitTicket() {
-  const kit = document.getElementById('ticketKit').value;
-  const date = document.getElementById('ticketDate').value;
-  const timeSlot = document.getElementById('ticketSlot').value;
-  const notes = document.getElementById('ticketNotes').value;
-  
-  if (!kit || !date || !timeSlot) {
-    alert('Por favor completa todos los campos requeridos');
-    return;
-  }
-  
-  try {
-    const res = await fetch(API + '/tickets', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + authToken
-      },
-      body: JSON.stringify({ kit, date, timeSlot, notes })
-    });
-    
-    if (res.ok) {
-      hideNewTicketModal();
-      alert('✅ Ticket creado correctamente. Te notificaremos cuando un Tester lo revise.');
-      showTicketsPanel();
-    } else {
-      const data = await res.json();
-      alert('Error: ' + (data.error || 'No se pudo crear el ticket'));
-    }
-  } catch (e) {
-    alert('Error de conexión');
-  }
-}
-
-async function showTicketsPanel() {
-  if (!currentUser) { showAuthModal(); return; }
-  document.getElementById('userDropdown').classList.remove('show');
-  
-  try {
-    const res = await fetch(API + '/tickets', {
-      headers: { 'Authorization': 'Bearer ' + authToken }
-    });
-    const tickets = await res.json();
-    
-    const container = document.getElementById('ticketsList');
-    if (tickets.length === 0) {
-      container.innerHTML = '<p class="no-tickets">No tienes tickets. ¡Solicita tu test HT3+ ahora!</p>';
-    } else {
-      container.innerHTML = tickets.map(t => `
-        <div class="ticket-card ${t.status}" onclick="showTicketDetail('${t.id}')">
-          <div class="ticket-header">
-            <span class="ticket-id">${t.id}</span>
-            <span class="ticket-status status-${t.status}">${getStatusLabel(t.status)}</span>
-          </div>
-          <div class="ticket-info">
-            <span>🎮 <strong>${t.kit}</strong></span>
-            <span>📅 ${t.date} - ${t.timeSlot}</span>
-          </div>
-          <div class="ticket-meta">Creado: ${new Date(t.createdAt).toLocaleDateString('es-ES')}</div>
-        </div>
-      `).join('');
-    }
-    
-    document.getElementById('ticketsPanel').classList.add('show');
-  } catch (e) {
-    alert('Error cargando tickets');
-  }
-}
-
-function hideTicketsPanel() {
-  document.getElementById('ticketsPanel').classList.remove('show');
-}
-
-function getStatusLabel(status) {
-  const labels = {
-    'pending': '⏳ Pendiente',
-    'scheduled': '📅 Programado',
-    'completed': '✅ Completado',
-    'cancelled': '❌ Cancelado'
-  };
-  return labels[status] || status;
-}
-
-async function showTicketDetail(ticketId) {
-  try {
-    const res = await fetch(API + '/tickets/' + ticketId, {
-      headers: { 'Authorization': 'Bearer ' + authToken }
-    });
-    const ticket = await res.json();
-    
-    document.getElementById('detailTicketId').textContent = ticket.id;
-    document.getElementById('detailKit').textContent = ticket.kit;
-    document.getElementById('detailDate').textContent = ticket.date + ' - ' + ticket.timeSlot;
-    document.getElementById('detailStatus').textContent = getStatusLabel(ticket.status);
-    document.getElementById('detailStatus').className = 'ticket-status status-' + ticket.status;
-    document.getElementById('detailNotes').textContent = ticket.notes || 'Sin notas';
-    
-    // Show messages
-    const messagesEl = document.getElementById('ticketMessages');
-    messagesEl.innerHTML = ticket.messages.map(m => `
-      <div class="chat-msg ${m.isStaff ? 'staff' : 'user'}">
-        <div class="chat-author">${m.isStaff ? '⚙️ ' : ''}${m.author}</div>
-        <div class="chat-text">${escapeHtml(m.message)}</div>
-        <div class="chat-time">${new Date(m.timestamp).toLocaleString('es-ES')}</div>
-      </div>
-    `).join('') || '<p class="no-messages">No hay mensajes aún. Escribe para contactar con el staff.</p>';
-    
-    // Store current ticket ID for sending messages
-    document.getElementById('ticketDetailModal').dataset.ticketId = ticketId;
-    
-    // Show status buttons for staff
-    const staffActions = document.getElementById('staffTicketActions');
-    if (currentUser && (currentUser.role === 'tester' || currentUser.role === 'admin')) {
-      staffActions.style.display = 'flex';
-    } else {
-      staffActions.style.display = 'none';
-    }
-    
-    document.getElementById('ticketDetailModal').classList.add('show');
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  } catch (e) {
-    alert('Error cargando ticket');
-  }
-}
-
-function hideTicketDetail() {
-  document.getElementById('ticketDetailModal').classList.remove('show');
-}
-
-async function sendTicketMessage() {
-  const input = document.getElementById('ticketMsgInput');
-  const message = input.value.trim();
-  if (!message) return;
-  
-  const ticketId = document.getElementById('ticketDetailModal').dataset.ticketId;
-  
-  try {
-    const res = await fetch(API + '/tickets/' + ticketId + '/message', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + authToken
-      },
-      body: JSON.stringify({ message })
-    });
-    
-    if (res.ok) {
-      input.value = '';
-      showTicketDetail(ticketId); // Refresh
-    }
-  } catch (e) {
-    alert('Error enviando mensaje');
-  }
-}
-
-async function updateTicketStatus(status) {
-  const ticketId = document.getElementById('ticketDetailModal').dataset.ticketId;
-  
-  try {
-    await fetch(API + '/tickets/' + ticketId + '/status', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + authToken
-      },
-      body: JSON.stringify({ status })
-    });
-    showTicketDetail(ticketId); // Refresh
-  } catch (e) {
-    alert('Error actualizando estado');
-  }
-}
-
-// ── STAFF PANEL ───────────────────────────────────────────────────────────
-
-async function showStaffPanel() {
-  if (!currentUser || (currentUser.role !== 'tester' && currentUser.role !== 'admin')) return;
-  document.getElementById('userDropdown').classList.remove('show');
-  
-  try {
-    const res = await fetch(API + '/tickets', {
-      headers: { 'Authorization': 'Bearer ' + authToken }
-    });
-    const tickets = await res.json();
-    
-    const pending = tickets.filter(t => t.status === 'pending' || t.status === 'scheduled');
-    
-    const container = document.getElementById('staffTicketsList');
-    container.innerHTML = pending.map(t => `
-      <div class="ticket-card ${t.status}" onclick="showTicketDetail('${t.id}')">
-        <div class="ticket-header">
-          <span class="ticket-id">${t.id}</span>
-          <span class="ticket-user">👤 ${t.username}</span>
-          <span class="ticket-status status-${t.status}">${getStatusLabel(t.status)}</span>
-        </div>
-        <div class="ticket-info">
-          <span>🎮 <strong>${t.kit}</strong></span>
-          <span>📅 ${t.date} - ${t.timeSlot}</span>
-        </div>
-      </div>
-    `).join('') || '<p class="no-tickets">No hay tickets pendientes.</p>';
-    
-    document.getElementById('staffPanel').classList.add('show');
-  } catch (e) {
-    alert('Error cargando tickets');
-  }
-}
-
-function hideStaffPanel() {
-  document.getElementById('staffPanel').classList.remove('show');
-}
-
-// ── ADMIN PANEL ───────────────────────────────────────────────────────────
-
-async function showAdminPanel() {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  document.getElementById('userDropdown').classList.remove('show');
-  
-  try {
-    const res = await fetch(API + '/admin/users', {
-      headers: { 'Authorization': 'Bearer ' + authToken }
-    });
-    const users = await res.json();
-    
-    const container = document.getElementById('adminUsersList');
-    container.innerHTML = users.map(u => `
-      <div class="admin-user-card">
-        <img src="https://mc-heads.net/avatar/${u.name}/32" class="admin-user-head"/>
-        <div class="admin-user-info">
-          <span class="admin-user-name">${u.name}</span>
-          <span class="admin-user-role role-${u.role}">${u.role.toUpperCase()}</span>
-        </div>
-        <select onchange="changeUserRole('${u.name}', this.value)" ${u.name.toLowerCase() === 'sh4dos3kr' ? 'disabled' : ''}>
-          <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuario</option>
-          <option value="tester" ${u.role === 'tester' ? 'selected' : ''}>Tester</option>
-          <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
-        </select>
-      </div>
-    `).join('') || '<p>No hay usuarios registrados.</p>';
-    
-    document.getElementById('adminPanel').classList.add('show');
-  } catch (e) {
-    alert('Error cargando usuarios');
-  }
-}
-
-function hideAdminPanel() {
-  document.getElementById('adminPanel').classList.remove('show');
-}
-
-async function changeUserRole(username, role) {
-  try {
-    await fetch(API + '/admin/users/' + username + '/role', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + authToken
-      },
-      body: JSON.stringify({ role })
-    });
-    showAdminPanel(); // Refresh
-  } catch (e) {
-    alert('Error cambiando rol');
-  }
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Initialize auth check and load data
-checkAuth();
-loadKitsAndSlots();
-
 </script>
 
 <!-- Monetag InPage Push -->
+<script>(function(s){s.dataset.zone='10807127',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+
 <!-- Monetag Vignette Banner -->
 <script>(function(s){s.dataset.zone='10807134',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 
-
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- AUTH MODAL -->
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="authModal">
-  <div class="modal auth-modal">
-    <button class="modal-close" onclick="hideAuthModal()">×</button>
-    <div class="modal-header">
-      <img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" class="modal-logo"/>
-      <h2>Acceder a Moon·Tiers</h2>
-    </div>
-    
-    <div id="authStep1">
-      <p class="auth-desc">Vincula tu cuenta de Minecraft para acceder al sistema de tickets y solicitar tests de rango HT3+.</p>
-      
-      <div class="auth-field">
-        <label>Nombre de Minecraft</label>
-        <input type="text" id="authUsername" placeholder="Tu nombre exacto en Minecraft" maxlength="16"/>
-      </div>
-      
-      <p class="auth-error" id="authError"></p>
-      
-      <div class="auth-buttons">
-        <button class="btn-primary" onclick="doLogin()">Iniciar Sesión</button>
-        <button class="btn-secondary" onclick="startRegister()">Registrarme</button>
-      </div>
-      
-      <p class="auth-hint">Si ya te registraste, usa "Iniciar Sesión".<br/>Si es tu primera vez, usa "Registrarme".</p>
-    </div>
-    
-    <div id="authStep2" style="display:none;">
-      <div class="verify-box">
-        <h3>🔐 Verificación Requerida</h3>
-        <p>Entra al servidor de Minecraft y ejecuta el siguiente comando:</p>
-        <div class="verify-code-box">
-          <code>/verificar <span id="verifyCode">123456789</span></code>
-        </div>
-        <p class="verify-hint">El código expira en 10 minutos.</p>
-        <p class="verify-hint">Una vez verificado, vuelve aquí y haz clic en "Iniciar Sesión".</p>
-      </div>
-      <button class="btn-secondary" onclick="hideAuthModal()">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- NEW TICKET MODAL -->
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="newTicketModal">
-  <div class="modal ticket-modal">
-    <button class="modal-close" onclick="hideNewTicketModal()">×</button>
-    <div class="modal-header">
-      <h2>✨ Solicitar Test HT3+</h2>
-    </div>
-    
-    <div class="ticket-info-box">
-      <h3>📋 ¿Cómo funciona el sistema de tests?</h3>
-      <ol>
-        <li><strong>Crea un ticket</strong> seleccionando el kit y horario que prefieras.</li>
-        <li><strong>Un Tester revisará</strong> tu solicitud y te contactará por el chat del ticket.</li>
-        <li><strong>Acude al test</strong> en la fecha y hora acordada.</li>
-        <li><strong>El Tester evaluará</strong> tu nivel y decidirá tu nuevo rango.</li>
-      </ol>
-      <p class="ticket-warning">⚠️ Debes grabar el test completo. Si no acudes sin avisar, podrías ser sancionado.</p>
-    </div>
-    
-    <div class="ticket-form">
-      <div class="form-group">
-        <label>🎮 Kit para el test *</label>
-        <select id="ticketKit" required>
-          <option value="">Selecciona un kit...</option>
-        </select>
-      </div>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label>📅 Fecha preferida *</label>
-          <input type="date" id="ticketDate" required/>
-        </div>
-        <div class="form-group">
-          <label>🕐 Horario preferido *</label>
-          <select id="ticketSlot" required>
-            <option value="">Selecciona horario...</option>
-          </select>
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label>📝 Notas adicionales (opcional)</label>
-        <textarea id="ticketNotes" placeholder="Cualquier información adicional que quieras compartir..." rows="3"></textarea>
-      </div>
-      
-      <button class="btn-primary btn-full" onclick="submitTicket()">📨 Enviar Solicitud</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- TICKETS PANEL -->
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="ticketsPanel">
-  <div class="modal panel-modal">
-    <button class="modal-close" onclick="hideTicketsPanel()">×</button>
-    <div class="modal-header">
-      <h2>📋 Mis Tickets</h2>
-      <button class="btn-small" onclick="showNewTicketModal()">+ Nuevo Ticket</button>
-    </div>
-    <div class="tickets-list" id="ticketsList">
-      <p class="loading">Cargando...</p>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- TICKET DETAIL MODAL -->
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="ticketDetailModal">
-  <div class="modal detail-modal">
-    <button class="modal-close" onclick="hideTicketDetail()">×</button>
-    <div class="modal-header">
-      <h2>Ticket <span id="detailTicketId"></span></h2>
-      <span class="ticket-status" id="detailStatus"></span>
-    </div>
-    
-    <div class="ticket-detail-info">
-      <div class="detail-row"><span>🎮 Kit:</span> <strong id="detailKit"></strong></div>
-      <div class="detail-row"><span>📅 Fecha:</span> <strong id="detailDate"></strong></div>
-      <div class="detail-row"><span>📝 Notas:</span> <span id="detailNotes"></span></div>
-    </div>
-    
-    <div class="staff-actions" id="staffTicketActions" style="display:none;">
-      <span>Cambiar estado:</span>
-      <button onclick="updateTicketStatus('scheduled')" class="btn-sm btn-blue">📅 Programar</button>
-      <button onclick="updateTicketStatus('completed')" class="btn-sm btn-green">✅ Completar</button>
-      <button onclick="updateTicketStatus('cancelled')" class="btn-sm btn-red">❌ Cancelar</button>
-    </div>
-    
-    <div class="ticket-chat">
-      <h3>💬 Chat</h3>
-      <div class="chat-messages" id="ticketMessages"></div>
-      <div class="chat-input">
-        <input type="text" id="ticketMsgInput" placeholder="Escribe un mensaje..." onkeypress="if(event.key==='Enter')sendTicketMessage()"/>
-        <button onclick="sendTicketMessage()">Enviar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- STAFF PANEL -->
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="staffPanel">
-  <div class="modal panel-modal">
-    <button class="modal-close" onclick="hideStaffPanel()">×</button>
-    <div class="modal-header">
-      <h2>⚙️ Panel de Tester</h2>
-    </div>
-    <p class="panel-desc">Tickets pendientes de revisión:</p>
-    <div class="tickets-list" id="staffTicketsList">
-      <p class="loading">Cargando...</p>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<!-- ADMIN PANEL -->
-<!-- ══════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="adminPanel">
-  <div class="modal panel-modal">
-    <button class="modal-close" onclick="hideAdminPanel()">×</button>
-    <div class="modal-header">
-      <h2>👑 Panel de Administración</h2>
-    </div>
-    <p class="panel-desc">Gestión de usuarios y roles:</p>
-    <div class="admin-users-list" id="adminUsersList">
-      <p class="loading">Cargando...</p>
-    </div>
-  </div>
-</div>
+<!-- Monetag OnClick -->
+<script>(function(s){s.dataset.zone='10808102',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 
 </body>
 </html>

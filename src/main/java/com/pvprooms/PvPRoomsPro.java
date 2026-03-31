@@ -1,7 +1,6 @@
 package com.pvprooms;
 
 import com.pvprooms.commands.*;
-import com.pvprooms.commands.VerifyCommand;
 import com.pvprooms.commands.SetSpawnCommand;
 import com.pvprooms.commands.TrimCommand;
 import com.pvprooms.commands.PhysicalCrateCommand;
@@ -80,7 +79,6 @@ public class PvPRoomsPro extends JavaPlugin {
     private HealthHologramManager healthHologramManager;
     private TierManager tierManager;
     private TierApiServer tierApiServer;
-    private TicketManager ticketManager;
     private PersonalKitManager personalKitManager;
     private TrimManager trimManager;
     private TrimGUI trimGUI;
@@ -96,6 +94,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private com.pvprooms.listeners.AntiMultiaccountListener antiMultiaccountListener;
     private BotManager botManager;
     private BotPracticeGUI botPracticeGUI;
+    private TicketManager ticketManager;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -344,8 +343,6 @@ public class PvPRoomsPro extends JavaPlugin {
 
         AdminNpcHoloCommand adminNpcHoloCmd = new AdminNpcHoloCommand(this);
         // Admin command already registered, just add NPC/Holo subcommands via the existing /admin
-
-        getCommand("verificar").setExecutor(new VerifyCommand(this));
     }
 
     private void registerListeners() {

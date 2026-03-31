@@ -1,477 +1,599 @@
 package com.pvprooms.api;
 
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.pvprooms.PvPRoomsPro;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.io.*;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.security.SecureRandom;
+import java.time.*;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
+import java.util.stream.*;
 
-/**
- * Manages the web ticket system for tier tests.
- * Handles user authentication, tickets, and chat messages.
- */
 public class TicketManager {
 
     private final PvPRoomsPro plugin;
-    private final File dataFolder;
-    
-    // In-memory caches (persisted to YAML)
-    private final Map<String, WebUser> users = new ConcurrentHashMap<>();           // username -> WebUser
-    private final Map<String, String> sessions = new ConcurrentHashMap<>();          // sessionToken -> username
-    private final Map<String, PendingVerification> pendingVerifications = new ConcurrentHashMap<>(); // username -> code
-    private final Map<String, Ticket> tickets = new ConcurrentHashMap<>();           // ticketId -> Ticket
-    
-    // Available time slots for tests (hour in 24h format)
-    private static final List<TimeSlot> TIME_SLOTS = List.of(
-            new TimeSlot("16:00", "16:00 - 17:00 (Tarde)"),
-            new TimeSlot("17:00", "17:00 - 18:00 (Tarde)"),
-            new TimeSlot("18:00", "18:00 - 19:00 (Tarde)"),
-            new TimeSlot("19:00", "19:00 - 20:00 (Noche)"),
-            new TimeSlot("20:00", "20:00 - 21:00 (Noche)"),
-            new TimeSlot("21:00", "21:00 - 22:00 (Noche)"),
-            new TimeSlot("22:00", "22:00 - 23:00 (Noche)")
-    );
-    
-    // Staff roles
-    private static final Map<String, String> STAFF_ROLES = Map.of(
-            "sh4dos3kr", "admin",
-            "420sleeptyx", "tester"
-    );
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    private final Map<String, WebUser>        users     = new ConcurrentHashMap<>();
+    private final Map<String, Ticket>         tickets   = new ConcurrentHashMap<>();
+    private final Map<String, TesterSchedule> schedules = new ConcurrentHashMap<>();
+    private final Map<String, PendingCode>    pending   = new ConcurrentHashMap<>();
+    private final Map<String, List<Long>>     rateLims  = new ConcurrentHashMap<>();
+
+    public static final String ADMIN_NAME  = "Sh4doS3kr";
+    public static final String ROLE_ADMIN  = "admin";
+    public static final String ROLE_TESTER = "tester";
+    public static final String ROLE_USER   = "user";
+
+    private static final String[] TESTABLE_TIERS = {"HT3","LT2","HT2","LT1","HT1"};
+
+    // ── Inner data classes ───────────────────────────────────────────────────
+
+    public static class WebUser {
+        public String username;
+        public String uuid;
+        public String role = ROLE_USER;
+        public List<SessionEntry> sessions = new ArrayList<>();
+        public long   createdAt;
+        public String registeredIp;
+    }
+
+    public static class SessionEntry {
+        public String token;
+        public String ip;
+        public long   createdAt;
+        public long   lastUsed;
+    }
+
+    public static class PendingCode {
+        public String username;
+        public String code;
+        public String ip;
+        public long   createdAt;
+        public long   expiresAt;
+    }
+
+    public static class Ticket {
+        public String id;
+        public String username;
+        public String uuid;
+        public String kit;
+        public String targetTier;
+        public String status = "pending"; // pending|scheduled|testing|completed|rejected
+        public String assignedTester;
+        public ScheduledSlot slot;
+        public List<TicketMessage> messages = new ArrayList<>();
+        public String ip;
+        public long   createdAt;
+        public Long   resolvedAt;
+        public String resolvedBy;
+        public String resolution;
+        public String rejectionReason;
+    }
+
+    public static class ScheduledSlot {
+        public String id;
+        public String testerName;
+        public int    dayOfWeek;
+        public String time;
+        public String date;
+    }
+
+    public static class TicketMessage {
+        public String id;
+        public String author;
+        public String role;
+        public String content;
+        public long   ts;
+    }
+
+    public static class TesterSchedule {
+        public String           testerName;
+        public List<SlotTemplate> slots = new ArrayList<>();
+    }
+
+    public static class SlotTemplate {
+        public String  id;
+        public int     dayOfWeek;
+        public String  time;
+        public boolean available = true;
+        public String  timezone  = "Europe/Madrid";
+        public String  note;
+    }
+
+    public record RegisterResult(boolean success, String error, String username) {}
+    public record VerifyResult  (boolean success, String error, String token, WebUser user) {}
+    public record TicketResult  (boolean success, String error, Ticket ticket) {}
+    public record MsgResult     (boolean success, String error, TicketMessage message) {}
+    public record StatusResult  (boolean success, String error) {}
+
+    // ── Constructor ──────────────────────────────────────────────────────────
 
     public TicketManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
-        this.dataFolder = new File(plugin.getDataFolder(), "tickets");
-        if (!dataFolder.exists()) dataFolder.mkdirs();
         load();
+        ensureAdmin();
+        ensureDefaultSchedule();
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // AUTHENTICATION
-    // ══════════════════════════════════════════════════════════════════════
-
-    /**
-     * Start registration process - creates pending verification.
-     * @return verification code to enter in-game, or null if already registered
-     */
-    public String startRegistration(String username) {
-        String lowerUser = username.toLowerCase();
-        
-        // Check if already registered
-        if (users.containsKey(lowerUser)) {
-            return null; // Already registered
-        }
-        
-        // Generate 9-digit code
-        String code = generateCode();
-        pendingVerifications.put(lowerUser, new PendingVerification(code, System.currentTimeMillis()));
-        
-        return code;
-    }
-    
-    /**
-     * Verify code entered in-game.
-     * @return true if verification successful
-     */
-    public boolean verifyCode(UUID playerUUID, String playerName, String code) {
-        String lowerName = playerName.toLowerCase();
-        PendingVerification pending = pendingVerifications.get(lowerName);
-        
-        if (pending == null) return false;
-        
-        // Check if expired (10 minutes)
-        if (System.currentTimeMillis() - pending.timestamp > 600000) {
-            pendingVerifications.remove(lowerName);
-            return false;
-        }
-        
-        if (!pending.code.equals(code)) return false;
-        
-        // Create user account
-        WebUser user = new WebUser(playerUUID, playerName, getRole(lowerName));
-        users.put(lowerName, user);
-        pendingVerifications.remove(lowerName);
+    private void ensureAdmin() {
+        users.compute(ADMIN_NAME.toLowerCase(), (k, u) -> {
+            if (u == null) {
+                u = new WebUser();
+                u.username  = ADMIN_NAME;
+                u.createdAt = System.currentTimeMillis();
+            }
+            u.role = ROLE_ADMIN;
+            UUID uuid = resolveUUID(ADMIN_NAME);
+            if (uuid != null) u.uuid = uuid.toString();
+            return u;
+        });
         save();
-        
-        return true;
     }
-    
-    /**
-     * Check if there's a pending verification for a player.
-     */
-    public PendingVerification getPendingVerification(String username) {
-        return pendingVerifications.get(username.toLowerCase());
+
+    private void ensureDefaultSchedule() {
+        if (schedules.containsKey("420Sleeptyx")) return;
+        TesterSchedule ts = new TesterSchedule();
+        ts.testerName = "420Sleeptyx";
+        int[][] weekdays = {{1,20},{1,21},{2,20},{2,21},{3,20},{3,21},{4,20},{4,21},{5,20},{5,21}};
+        int[][] weekend  = {{6,18},{6,19},{6,20},{6,21},{7,18},{7,19},{7,20},{7,21}};
+        for (int[] d : weekdays) addSlot(ts, d[0], String.format("%02d:00", d[1]));
+        for (int[] d : weekend)  addSlot(ts, d[0], String.format("%02d:00", d[1]));
+        schedules.put("420Sleeptyx", ts);
+
+        // Make 420Sleeptyx a tester
+        users.compute("420sleeptyx", (k, u) -> {
+            if (u == null) {
+                u = new WebUser();
+                u.username  = "420Sleeptyx";
+                u.createdAt = System.currentTimeMillis();
+                UUID uuid = resolveUUID("420Sleeptyx");
+                if (uuid != null) u.uuid = uuid.toString();
+            }
+            if (!ROLE_ADMIN.equals(u.role)) u.role = ROLE_TESTER;
+            return u;
+        });
+        save();
+        saveSchedules();
     }
-    
-    /**
-     * Login user and create session.
-     * @return session token or null if user not found
-     */
-    public String login(String username) {
-        String lowerUser = username.toLowerCase();
-        WebUser user = users.get(lowerUser);
-        if (user == null) return null;
-        
-        // Generate session token
+
+    private void addSlot(TesterSchedule ts, int day, String time) {
+        SlotTemplate s = new SlotTemplate();
+        s.id        = ts.testerName + "-" + day + "-" + time.replace(":", "");
+        s.dayOfWeek = day;
+        s.time      = time;
+        s.available = true;
+        ts.slots.add(s);
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+
+    public RegisterResult register(String username, String ip) {
+        if (!rateCheck(ip, "reg", 3, 3_600_000))
+            return new RegisterResult(false, "Demasiados intentos. Espera 1 hora.", null);
+
+        if (username == null || !username.matches("[a-zA-Z0-9_]{3,16}"))
+            return new RegisterResult(false, "Nombre inválido (3-16 caracteres, solo letras, números y _).", null);
+
+        UUID uuid = resolveUUID(username);
+        if (uuid == null)
+            return new RegisterResult(false, "Jugador no encontrado en el servidor. Debes haber jugado al menos una vez.", null);
+
+        String key = username.toLowerCase();
+        WebUser user = users.computeIfAbsent(key, k -> {
+            WebUser u = new WebUser();
+            u.username     = username;
+            u.uuid         = uuid.toString();
+            u.registeredIp = ip;
+            u.createdAt    = System.currentTimeMillis();
+            return u;
+        });
+        // Always update uuid (might have changed)
+        user.uuid = uuid.toString();
+
+        String code = String.format("%09d", new SecureRandom().nextInt(1_000_000_000));
+        PendingCode pc = new PendingCode();
+        pc.username  = username;
+        pc.code      = code;
+        pc.ip        = ip;
+        pc.createdAt = System.currentTimeMillis();
+        pc.expiresAt = pc.createdAt + 5 * 60_000;
+        pending.put(key, pc);
+
+        sendCode(username, code);
+        save();
+        return new RegisterResult(true, null, username);
+    }
+
+    public VerifyResult verify(String username, String code, String ip) {
+        if (!rateCheck(ip, "verify", 5, 300_000))
+            return new VerifyResult(false, "Demasiados intentos. Espera 5 minutos.", null, null);
+
+        if (username == null || code == null)
+            return new VerifyResult(false, "Parámetros inválidos.", null, null);
+
+        String key = username.toLowerCase();
+        PendingCode pc = pending.get(key);
+        if (pc == null)
+            return new VerifyResult(false, "No hay código pendiente. Solicita uno nuevo.", null, null);
+        if (System.currentTimeMillis() > pc.expiresAt) {
+            pending.remove(key);
+            return new VerifyResult(false, "Código expirado. Solicita uno nuevo.", null, null);
+        }
+        if (!pc.code.equals(code.trim()))
+            return new VerifyResult(false, "Código incorrecto.", null, null);
+
+        pending.remove(key);
+        WebUser user = users.get(key);
+        if (user == null) return new VerifyResult(false, "Usuario no encontrado.", null, null);
+
         String token = UUID.randomUUID().toString();
-        sessions.put(token, lowerUser);
-        
-        return token;
-    }
-    
-    /**
-     * Logout and invalidate session.
-     */
-    public void logout(String sessionToken) {
-        sessions.remove(sessionToken);
-    }
-    
-    /**
-     * Get user from session token.
-     */
-    public WebUser getUserBySession(String sessionToken) {
-        if (sessionToken == null) return null;
-        String username = sessions.get(sessionToken);
-        if (username == null) return null;
-        return users.get(username);
-    }
-    
-    /**
-     * Get user by username.
-     */
-    public WebUser getUser(String username) {
-        return users.get(username.toLowerCase());
-    }
-    
-    private String getRole(String username) {
-        return STAFF_ROLES.getOrDefault(username.toLowerCase(), "user");
-    }
-    
-    private String generateCode() {
-        Random random = new Random();
-        StringBuilder code = new StringBuilder();
-        for (int i = 0; i < 9; i++) {
-            code.append(random.nextInt(10));
+        SessionEntry se = new SessionEntry();
+        se.token     = token;
+        se.ip        = ip;
+        se.createdAt = System.currentTimeMillis();
+        se.lastUsed  = se.createdAt;
+
+        if (user.sessions == null) user.sessions = new ArrayList<>();
+        user.sessions.removeIf(s -> s.ip.equals(ip));
+        if (user.sessions.size() >= 5) {
+            user.sessions.sort(Comparator.comparingLong(s -> s.lastUsed));
+            user.sessions.remove(0);
         }
-        return code.toString();
+        user.sessions.add(se);
+        save();
+        return new VerifyResult(true, null, token, user);
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // TICKETS
-    // ══════════════════════════════════════════════════════════════════════
-
-    /**
-     * Create a new ticket for tier test.
-     */
-    public Ticket createTicket(String username, String kit, String date, String timeSlot, String notes) {
-        WebUser user = users.get(username.toLowerCase());
-        if (user == null) return null;
-        
-        String ticketId = "TKT-" + System.currentTimeMillis() % 100000;
-        Ticket ticket = new Ticket(
-                ticketId,
-                username,
-                user.uuid,
-                kit,
-                date,
-                timeSlot,
-                notes,
-                "pending",
-                new ArrayList<>(),
-                System.currentTimeMillis()
-        );
-        
-        tickets.put(ticketId, ticket);
-        save();
-        
-        return ticket;
-    }
-    
-    /**
-     * Get tickets for a user.
-     */
-    public List<Ticket> getTicketsForUser(String username) {
-        List<Ticket> result = new ArrayList<>();
-        for (Ticket t : tickets.values()) {
-            if (t.username.equalsIgnoreCase(username)) {
-                result.add(t);
-            }
-        }
-        result.sort((a, b) -> Long.compare(b.createdAt, a.createdAt));
-        return result;
-    }
-    
-    /**
-     * Get all tickets (for staff).
-     */
-    public List<Ticket> getAllTickets() {
-        List<Ticket> result = new ArrayList<>(tickets.values());
-        result.sort((a, b) -> Long.compare(b.createdAt, a.createdAt));
-        return result;
-    }
-    
-    /**
-     * Get pending tickets (for testers).
-     */
-    public List<Ticket> getPendingTickets() {
-        List<Ticket> result = new ArrayList<>();
-        for (Ticket t : tickets.values()) {
-            if (t.status.equals("pending") || t.status.equals("scheduled")) {
-                result.add(t);
-            }
-        }
-        result.sort((a, b) -> Long.compare(b.createdAt, a.createdAt));
-        return result;
-    }
-    
-    /**
-     * Get ticket by ID.
-     */
-    public Ticket getTicket(String ticketId) {
-        return tickets.get(ticketId);
-    }
-    
-    /**
-     * Update ticket status.
-     */
-    public boolean updateTicketStatus(String ticketId, String status, String staffUser) {
-        Ticket ticket = tickets.get(ticketId);
-        if (ticket == null) return false;
-        
-        ticket.status = status;
-        if (staffUser != null) {
-            ticket.assignedTo = staffUser;
-        }
-        save();
-        return true;
-    }
-    
-    /**
-     * Add chat message to ticket.
-     */
-    public boolean addMessage(String ticketId, String author, String message, boolean isStaff) {
-        Ticket ticket = tickets.get(ticketId);
-        if (ticket == null) return false;
-        
-        ticket.messages.add(new ChatMessage(author, message, isStaff, System.currentTimeMillis()));
-        save();
-        return true;
-    }
-    
-    /**
-     * Get available time slots.
-     */
-    public List<TimeSlot> getTimeSlots() {
-        return TIME_SLOTS;
-    }
-    
-    /**
-     * Get all users (for admin).
-     */
-    public List<WebUser> getAllUsers() {
-        return new ArrayList<>(users.values());
-    }
-    
-    /**
-     * Update user role (admin only).
-     */
-    public boolean setUserRole(String username, String role) {
-        WebUser user = users.get(username.toLowerCase());
-        if (user == null) return false;
-        user.role = role;
-        save();
-        return true;
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // PERSISTENCE
-    // ══════════════════════════════════════════════════════════════════════
-
-    private void load() {
-        // Load users
-        File usersFile = new File(dataFolder, "users.yml");
-        if (usersFile.exists()) {
-            YamlConfiguration cfg = YamlConfiguration.loadConfiguration(usersFile);
-            for (String key : cfg.getKeys(false)) {
-                var section = cfg.getConfigurationSection(key);
-                if (section != null) {
-                    WebUser user = new WebUser(
-                            UUID.fromString(section.getString("uuid", UUID.randomUUID().toString())),
-                            section.getString("name", key),
-                            section.getString("role", "user")
-                    );
-                    users.put(key.toLowerCase(), user);
+    public WebUser getByToken(String token) {
+        if (token == null || token.isBlank()) return null;
+        long now    = System.currentTimeMillis();
+        long expiry = 30L * 86_400_000;
+        for (WebUser u : users.values()) {
+            if (u.sessions == null) continue;
+            for (SessionEntry s : u.sessions) {
+                if (s.token.equals(token) && (now - s.lastUsed) < expiry) {
+                    s.lastUsed = now;
+                    return u;
                 }
             }
         }
-        
-        // Load tickets
-        File ticketsFile = new File(dataFolder, "tickets.yml");
-        if (ticketsFile.exists()) {
-            YamlConfiguration cfg = YamlConfiguration.loadConfiguration(ticketsFile);
-            for (String ticketId : cfg.getKeys(false)) {
-                var section = cfg.getConfigurationSection(ticketId);
-                if (section != null) {
-                    List<ChatMessage> messages = new ArrayList<>();
-                    var msgSection = section.getConfigurationSection("messages");
-                    if (msgSection != null) {
-                        for (String msgKey : msgSection.getKeys(false)) {
-                            var msg = msgSection.getConfigurationSection(msgKey);
-                            if (msg != null) {
-                                messages.add(new ChatMessage(
-                                        msg.getString("author", ""),
-                                        msg.getString("message", ""),
-                                        msg.getBoolean("isStaff", false),
-                                        msg.getLong("timestamp", 0)
-                                ));
-                            }
-                        }
-                    }
-                    
-                    Ticket ticket = new Ticket(
-                            ticketId,
-                            section.getString("username", ""),
-                            UUID.fromString(section.getString("uuid", UUID.randomUUID().toString())),
-                            section.getString("kit", ""),
-                            section.getString("date", ""),
-                            section.getString("timeSlot", ""),
-                            section.getString("notes", ""),
-                            section.getString("status", "pending"),
-                            messages,
-                            section.getLong("createdAt", 0)
-                    );
-                    ticket.assignedTo = section.getString("assignedTo");
-                    tickets.put(ticketId, ticket);
+        return null;
+    }
+
+    public void logout(String token) {
+        users.values().forEach(u -> {
+            if (u.sessions != null) u.sessions.removeIf(s -> s.token.equals(token));
+        });
+        save();
+    }
+
+    // ── Tickets ──────────────────────────────────────────────────────────────
+
+    public TicketResult createTicket(WebUser user, String kit, String targetTier, String ip) {
+        if (!Arrays.asList(TESTABLE_TIERS).contains(targetTier))
+            return new TicketResult(false, "Tier inválido. Disponibles: " + String.join(", ", TESTABLE_TIERS), null);
+
+        List<String> kits = plugin.getKitManager().getKitNames();
+        boolean kitOk = kits.stream().anyMatch(k -> k.equalsIgnoreCase(kit));
+        if (!kitOk) return new TicketResult(false, "Kit no encontrado.", null);
+
+        String kitLow = kit.toLowerCase();
+
+        // One active ticket per user+kit+tier
+        for (Ticket t : tickets.values()) {
+            if (t.username.equalsIgnoreCase(user.username) && t.kit.equalsIgnoreCase(kit)
+                    && t.targetTier.equals(targetTier)
+                    && List.of("pending","scheduled","testing").contains(t.status))
+                return new TicketResult(false, "Ya tienes un ticket activo para " + targetTier + " en " + kit + ".", null);
+        }
+
+        // One active ticket per IP+kit+tier
+        for (Ticket t : tickets.values()) {
+            if (ip.equals(t.ip) && t.kit.equalsIgnoreCase(kit) && t.targetTier.equals(targetTier)
+                    && List.of("pending","scheduled").contains(t.status))
+                return new TicketResult(false, "Ya hay un ticket activo desde tu IP para ese tier.", null);
+        }
+
+        if (!rateCheck(ip, "ticket", 3, 86_400_000))
+            return new TicketResult(false, "Máximo 3 tickets por día.", null);
+
+        Ticket ticket       = new Ticket();
+        ticket.id           = genId();
+        ticket.username     = user.username;
+        ticket.uuid         = user.uuid;
+        ticket.kit          = kitLow;
+        ticket.targetTier   = targetTier;
+        ticket.status       = "pending";
+        ticket.ip           = ip;
+        ticket.createdAt    = System.currentTimeMillis();
+        ticket.messages     = new ArrayList<>();
+
+        sysMsg(ticket, "✅ Ticket creado correctamente. Un tester revisará tu solicitud y te asignará un horario. Estate atento a este ticket.");
+        tickets.put(ticket.id, ticket);
+        saveTickets();
+
+        notifyStaff("§d[MoonTiers] §fNuevo ticket §e#" + ticket.id + " §fde §a" + user.username
+                + " §7[" + targetTier + " · " + kit + "]");
+        return new TicketResult(true, null, ticket);
+    }
+
+    public List<Ticket> getTicketsFor(WebUser user) {
+        boolean staff = !ROLE_USER.equals(user.role);
+        return tickets.values().stream()
+                .filter(t -> staff || t.username.equalsIgnoreCase(user.username))
+                .sorted(Comparator.comparingLong((Ticket t) -> t.createdAt).reversed())
+                .collect(Collectors.toList());
+    }
+
+    public Ticket getTicket(String id) {
+        return id == null ? null : tickets.get(id.toUpperCase());
+    }
+
+    public MsgResult addMessage(String ticketId, WebUser user, String content) {
+        Ticket t = getTicket(ticketId);
+        if (t == null) return new MsgResult(false, "Ticket no encontrado.", null);
+
+        boolean owner = t.username.equalsIgnoreCase(user.username);
+        boolean staff = !ROLE_USER.equals(user.role);
+        if (!owner && !staff) return new MsgResult(false, "Sin permisos.", null);
+        if (List.of("completed","rejected").contains(t.status))
+            return new MsgResult(false, "El ticket está cerrado.", null);
+        if (content == null || content.isBlank() || content.length() > 500)
+            return new MsgResult(false, "Mensaje inválido (máx 500 caracteres).", null);
+
+        TicketMessage msg = new TicketMessage();
+        msg.id      = UUID.randomUUID().toString().substring(0, 8);
+        msg.author  = user.username;
+        msg.role    = user.role;
+        msg.content = content.trim();
+        msg.ts      = System.currentTimeMillis();
+        t.messages.add(msg);
+        saveTickets();
+        return new MsgResult(true, null, msg);
+    }
+
+    public StatusResult assignTicket(String id, WebUser admin, String testerName) {
+        if (!ROLE_ADMIN.equals(admin.role)) return new StatusResult(false, "Sin permisos.");
+        Ticket t = getTicket(id);
+        if (t == null) return new StatusResult(false, "Ticket no encontrado.");
+        t.assignedTester = testerName;
+        sysMsg(t, "📋 Ticket asignado al tester **" + testerName + "**.");
+        saveTickets();
+        return new StatusResult(true, null);
+    }
+
+    public StatusResult scheduleTicket(String id, WebUser staff, String slotId) {
+        if (ROLE_USER.equals(staff.role)) return new StatusResult(false, "Sin permisos.");
+        Ticket t = getTicket(id);
+        if (t == null) return new StatusResult(false, "Ticket no encontrado.");
+
+        ScheduledSlot slot = resolveSlot(slotId);
+        if (slot == null) return new StatusResult(false, "Horario no disponible.");
+
+        t.slot           = slot;
+        t.status         = "scheduled";
+        t.assignedTester = t.assignedTester != null ? t.assignedTester : staff.username;
+
+        String day = dayName(slot.dayOfWeek);
+        sysMsg(t, "📅 **Test programado**\n🗓 " + day + " " + slot.date
+                + " · " + slot.time + " (hora España, CET/CEST)\n👤 Tester: " + slot.testerName
+                + "\n\n⚠️ Conéctate al servidor a esa hora. Si no apareces, el ticket se archivará.");
+        saveTickets();
+        return new StatusResult(true, null);
+    }
+
+    public StatusResult resolveTicket(String id, WebUser resolver, String resolution,
+                                      String reason, String newTier, int newPoints) {
+        if (ROLE_USER.equals(resolver.role)) return new StatusResult(false, "Sin permisos.");
+        Ticket t = getTicket(id);
+        if (t == null) return new StatusResult(false, "Ticket no encontrado.");
+
+        t.status          = "approved".equals(resolution) ? "completed" : "rejected";
+        t.resolvedAt      = System.currentTimeMillis();
+        t.resolvedBy      = resolver.username;
+        t.resolution      = resolution;
+        t.rejectionReason = reason;
+
+        if ("approved".equals(resolution) && newTier != null && ROLE_ADMIN.equals(resolver.role)) {
+            String finalTier = newTier;
+            int    finalPts  = newPoints;
+            String finalKit  = t.kit;
+            UUID   uuid      = t.uuid != null ? tryParseUUID(t.uuid) : resolveUUID(t.username);
+            if (uuid != null) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    plugin.getTierManager().setPoints(uuid, finalKit, finalPts);
+                    Player p = Bukkit.getPlayer(uuid);
+                    if (p != null) p.sendMessage(
+                        "§d§l[MoonTiers] §f¡Felicidades §a" + t.username + "§f! Tu tier en §e"
+                        + finalKit + " §fha sido subido a §6§l" + finalTier + "§f. ¡Enhorabuena!");
+                });
+            }
+            sysMsg(t, "✅ **¡Test APROBADO!** Tu tier en **" + t.kit + "** ha sido actualizado a **" + newTier + "**. ¡Enhorabuena!");
+        } else if ("rejected".equals(resolution)) {
+            String rText = reason != null && !reason.isBlank() ? "\n\n💬 Razón: " + reason : "";
+            sysMsg(t, "❌ **Test no superado**." + rText + "\n\nSigue practicando y vuelve a intentarlo cuando estés listo. ¡Mucho ánimo!");
+        }
+        saveTickets();
+        return new StatusResult(true, null);
+    }
+
+    // ── Schedules ─────────────────────────────────────────────────────────────
+
+    public List<TesterSchedule> allSchedules() { return new ArrayList<>(schedules.values()); }
+
+    public TesterSchedule getSchedule(String tester) { return schedules.get(tester); }
+
+    public StatusResult updateSchedule(WebUser staff, String testerName, List<SlotTemplate> slots) {
+        if (ROLE_USER.equals(staff.role)) return new StatusResult(false, "Sin permisos.");
+        // Tester can only update own; admin can update any
+        if (ROLE_TESTER.equals(staff.role) && !staff.username.equalsIgnoreCase(testerName))
+            return new StatusResult(false, "Solo puedes modificar tu propio horario.");
+        TesterSchedule ts = schedules.getOrDefault(testerName, new TesterSchedule());
+        ts.testerName = testerName;
+        ts.slots      = slots;
+        schedules.put(testerName, ts);
+        saveSchedules();
+        return new StatusResult(true, null);
+    }
+
+    // ── Users (admin) ────────────────────────────────────────────────────────
+
+    public List<WebUser>  allUsers()                  { return new ArrayList<>(users.values()); }
+    public WebUser        getByUsername(String name)  { return name == null ? null : users.get(name.toLowerCase()); }
+
+    public StatusResult setRole(WebUser admin, String target, String role) {
+        if (!ROLE_ADMIN.equals(admin.role)) return new StatusResult(false, "Sin permisos.");
+        WebUser u = getByUsername(target);
+        if (u == null) return new StatusResult(false, "Usuario no encontrado.");
+        if (!List.of("user","tester","admin").contains(role)) return new StatusResult(false, "Rol inválido.");
+        u.role = role;
+        save();
+        return new StatusResult(true, null);
+    }
+
+    public String[] getTestableTiers() { return TESTABLE_TIERS; }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private void sysMsg(Ticket t, String content) {
+        TicketMessage msg = new TicketMessage();
+        msg.id      = UUID.randomUUID().toString().substring(0, 8);
+        msg.author  = "Sistema";
+        msg.role    = "system";
+        msg.content = content;
+        msg.ts      = System.currentTimeMillis();
+        t.messages.add(msg);
+    }
+
+    private void notifyStaff(String msg) {
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                WebUser wu = getByUsername(p.getName());
+                if (wu != null && !ROLE_USER.equals(wu.role)) p.sendMessage(msg);
+            }
+        });
+    }
+
+    private void sendCode(String username, String code) {
+        String fmt = code.substring(0,3) + "-" + code.substring(3,6) + "-" + code.substring(6,9);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Player p = Bukkit.getPlayer(username);
+            if (p != null) {
+                p.sendMessage("");
+                p.sendMessage("§d§l▶ §d§lMoonTiers §r§7— Verificación Web");
+                p.sendMessage("§fTu código: §e§l" + fmt);
+                p.sendMessage("§7Expira en §f5 minutos§7. Introdúcelo en la web.");
+                p.sendMessage("");
+            } else {
+                plugin.getLogger().info("[TicketManager] Código para " + username + " (offline): " + fmt);
+            }
+        });
+    }
+
+    private boolean rateCheck(String ip, String action, int max, long windowMs) {
+        String key = ip + ":" + action;
+        long now = System.currentTimeMillis();
+        List<Long> ts = rateLims.computeIfAbsent(key, k -> new ArrayList<>());
+        ts.removeIf(t -> (now - t) > windowMs);
+        if (ts.size() >= max) return false;
+        ts.add(now);
+        return true;
+    }
+
+    private ScheduledSlot resolveSlot(String slotId) {
+        for (TesterSchedule ts : schedules.values()) {
+            for (SlotTemplate st : ts.slots) {
+                if (st.id.equals(slotId) && st.available) {
+                    ScheduledSlot s = new ScheduledSlot();
+                    s.id         = slotId;
+                    s.testerName = ts.testerName;
+                    s.dayOfWeek  = st.dayOfWeek;
+                    s.time       = st.time;
+                    s.date       = nextOccurrence(st.dayOfWeek, st.time);
+                    return s;
                 }
             }
         }
-        
-        plugin.getLogger().info("[Tickets] Cargados " + users.size() + " usuarios y " + tickets.size() + " tickets.");
+        return null;
     }
-    
-    public void save() {
-        // Save users
-        YamlConfiguration usersCfg = new YamlConfiguration();
-        for (var entry : users.entrySet()) {
-            WebUser user = entry.getValue();
-            usersCfg.set(entry.getKey() + ".uuid", user.uuid.toString());
-            usersCfg.set(entry.getKey() + ".name", user.name);
-            usersCfg.set(entry.getKey() + ".role", user.role);
-        }
+
+    private String nextOccurrence(int dow, String time) {
         try {
-            usersCfg.save(new File(dataFolder, "users.yml"));
-        } catch (IOException e) {
-            plugin.getLogger().warning("[Tickets] Error guardando usuarios: " + e.getMessage());
-        }
-        
-        // Save tickets
-        YamlConfiguration ticketsCfg = new YamlConfiguration();
-        for (var entry : tickets.entrySet()) {
-            Ticket t = entry.getValue();
-            String id = entry.getKey();
-            ticketsCfg.set(id + ".username", t.username);
-            ticketsCfg.set(id + ".uuid", t.uuid.toString());
-            ticketsCfg.set(id + ".kit", t.kit);
-            ticketsCfg.set(id + ".date", t.date);
-            ticketsCfg.set(id + ".timeSlot", t.timeSlot);
-            ticketsCfg.set(id + ".notes", t.notes);
-            ticketsCfg.set(id + ".status", t.status);
-            ticketsCfg.set(id + ".assignedTo", t.assignedTo);
-            ticketsCfg.set(id + ".createdAt", t.createdAt);
-            
-            for (int i = 0; i < t.messages.size(); i++) {
-                ChatMessage msg = t.messages.get(i);
-                ticketsCfg.set(id + ".messages." + i + ".author", msg.author);
-                ticketsCfg.set(id + ".messages." + i + ".message", msg.message);
-                ticketsCfg.set(id + ".messages." + i + ".isStaff", msg.isStaff);
-                ticketsCfg.set(id + ".messages." + i + ".timestamp", msg.timestamp);
-            }
-        }
+            LocalDate today  = LocalDate.now(ZoneId.of("Europe/Madrid"));
+            DayOfWeek target = DayOfWeek.of(dow);
+            LocalDate next   = today.with(TemporalAdjusters.nextOrSame(target));
+            return next + " " + time;
+        } catch (Exception e) { return time; }
+    }
+
+    private String dayName(int dow) {
+        String[] n = {"","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};
+        return (dow >= 1 && dow <= 7) ? n[dow] : "?";
+    }
+
+    private String genId() {
+        return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private UUID resolveUUID(String name) {
+        for (var p : plugin.getServer().getOfflinePlayers())
+            if (name.equalsIgnoreCase(p.getName())) return p.getUniqueId();
+        return null;
+    }
+
+    private UUID tryParseUUID(String s) {
+        try { return UUID.fromString(s); } catch (Exception e) { return null; }
+    }
+
+    // ── Persistence ──────────────────────────────────────────────────────────
+
+    public void load() {
+        loadMap("web_users.json",     users,     new TypeToken<Map<String,WebUser>>(){}.getType());
+        loadMap("web_tickets.json",   tickets,   new TypeToken<Map<String,Ticket>>(){}.getType());
+        loadMap("web_schedules.json", schedules, new TypeToken<Map<String,TesterSchedule>>(){}.getType());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <V> void loadMap(String filename, Map<String,V> map, Type type) {
+        File f = new File(plugin.getDataFolder(), filename);
+        if (!f.exists()) return;
         try {
-            ticketsCfg.save(new File(dataFolder, "tickets.yml"));
-        } catch (IOException e) {
-            plugin.getLogger().warning("[Tickets] Error guardando tickets: " + e.getMessage());
+            String json = Files.readString(f.toPath(), StandardCharsets.UTF_8);
+            Map<String,V> data = gson.fromJson(json, type);
+            if (data != null) map.putAll(data);
+        } catch (Exception e) {
+            plugin.getLogger().warning("[TicketManager] Error loading " + filename + ": " + e.getMessage());
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // DATA CLASSES
-    // ══════════════════════════════════════════════════════════════════════
+    public synchronized void save() {
+        write("web_users.json", users);
+    }
 
-    public static class WebUser {
-        public final UUID uuid;
-        public final String name;
-        public String role; // "user", "tester", "admin"
-        
-        public WebUser(UUID uuid, String name, String role) {
-            this.uuid = uuid;
-            this.name = name;
-            this.role = role;
-        }
+    public synchronized void saveTickets() {
+        write("web_tickets.json", tickets);
     }
-    
-    public static class PendingVerification {
-        public final String code;
-        public final long timestamp;
-        
-        public PendingVerification(String code, long timestamp) {
-            this.code = code;
-            this.timestamp = timestamp;
-        }
+
+    public synchronized void saveSchedules() {
+        write("web_schedules.json", schedules);
     }
-    
-    public static class Ticket {
-        public final String id;
-        public final String username;
-        public final UUID uuid;
-        public final String kit;
-        public final String date;
-        public final String timeSlot;
-        public final String notes;
-        public String status; // "pending", "scheduled", "completed", "cancelled"
-        public String assignedTo;
-        public final List<ChatMessage> messages;
-        public final long createdAt;
-        
-        public Ticket(String id, String username, UUID uuid, String kit, String date,
-                      String timeSlot, String notes, String status, List<ChatMessage> messages, long createdAt) {
-            this.id = id;
-            this.username = username;
-            this.uuid = uuid;
-            this.kit = kit;
-            this.date = date;
-            this.timeSlot = timeSlot;
-            this.notes = notes;
-            this.status = status;
-            this.messages = messages;
-            this.createdAt = createdAt;
-        }
-    }
-    
-    public static class ChatMessage {
-        public final String author;
-        public final String message;
-        public final boolean isStaff;
-        public final long timestamp;
-        
-        public ChatMessage(String author, String message, boolean isStaff, long timestamp) {
-            this.author = author;
-            this.message = message;
-            this.isStaff = isStaff;
-            this.timestamp = timestamp;
-        }
-    }
-    
-    public static class TimeSlot {
-        public final String value;
-        public final String display;
-        
-        public TimeSlot(String value, String display) {
-            this.value = value;
-            this.display = display;
+
+    private void write(String filename, Object data) {
+        try {
+            plugin.getDataFolder().mkdirs();
+            Files.writeString(new File(plugin.getDataFolder(), filename).toPath(),
+                    gson.toJson(data), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            plugin.getLogger().warning("[TicketManager] Error saving " + filename + ": " + e.getMessage());
         }
     }
 }
