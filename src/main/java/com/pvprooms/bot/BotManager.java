@@ -398,6 +398,13 @@ public class BotManager {
     }
 
     /**
+     * Get the bot duel for a player.
+     */
+    public BotDuel getBotDuel(UUID uuid) {
+        return activeBotDuels.get(uuid);
+    }
+
+    /**
      * Get the bot NPC for a player's bot duel.
      */
     public NPC getPlayerBot(UUID uuid) {

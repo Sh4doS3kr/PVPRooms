@@ -342,12 +342,24 @@ public class PlayerListener implements Listener {
         String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
         String blockWorld = event.getBlock().getWorld().getName();
         if (blockWorld.startsWith(instancePrefix)) {
+            // Check regular duels first
             Duel duel = plugin.getDuelManager().getDuelByWorldName(blockWorld);
             if (duel != null && duel.isSpectator(player.getUniqueId())) {
                 event.setCancelled(true);
                 return;
             }
-            ArenaTemplate template = duel != null ? duel.getArenaTemplate() : null;
+            
+            ArenaTemplate template = null;
+            if (duel != null) {
+                template = duel.getArenaTemplate();
+            } else {
+                // Check bot duels
+                var botDuel = plugin.getBotManager().getBotDuel(player.getUniqueId());
+                if (botDuel != null && botDuel.instanceWorldName.equals(blockWorld)) {
+                    template = botDuel.template;
+                }
+            }
+            
             if (template == null || !template.isAllowBlockPlace()) {
                 event.setCancelled(true);
             }
@@ -425,32 +437,21 @@ public class PlayerListener implements Listener {
         if (to == null) return;
         
         // ═══ ENDERPEARL BLOCK GLITCH PREVENTION ═══
-        // Prevents players from using enderpearls to glitch through solid blocks
+        // Only blocks pearls that would trap player inside solid blocks
         if (event.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
-            Location from = event.getFrom();
-            
-            // Check if destination is inside a solid block
+            // Check if destination would trap player inside solid blocks (both feet and head level)
             Block destBlock = to.getBlock();
             Block destBlockAbove = to.clone().add(0, 1, 0).getBlock();
             
-            if (isSolidBlock(destBlock) || isSolidBlock(destBlockAbove)) {
+            // Only block if BOTH feet and head would be inside solid blocks (truly stuck)
+            if (isFullySolidBlock(destBlock) && isFullySolidBlock(destBlockAbove)) {
                 // Try to find a safe location nearby
                 Location safeLoc = findSafeLocation(to);
                 if (safeLoc != null) {
                     event.setTo(safeLoc);
                 } else {
-                    // Cancel the teleport entirely - no safe spot found
                     event.setCancelled(true);
-                    player.sendMessage(plugin.prefix() + "§c¡Enderpearl bloqueada! No puedes atravesar bloques.");
-                    return;
-                }
-            }
-            
-            // Check if player is trying to pearl through a wall (raycast check)
-            if (from.getWorld().equals(to.getWorld())) {
-                if (isPathBlocked(from, to)) {
-                    event.setCancelled(true);
-                    player.sendMessage(plugin.prefix() + "§c¡Enderpearl bloqueada! No puedes atravesar muros.");
+                    player.sendMessage(plugin.prefix() + "§c¡Enderpearl bloqueada! Destino inválido.");
                     return;
                 }
             }
@@ -472,12 +473,16 @@ public class PlayerListener implements Listener {
     }
     
     /**
-     * Check if a block is solid (can't pass through)
+     * Check if a block is fully solid and would trap a player
+     * More strict than isSolid - excludes fences, glass, etc.
      */
-    private boolean isSolidBlock(Block block) {
+    private boolean isFullySolidBlock(Block block) {
         if (block == null) return false;
         Material type = block.getType();
-        return type.isSolid() && type.isOccluding();
+        // Must be solid AND occluding (full cube that blocks light/vision)
+        // This excludes fences, glass panes, stairs, slabs, etc.
+        return type.isSolid() && type.isOccluding() && !type.name().contains("FENCE") 
+                && !type.name().contains("WALL") && !type.name().contains("GATE");
     }
     
     /**
@@ -493,36 +498,11 @@ public class PlayerListener implements Listener {
             Location check = loc.clone().add(offset[0], offset[1], offset[2]);
             Block foot = check.getBlock();
             Block head = check.clone().add(0, 1, 0).getBlock();
-            if (!isSolidBlock(foot) && !isSolidBlock(head)) {
+            if (!isFullySolidBlock(foot) && !isFullySolidBlock(head)) {
                 return check;
             }
         }
         return null;
-    }
-    
-    /**
-     * Check if there's a solid block between two locations (wall check)
-     */
-    private boolean isPathBlocked(Location from, Location to) {
-        if (from.getWorld() == null || !from.getWorld().equals(to.getWorld())) return false;
-        
-        double distance = from.distance(to);
-        if (distance < 1.5) return false; // Too short to check
-        
-        Vector direction = to.toVector().subtract(from.toVector()).normalize();
-        int steps = (int) Math.ceil(distance * 2); // Check every 0.5 blocks
-        
-        Location check = from.clone();
-        for (int i = 0; i < steps; i++) {
-            check.add(direction.clone().multiply(0.5));
-            Block block = check.getBlock();
-            
-            // If we hit a solid block along the path, the pearl went through a wall
-            if (block.getType().isSolid() && block.getType().isOccluding()) {
-                return true;
-            }
-        }
-        return false;
     }
 
 }

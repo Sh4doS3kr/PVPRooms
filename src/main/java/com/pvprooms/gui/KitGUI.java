@@ -94,15 +94,13 @@ public class KitGUI {
     private ItemStack buildKitItem(Kit kit, Player viewer) {
         int queueSize = plugin.getQueueManager().getQueueSize(kit.getName());
         int myElo     = plugin.getEloManager().getElo(viewer.getUniqueId());
-        Tier myTier   = Tier.fromElo(myElo);
         return buildItem(kit.getIconMaterial(),
                 "§e§l" + capitalize(kit.getName()),
                 List.of("§7Click para entrar en cola ELO",
                         "§7Click derecho §fpara editar kit",
                         "",
                         "§fEn cola: §a" + queueSize,
-                        "§fTu ELO:  §e" + myElo,
-                        "§fTu Tier: " + myTier.formatted()));
+                        "§fTu ELO:  §e" + myElo));
     }
 
     private ItemStack buildKitItemTier(Kit kit, Player viewer) {
