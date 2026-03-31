@@ -4,7 +4,12 @@ import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
 import com.pvprooms.managers.WallManager;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -415,21 +420,109 @@ public class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
-        // Block /tp commands that bypass the arena during countdown
         Player player = event.getPlayer();
+        Location to = event.getTo();
+        if (to == null) return;
+        
+        // ═══ ENDERPEARL BLOCK GLITCH PREVENTION ═══
+        // Prevents players from using enderpearls to glitch through solid blocks
+        if (event.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
+            Location from = event.getFrom();
+            
+            // Check if destination is inside a solid block
+            Block destBlock = to.getBlock();
+            Block destBlockAbove = to.clone().add(0, 1, 0).getBlock();
+            
+            if (isSolidBlock(destBlock) || isSolidBlock(destBlockAbove)) {
+                // Try to find a safe location nearby
+                Location safeLoc = findSafeLocation(to);
+                if (safeLoc != null) {
+                    event.setTo(safeLoc);
+                } else {
+                    // Cancel the teleport entirely - no safe spot found
+                    event.setCancelled(true);
+                    player.sendMessage(plugin.prefix() + "§c¡Enderpearl bloqueada! No puedes atravesar bloques.");
+                    return;
+                }
+            }
+            
+            // Check if player is trying to pearl through a wall (raycast check)
+            if (from.getWorld().equals(to.getWorld())) {
+                if (isPathBlocked(from, to)) {
+                    event.setCancelled(true);
+                    player.sendMessage(plugin.prefix() + "§c¡Enderpearl bloqueada! No puedes atravesar muros.");
+                    return;
+                }
+            }
+        }
+        
+        // Block /tp commands that bypass the arena during countdown
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.getState() == Duel.State.COUNTDOWN) {
             PlayerTeleportEvent.TeleportCause cause = event.getCause();
             if (cause == PlayerTeleportEvent.TeleportCause.COMMAND
                     || cause == PlayerTeleportEvent.TeleportCause.PLUGIN) {
                 // Allow only teleports within the same instance world
-                if (event.getTo() != null
-                        && !event.getTo().getWorld().getName().equals(duel.getInstanceWorldName())) {
+                if (!to.getWorld().getName().equals(duel.getInstanceWorldName())) {
                     event.setCancelled(true);
                     player.sendMessage(plugin.prefix() + "§cNo puedes teletransportarte durante la cuenta atrás.");
                 }
             }
         }
+    }
+    
+    /**
+     * Check if a block is solid (can't pass through)
+     */
+    private boolean isSolidBlock(Block block) {
+        if (block == null) return false;
+        Material type = block.getType();
+        return type.isSolid() && type.isOccluding();
+    }
+    
+    /**
+     * Find a safe location near the destination (not inside blocks)
+     */
+    private Location findSafeLocation(Location loc) {
+        World world = loc.getWorld();
+        if (world == null) return null;
+        
+        // Check positions around the destination
+        int[][] offsets = {{0,1,0}, {0,2,0}, {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1}};
+        for (int[] offset : offsets) {
+            Location check = loc.clone().add(offset[0], offset[1], offset[2]);
+            Block foot = check.getBlock();
+            Block head = check.clone().add(0, 1, 0).getBlock();
+            if (!isSolidBlock(foot) && !isSolidBlock(head)) {
+                return check;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Check if there's a solid block between two locations (wall check)
+     */
+    private boolean isPathBlocked(Location from, Location to) {
+        if (from.getWorld() == null || !from.getWorld().equals(to.getWorld())) return false;
+        
+        double distance = from.distance(to);
+        if (distance < 1.5) return false; // Too short to check
+        
+        Vector direction = to.toVector().subtract(from.toVector()).normalize();
+        int steps = (int) Math.ceil(distance * 2); // Check every 0.5 blocks
+        
+        Location check = from.clone();
+        for (int i = 0; i < steps; i++) {
+            check.add(direction.clone().multiply(0.5));
+            Block block = check.getBlock();
+            
+            // If we hit a solid block along the path, the pearl went through a wall
+            if (block.getType().isSolid() && block.getType().isOccluding()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

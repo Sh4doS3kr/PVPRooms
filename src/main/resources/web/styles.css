@@ -537,119 +537,220 @@ footer{
   .formula-grid{grid-template-columns:1fr;}
 }
 
-/* ═══ MOBILE CARD LAYOUT ═══════════════════════════════════ */
+/* ═══ MOBILE CARD LAYOUT - MEGA RESPONSIVE ═══════════════════ */
 @media(max-width:700px){
   .tbl-head{display:none!important;}
-  .tbl-scroll-wrap{overflow-x:visible;}
+  #tableBody{display:flex;flex-direction:column;gap:.5rem;padding:.5rem;}
   
   .tbl-row{
-    display:flex!important;
-    flex-direction:column;
+    display:grid!important;
+    grid-template-columns:32px 1fr auto;
+    grid-template-rows:auto auto;
+    grid-template-areas:
+      "rank player flag"
+      "rank stats stats";
     background:rgba(255,255,255,.03);
     border:1px solid var(--border);
-    border-radius:12px;
-    padding:.8rem;
-    margin-bottom:.6rem;
+    border-radius:10px;
+    padding:.6rem .7rem;
     min-width:0!important;
-    gap:0;
+    gap:.3rem .5rem;
+    align-items:center;
   }
   .tbl-row:hover{background:rgba(255,255,255,.05);}
   
-  /* Card header: rank + avatar + name + region */
+  /* Rank - left side */
   .col-rank{
-    position:absolute;
-    left:.8rem;top:50%;
-    transform:translateY(-50%);
-    font-size:1.4rem;font-weight:800;
+    grid-area:rank;
+    justify-content:center;
+    font-size:1rem;font-weight:800;
   }
-  .col-player{
-    display:flex;align-items:center;gap:.7rem;
-    padding-left:2.2rem;
-    position:relative;
-  }
-  .row-av{width:48px;height:48px;border-radius:6px;}
-  .row-player-info{flex:1;}
-  .row-name{font-size:1rem;font-weight:700;}
-  .row-title{font-size:.75rem;}
+  .rk-icon{width:20px;height:20px;}
+  .rk-num{font-size:.8rem;}
   
-  /* Region badge - positioned right */
+  /* Player info - center */
+  .col-player{
+    grid-area:player;
+    display:flex;align-items:center;gap:.5rem;
+    min-width:0;
+  }
+  .row-av{width:36px;height:36px;border-radius:5px;flex-shrink:0;}
+  .row-player-info{min-width:0;flex:1;}
+  .row-name{font-size:.85rem;font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;}
+  .row-title{font-size:.65rem;opacity:.8;}
+  .ping-val{display:none;}
+  
+  /* Flag - top right */
   .col-country{
-    position:absolute;
-    right:0;top:50%;
-    transform:translateY(-50%);
+    grid-area:flag;
+    justify-content:flex-end;
   }
   .country-nm{display:none;}
-  .col-country img{width:28px!important;height:auto;border-radius:4px;}
+  .col-country img{width:22px!important;height:auto!important;border-radius:3px;}
   
-  /* Hide tier, elo, pts in header area */
-  .col-tier,.col-elo,.col-pts{display:none;}
+  /* Stats row - ELO, Tier, Points, Kits */
+  .col-tier,.col-elo,.col-pts,.col-kits{
+    display:flex!important;
+  }
   
-  /* TIERS section - kit badges below */
+  /* Create a stats container area */
+  .tbl-row::after{content:none;}
+  
+  /* Stats row styling */
+  .col-tier{order:1;}
+  .col-elo{order:2;}
+  .col-pts{order:3;}
   .col-kits{
-    width:100%;
-    padding-top:.7rem;
-    margin-top:.7rem;
-    border-top:1px solid var(--border);
+    grid-area:stats;
+    order:4;
+    display:flex!important;
+    flex-wrap:wrap;
+    gap:3px;
+    padding:0;
+    align-items:center;
   }
-  .col-kits::before{
-    content:'TIERS';
-    display:block;
-    font-size:.65rem;
-    font-weight:600;
-    color:var(--muted);
-    letter-spacing:.08em;
-    margin-bottom:.5rem;
-  }
-  .kit-badge{
-    padding:.25rem .4rem;
-    border-radius:6px;
-  }
-  .kb-kit-img{width:20px;height:20px;}
-  .kb-tier{font-size:.65rem;font-weight:700;}
+  .col-kits::before{content:none;}
   
-  /* Card positioning context */
-  .tbl-row{position:relative;padding-right:3rem;}
+  /* Compact kit badges */
+  .kit-badge{
+    padding:2px 4px;
+    border-radius:4px;
+    flex-direction:row;
+    gap:3px;
+  }
+  .kb-kit-img{width:14px;height:14px;}
+  .kb-tier{font-size:.55rem;font-weight:700;}
+  
+  /* Tier pill compact */
+  .tier-pill{
+    padding:2px 5px;font-size:.6rem;
+    margin-right:6px;
+  }
+  .tier-pill-img{width:12px;height:12px;}
+  
+  /* ELO compact */
+  .col-elo span{font-size:.7rem!important;margin-right:6px;}
+  
+  /* Points compact */
+  .pts-val{font-size:.7rem;color:var(--accent);margin-right:4px;}
+  .col-pts::before{content:'';display:none;}
+  
+  /* Top 3 row glows - reduced */
+  .row-g1,.row-g2,.row-g3{box-shadow:none;}
+  .row-g1::before,.row-g2::before,.row-g3::before{display:none;}
   
   .rank-grid{grid-template-columns:repeat(5,1fr);}
-  .modal{padding:.8rem;max-width:98vw;}
-  .modal-av{width:50px;height:50px;}
-  .modal-stats{grid-template-columns:repeat(2,1fr);gap:.3rem;}
-  .mstat{padding:.4rem .3rem;}
-  .mstat-v{font-size:.75rem;}
+  .modal{padding:.7rem;max-width:98vw;border-radius:12px;}
+  .modal-hero{gap:.8rem;}
+  .modal-av{width:48px;height:48px;}
+  .modal-name{font-size:.95rem;}
+  .modal-stats{grid-template-columns:repeat(3,1fr);gap:.3rem;}
+  .mstat{padding:.35rem .25rem;}
+  .mstat-v{font-size:.7rem;}
   .mstat-l{font-size:.5rem;}
 }
 
 @media(max-width:480px){
-  html{font-size:15px;}
-  .nav-brand{font-size:.85rem;}
+  html{font-size:14px;}
+  header{height:50px;}
+  nav{padding:0 .8rem;}
+  .nav-logo{font-size:.9rem;}
+  .nav-logo-img{width:18px;height:18px;}
   .nav-search{display:none;}
-  .folder-tabs{gap:.2rem;}
-  .folder-tab{padding:.4rem .5rem;font-size:.65rem;}
-  .folder-tab img{width:14px;height:14px;}
+  .srv-pill{padding:.2rem .5rem;font-size:.65rem;}
   
-  .tbl-row{padding:.7rem;padding-right:2.8rem;}
-  .col-rank{font-size:1.2rem;}
-  .col-player{padding-left:1.8rem;}
-  .row-av{width:42px;height:42px;}
-  .row-name{font-size:.9rem;}
-  .row-title{font-size:.7rem;}
-  .col-country img{width:24px!important;}
+  main{padding:.6rem .5rem 2rem;}
+  .folder-tabs{gap:3px;padding:4px 0 0;}
+  .folder-tab{
+    padding:.35rem .45rem;
+    width:auto;min-width:58px;
+    border-radius:10px 10px 0 0;
+  }
+  .ftab-ico{width:18px;height:18px;}
+  .folder-tab strong{font-size:.6rem;}
   
-  .kit-badge{padding:.2rem .35rem;}
-  .kb-kit-img{width:18px;height:18px;}
-  .kb-tier{font-size:.6rem;}
+  .main-card{border-radius:0 8px 8px 8px;}
+  .card-head{padding:.6rem .8rem;}
+  .card-title{font-size:.9rem;}
+  .card-sub{font-size:.65rem;}
+  .live-badge{padding:.15rem .4rem;font-size:.6rem;}
   
-  .info-card{padding:.8rem;}
-  .info-title{font-size:.95rem;}
-  .info-subtitle{font-size:.85rem;}
-  .info-steps{font-size:.8rem;margin-left:.8rem;}
-  .rank-grid{grid-template-columns:repeat(5,1fr);gap:.25rem;}
-  .rank-name{font-size:.65rem;}
-  .rank-desc{font-size:.45rem;}
+  #tableBody{padding:.4rem;}
+  .tbl-row{
+    grid-template-columns:28px 1fr auto;
+    padding:.5rem .6rem;
+    gap:.25rem .4rem;
+    border-radius:8px;
+  }
+  .col-rank{font-size:.85rem;}
+  .rk-icon{width:18px;height:18px;}
+  .row-av{width:32px;height:32px;}
+  .row-name{font-size:.78rem;}
+  .row-title{font-size:.6rem;}
+  .col-country img{width:18px!important;}
   
-  .modal-hero{flex-direction:column;text-align:center;}
-  .modal-name{font-size:.95rem;}
-  .modal-stats{grid-template-columns:repeat(2,1fr);}
+  .kit-badge{padding:2px 3px;}
+  .kb-kit-img{width:12px;height:12px;}
+  .kb-tier{font-size:.5rem;}
+  
+  .tier-pill{padding:1px 4px;font-size:.55rem;margin-right:4px;}
+  .tier-pill-img{width:10px;height:10px;}
+  .col-elo span{font-size:.6rem!important;margin-right:4px;}
+  .pts-val{font-size:.6rem;}
+  
+  .info-section{margin-top:1rem;}
+  .info-card{padding:.7rem;border-radius:10px;}
+  .info-title{font-size:.9rem;margin-bottom:.5rem;}
+  .info-desc{font-size:.75rem;margin-bottom:.8rem;}
+  .info-subtitle{font-size:.8rem;margin:1rem 0 .5rem;}
+  .rank-grid{grid-template-columns:repeat(5,1fr);gap:.2rem;}
+  .rank-item{padding:.3rem .15rem;border-radius:6px;}
+  .rank-name{font-size:.6rem;}
+  .rank-desc{font-size:.4rem;}
+  .formula-grid{gap:.4rem;}
+  .formula-item{padding:.5rem .6rem;gap:.5rem;}
+  .formula-icon{font-size:1rem;}
+  .formula-name{font-size:.7rem;}
+  .formula-desc{font-size:.6rem;}
+  .info-box{padding:.7rem .8rem;border-radius:8px;}
+  .info-box h4{font-size:.8rem;margin-bottom:.4rem;}
+  .tier-reqs{gap:.25rem;}
+  .tier-req{padding:.3rem .4rem;gap:.4rem;}
+  .req-tier{font-size:.55rem;padding:.15rem .35rem;min-width:28px;}
+  .req-text{font-size:.6rem;}
+  .info-note{padding:.7rem .8rem;font-size:.7rem;}
+  
+  .modal-hero{flex-direction:row;gap:.6rem;}
+  .modal-av{width:42px;height:42px;}
+  .modal-name{font-size:.85rem;}
+  .modal-title{font-size:.65rem;}
+  .modal-stats{grid-template-columns:repeat(3,1fr);gap:.25rem;}
+  .mstat{padding:.3rem .2rem;}
+  .mstat-v{font-size:.65rem;}
+  .mstat-l{font-size:.45rem;}
+  .modal-kits-hd{font-size:.6rem;margin-bottom:.4rem;}
+  .mk-row{padding:.4rem .5rem;gap:.5rem;}
+  .mk-kit-img{width:22px;height:22px;}
+  .mk-name{font-size:.7rem;}
+  .mk-tier{font-size:.6rem;}
+  .mk-pts{font-size:.6rem;}
+  
+  footer{padding:.5rem .6rem;font-size:.6rem;gap:.2rem;}
+  .ft-brand{font-size:.65rem;}
+}
+
+@media(max-width:360px){
+  html{font-size:13px;}
+  .folder-tab{min-width:50px;padding:.3rem .35rem;}
+  .ftab-ico{width:16px;height:16px;}
+  .folder-tab strong{font-size:.55rem;}
+  .tbl-row{grid-template-columns:24px 1fr auto;padding:.4rem .5rem;}
+  .row-av{width:28px;height:28px;}
+  .row-name{font-size:.72rem;}
+  .col-country img{width:16px!important;}
+  .kit-badge{padding:1px 2px;}
+  .kb-kit-img{width:11px;height:11px;}
+  .kb-tier{font-size:.45rem;}
 }
 
 /* ═══ TIER COLOUR HELPERS ═══════════════════════════════════ */
