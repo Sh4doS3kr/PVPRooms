@@ -835,16 +835,32 @@ let authToken = localStorage.getItem('authToken');
 // Check if user is logged in on page load
 async function checkAuth() {
   if (!authToken) return;
+  
+  // Try to use cached user first
+  const cachedUser = localStorage.getItem('currentUser');
+  if (cachedUser) {
+    try {
+      currentUser = JSON.parse(cachedUser);
+      showLoggedInState();
+    } catch (e) {}
+  }
+  
+  // Verify with server
   try {
     const res = await fetch(API + '/auth/me', {
       headers: { 'Authorization': 'Bearer ' + authToken }
     });
     if (res.ok) {
       currentUser = await res.json();
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
       showLoggedInState();
     } else {
       localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
       authToken = null;
+      currentUser = null;
+      document.getElementById('authArea').style.display = 'flex';
+      document.getElementById('userMenu').style.display = 'none';
     }
   } catch (e) { console.error('Auth check failed:', e); }
 }
@@ -877,8 +893,8 @@ document.addEventListener('click', (e) => {
 });
 
 function showAuthModal() {
-  document.getElementById('authModal').classList.add('show');
-  document.getElementById('authModal').querySelector('input').focus();
+  // Redirect to login page instead of modal
+  window.location.href = '/login.html';
 }
 
 function hideAuthModal() {
@@ -954,6 +970,7 @@ async function logout() {
   } catch (e) {}
   
   localStorage.removeItem('authToken');
+  localStorage.removeItem('currentUser');
   authToken = null;
   currentUser = null;
   document.getElementById('authArea').style.display = 'flex';
