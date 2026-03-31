@@ -3,1012 +3,833 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Moon·Tiers — Sistema de Tickets</title>
+<title>Moon Tiers — Tickets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
 <style>
-/* ── Ticket-specific styles ── */
-:root {
-  --clr-admin:  #c084fc;
-  --clr-tester: #60a5fa;
-  --clr-user:   #4ade80;
-  --clr-system: #94a3b8;
-  --status-pending:   #f59e0b;
-  --status-scheduled: #60a5fa;
-  --status-testing:   #c084fc;
-  --status-completed: #4ade80;
-  --status-rejected:  #f87171;
+.page-container {
+  min-height: 100vh;
+  padding-top: 80px;
 }
 
-/* Layout */
-.page-wrap   { max-width:1100px;margin:0 auto;padding:90px 20px 60px; }
-.page-header { margin-bottom:32px; }
-.page-header h1 { font-size:2rem;font-weight:800;margin:0 0 4px; }
-.page-header p  { color:var(--clr-muted);margin:0; }
-
-/* Auth overlay */
-.auth-overlay {
-  position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(12px);
-  z-index:1000;display:flex;align-items:center;justify-content:center;
-}
-.auth-box {
-  background:var(--clr-card);border:1px solid var(--clr-border);border-radius:20px;
-  padding:40px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.6);
-}
-.auth-box h2 { font-size:1.5rem;font-weight:700;margin:0 0 8px; }
-.auth-box p  { color:var(--clr-muted);font-size:.9rem;margin:0 0 24px; }
-.auth-steps { display:flex;gap:8px;margin-bottom:28px; }
-.auth-step  {
-  flex:1;padding:8px;border-radius:10px;background:var(--clr-bg);border:1px solid var(--clr-border);
-  text-align:center;font-size:.78rem;font-weight:600;color:var(--clr-muted);transition:.2s;
-}
-.auth-step.active { border-color:var(--clr-accent);color:var(--clr-accent);background:rgba(139,92,246,.1); }
-.auth-step.done   { border-color:#4ade80;color:#4ade80;background:rgba(74,222,128,.05); }
-
-/* Form elements */
-.field       { margin-bottom:18px; }
-.field label { display:block;font-size:.82rem;font-weight:600;color:var(--clr-muted);margin-bottom:6px;letter-spacing:.03em;text-transform:uppercase; }
-.field input, .field select, .field textarea {
-  width:100%;padding:11px 14px;background:var(--clr-bg);border:1px solid var(--clr-border);
-  border-radius:10px;color:var(--clr-text);font-family:inherit;font-size:.93rem;
-  outline:none;transition:border-color .2s;box-sizing:border-box;
-}
-.field input:focus, .field select:focus, .field textarea:focus {
-  border-color:var(--clr-accent);
-}
-.field textarea { resize:vertical;min-height:80px; }
-
-/* Buttons */
-.btn         { display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;transition:.2s; }
-.btn-primary { background:var(--clr-accent);color:#fff; }
-.btn-primary:hover { background:#7c3aed; }
-.btn-secondary { background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text); }
-.btn-secondary:hover { border-color:var(--clr-accent); }
-.btn-danger  { background:#dc2626;color:#fff; }
-.btn-danger:hover { background:#b91c1c; }
-.btn-success { background:#16a34a;color:#fff; }
-.btn-success:hover { background:#15803d; }
-.btn-sm      { padding:7px 14px;font-size:.82rem; }
-.btn:disabled { opacity:.4;cursor:not-allowed; }
-.btn-full    { width:100%;justify-content:center;padding:13px; }
-
-/* Code input */
-.code-input {
-  font-family:'Geist Mono',monospace;font-size:1.8rem;font-weight:700;
-  text-align:center;letter-spacing:.2em;padding:16px;
+.page-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(10,10,15,.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  z-index: 100;
 }
 
-/* Error / success toast */
-.toast {
-  position:fixed;bottom:24px;right:24px;z-index:9999;
-  padding:14px 20px;border-radius:12px;font-weight:600;font-size:.88rem;
-  display:flex;align-items:center;gap:10px;max-width:360px;
-  animation:slideIn .3s ease;
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-family: 'Geist Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
 }
-.toast-error   { background:#dc2626;color:#fff; }
-.toast-success { background:#16a34a;color:#fff; }
-.toast-info    { background:var(--clr-accent);color:#fff; }
-@keyframes slideIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 
-/* Top nav user button */
-.nav-user-btn {
-  display:flex;align-items:center;gap:8px;padding:6px 14px;
-  background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:10px;
-  cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:600;color:var(--clr-text);
-  transition:.2s;
+.header-logo img {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
 }
-.nav-user-btn:hover { border-color:var(--clr-accent);color:var(--clr-accent); }
-.nav-user-btn img { width:26px;height:26px;border-radius:4px;image-rendering:pixelated; }
 
-/* Dropdown */
-.nav-dropdown {
-  position:relative;
+.header-logo .dot { color: var(--accent2); }
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
-.nav-dropdown-menu {
-  position:absolute;right:0;top:calc(100% + 8px);
-  background:var(--clr-card);border:1px solid var(--clr-border);border-radius:14px;
-  padding:8px;min-width:200px;z-index:999;box-shadow:0 16px 48px rgba(0,0,0,.5);
-  display:none;
+
+.header-link {
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 500;
+  padding: .5rem .8rem;
+  border-radius: 8px;
+  transition: all .2s ease;
+  text-decoration: none;
 }
-.nav-dropdown-menu.open { display:block; }
+
+.header-link:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.05);
+}
+
+.header-link.active {
+  color: var(--accent2);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  cursor: pointer;
+  padding: .4rem .8rem;
+  border-radius: 10px;
+  transition: all .2s ease;
+}
+
+.user-menu:hover {
+  background: rgba(255,255,255,.05);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.user-role {
+  font-size: .7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: .5rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .5rem;
+  min-width: 180px;
+  display: none;
+  box-shadow: 0 10px 40px rgba(0,0,0,.4);
+}
+
+.user-dropdown.show { display: block; }
+
 .dropdown-item {
-  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
-  cursor:pointer;font-size:.88rem;font-weight:500;color:var(--clr-text);
-  transition:.15s;text-decoration:none;
-}
-.dropdown-item:hover { background:var(--clr-bg);color:var(--clr-accent); }
-.dropdown-item.danger:hover { color:#f87171;background:rgba(248,113,113,.05); }
-.dropdown-sep { height:1px;background:var(--clr-border);margin:6px 0; }
-.dropdown-header { padding:8px 12px 4px;font-size:.75rem;font-weight:700;color:var(--clr-muted);letter-spacing:.06em;text-transform:uppercase; }
-
-/* Ticket cards */
-.tickets-grid { display:flex;flex-direction:column;gap:12px; }
-.ticket-card  {
-  background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px;
-  padding:20px 24px;cursor:pointer;transition:.2s;
-}
-.ticket-card:hover { border-color:var(--clr-accent);transform:translateY(-1px); }
-.ticket-card-header { display:flex;align-items:center;gap:12px;margin-bottom:8px; }
-.ticket-id      { font-family:'Geist Mono',monospace;font-size:.78rem;color:var(--clr-muted);background:var(--clr-bg);padding:3px 8px;border-radius:6px;border:1px solid var(--clr-border); }
-.status-badge   {
-  padding:3px 10px;border-radius:6px;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-}
-.status-pending   { background:rgba(245,158,11,.15);color:var(--status-pending); }
-.status-scheduled { background:rgba(96,165,250,.15);color:var(--status-scheduled); }
-.status-testing   { background:rgba(192,132,252,.15);color:var(--status-testing); }
-.status-completed { background:rgba(74,222,128,.15);color:var(--status-completed); }
-.status-rejected  { background:rgba(248,113,113,.15);color:var(--status-rejected); }
-.ticket-title { font-size:1rem;font-weight:700; }
-.ticket-meta  { font-size:.82rem;color:var(--clr-muted);display:flex;gap:16px;flex-wrap:wrap; }
-.ticket-meta span { display:flex;align-items:center;gap:4px; }
-
-/* Ticket detail */
-.ticket-detail { display:none; }
-.ticket-detail.active { display:block; }
-.detail-header {
-  background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px;
-  padding:24px;margin-bottom:20px;
-}
-.detail-title-row { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px; }
-.detail-title { font-size:1.4rem;font-weight:800;margin:0; }
-.detail-actions { display:flex;gap:8px;flex-wrap:wrap; }
-.detail-info { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px; }
-.info-block  { background:var(--clr-bg);border-radius:10px;padding:12px 14px; }
-.info-label  { font-size:.73rem;font-weight:700;color:var(--clr-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px; }
-.info-value  { font-size:.92rem;font-weight:600; }
-
-/* Schedule card */
-.schedule-section { background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px;padding:20px 24px;margin-bottom:20px; }
-.schedule-section h3 { margin:0 0 4px;font-size:1rem;font-weight:700; }
-.schedule-section p  { margin:0 0 16px;font-size:.85rem;color:var(--clr-muted); }
-.slots-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px; }
-.slot-card  {
-  background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:10px;
-  padding:12px;cursor:pointer;transition:.2s;
-}
-.slot-card:hover  { border-color:var(--clr-accent); }
-.slot-card.selected { border-color:var(--clr-accent);background:rgba(139,92,246,.08); }
-.slot-day  { font-size:.75rem;font-weight:700;color:var(--clr-accent);text-transform:uppercase;letter-spacing:.04em; }
-.slot-time { font-size:1.1rem;font-weight:700;font-family:'Geist Mono',monospace; }
-.slot-date { font-size:.73rem;color:var(--clr-muted); }
-
-/* Chat */
-.chat-section { background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px;padding:0; }
-.chat-header  { padding:16px 20px;border-bottom:1px solid var(--clr-border);font-weight:700; }
-.chat-messages { padding:16px 20px;display:flex;flex-direction:column;gap:12px;max-height:500px;overflow-y:auto; }
-.chat-msg      { display:flex;flex-direction:column;gap:4px; }
-.chat-msg-header { display:flex;align-items:center;gap:8px; }
-.chat-author   { font-size:.82rem;font-weight:700; }
-.chat-author.admin  { color:var(--clr-admin); }
-.chat-author.tester { color:var(--clr-tester); }
-.chat-author.user   { color:var(--clr-user); }
-.chat-author.system { color:var(--clr-system); }
-.chat-time     { font-size:.73rem;color:var(--clr-muted); }
-.chat-bubble   {
-  padding:10px 14px;border-radius:10px;font-size:.88rem;line-height:1.5;
-  background:var(--clr-bg);border:1px solid var(--clr-border);
-  max-width:85%;white-space:pre-wrap;
-}
-.chat-bubble.system { background:rgba(148,163,184,.05);border-color:rgba(148,163,184,.15);font-style:italic; }
-.chat-bubble.own    { background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.3);align-self:flex-end; }
-.chat-input-row     { padding:14px 20px;border-top:1px solid var(--clr-border);display:flex;gap:10px;align-items:flex-end; }
-.chat-input-row textarea { flex:1;resize:none;min-height:44px;max-height:120px; }
-
-/* How-it-works panel */
-.how-section { background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px;padding:24px;margin-bottom:28px; }
-.how-section h2 { font-size:1.1rem;font-weight:800;margin:0 0 16px;display:flex;align-items:center;gap:8px; }
-.steps-list     { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0; }
-.step-item      { background:var(--clr-bg);border-radius:12px;padding:16px; }
-.step-num       { width:28px;height:28px;border-radius:50%;background:var(--clr-accent);color:#fff;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;margin-bottom:8px; }
-.step-title     { font-weight:700;font-size:.9rem;margin-bottom:4px; }
-.step-desc      { font-size:.8rem;color:var(--clr-muted);line-height:1.4; }
-
-/* Tier badges */
-.tier-HT3 { color:#f97316; }
-.tier-LT2 { color:#ef4444; }
-.tier-HT2 { color:#dc2626; }
-.tier-LT1 { color:#ec4899; }
-.tier-HT1 { color:#f43f5e; }
-
-/* Empty state */
-.empty-state { text-align:center;padding:48px 20px;color:var(--clr-muted); }
-.empty-state .icon { font-size:3rem;margin-bottom:12px; }
-.empty-state h3 { font-size:1.1rem;font-weight:700;margin:0 0 8px;color:var(--clr-text); }
-.empty-state p  { font-size:.88rem;margin:0; }
-
-/* Loading spinner */
-.spinner { width:20px;height:20px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block; }
-@keyframes spin { to{transform:rotate(360deg)} }
-
-/* Tabs */
-.tab-bar { display:flex;gap:4px;background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:12px;padding:4px;margin-bottom:24px; }
-.tab-btn { flex:1;padding:8px;border:none;background:none;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600;color:var(--clr-muted);transition:.2s; }
-.tab-btn.active { background:var(--clr-card);color:var(--clr-text);box-shadow:0 2px 8px rgba(0,0,0,.2); }
-.tab-panel { display:none; }
-.tab-panel.active { display:block; }
-
-/* Wizard */
-.wizard-step { display:none; }
-.wizard-step.active { display:block; }
-.wizard-title { font-size:1.1rem;font-weight:800;margin:0 0 6px; }
-.wizard-desc  { font-size:.85rem;color:var(--clr-muted);margin:0 0 20px; }
-
-/* Kit grid */
-.kit-grid  { display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:16px; }
-.kit-card  {
-  background:var(--clr-bg);border:1.5px solid var(--clr-border);border-radius:10px;
-  padding:12px 10px;cursor:pointer;transition:.2s;text-align:center;
-}
-.kit-card:hover   { border-color:var(--clr-accent); }
-.kit-card.selected { border-color:var(--clr-accent);background:rgba(139,92,246,.1); }
-.kit-card img { width:40px;height:40px;image-rendering:pixelated;margin-bottom:6px; }
-.kit-card-name { font-size:.82rem;font-weight:700;text-transform:capitalize; }
-
-/* Tier selector */
-.tier-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:16px; }
-.tier-card {
-  background:var(--clr-bg);border:1.5px solid var(--clr-border);border-radius:10px;
-  padding:14px 10px;cursor:pointer;transition:.2s;text-align:center;
-}
-.tier-card:hover   { border-color:var(--clr-accent); }
-.tier-card.selected { border-color:var(--clr-accent);background:rgba(139,92,246,.1); }
-.tier-card-name { font-size:1rem;font-weight:800; }
-.tier-card-pts  { font-size:.73rem;color:var(--clr-muted);margin-top:2px; }
-
-/* Notification bar */
-.notif-bar {
-  background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);
-  border-radius:10px;padding:12px 16px;margin-bottom:20px;
-  font-size:.85rem;display:flex;align-items:center;gap:10px;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .6rem .8rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  color: var(--sub);
+  cursor: pointer;
+  transition: all .15s ease;
 }
 
-/* Responsive */
-@media(max-width:600px) {
-  .detail-title-row { flex-direction:column; }
-  .detail-info { grid-template-columns:1fr 1fr; }
-  .page-wrap { padding:80px 12px 40px; }
+.dropdown-item:hover {
+  background: rgba(255,255,255,.05);
+  color: var(--text);
 }
+
+.dropdown-item.danger { color: var(--red); }
+.dropdown-item svg { width: 16px; height: 16px; }
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.page-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+}
+
+.page-desc {
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.section-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.section-badge {
+  background: var(--accent);
+  color: white;
+  font-size: .7rem;
+  font-weight: 600;
+  padding: .25rem .6rem;
+  border-radius: 20px;
+}
+
+.section-body {
+  padding: 1.5rem;
+}
+
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.ticket-item {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.ticket-item:hover {
+  border-color: var(--accent);
+  background: rgba(99,76,255,.05);
+}
+
+.ticket-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .6rem;
+}
+
+.ticket-id {
+  font-family: 'Geist Mono', monospace;
+  font-size: .75rem;
+  color: var(--muted);
+}
+
+.ticket-status {
+  font-size: .7rem;
+  font-weight: 600;
+  padding: .2rem .5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.ticket-status.pending {
+  background: rgba(234,179,8,.15);
+  color: #fbbf24;
+}
+
+.ticket-status.scheduled {
+  background: rgba(59,130,246,.15);
+  color: #60a5fa;
+}
+
+.ticket-status.in_progress {
+  background: rgba(168,85,247,.15);
+  color: #c084fc;
+}
+
+.ticket-status.completed {
+  background: rgba(34,197,94,.15);
+  color: #4ade80;
+}
+
+.ticket-status.rejected {
+  background: rgba(239,68,68,.15);
+  color: #f87171;
+}
+
+.ticket-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ticket-kit {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ticket-tier {
+  color: var(--accent2);
+  font-size: .85rem;
+}
+
+.ticket-date {
+  color: var(--muted);
+  font-size: .75rem;
+  margin-top: .4rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--muted);
+}
+
+.empty-state svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  opacity: .5;
+}
+
+.empty-state h3 {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: .5rem;
+}
+
+/* Create Ticket Form */
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--sub);
+  margin-bottom: .4rem;
+}
+
+.form-select {
+  width: 100%;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: .8rem 1rem;
+  font-family: inherit;
+  font-size: .9rem;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+}
+
+.form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,76,255,.15);
+}
+
+.tier-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .6rem;
+}
+
+.tier-option {
+  background: rgba(255,255,255,.03);
+  border: 2px solid var(--border2);
+  border-radius: 10px;
+  padding: .8rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.tier-option:hover {
+  border-color: var(--accent);
+}
+
+.tier-option.selected {
+  border-color: var(--accent);
+  background: rgba(99,76,255,.1);
+}
+
+.tier-option.disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.tier-name {
+  font-weight: 600;
+  font-size: .9rem;
+  margin-bottom: .2rem;
+}
+
+.tier-desc {
+  font-size: .7rem;
+  color: var(--muted);
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border: none;
+  border-radius: 10px;
+  padding: 1rem;
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all .2s ease;
+  box-shadow: 0 4px 15px rgba(99,76,255,.25);
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99,76,255,.35);
+}
+
+.submit-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.info-box {
+  background: rgba(59,130,246,.1);
+  border: 1px solid rgba(59,130,246,.3);
+  border-radius: 10px;
+  padding: 1rem;
+  font-size: .8rem;
+  color: #93c5fd;
+  line-height: 1.5;
+}
+
+.info-box strong {
+  color: #60a5fa;
+}
+
+.how-it-works {
+  margin-top: 2rem;
+}
+
+.how-it-works h4 {
+  font-size: .9rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.step {
+  display: flex;
+  gap: .8rem;
+  padding: .8rem;
+  background: rgba(255,255,255,.02);
+  border-radius: 10px;
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.step-text {
+  font-size: .8rem;
+  color: var(--sub);
+  line-height: 1.5;
+}
+
+.step-text strong {
+  color: var(--text);
+}
+
+.alert-box {
+  padding: 1rem;
+  border-radius: 10px;
+  font-size: .85rem;
+  margin-bottom: 1rem;
+}
+
+.alert-box.error {
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.3);
+  color: #f87171;
+}
+
+.alert-box.success {
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.3);
+  color: #4ade80;
+}
+
+/* Hide elements based on user role */
+.admin-only, .tester-only { display: none; }
+body.role-admin .admin-only { display: flex; }
+body.role-tester .tester-only { display: flex; }
+body.role-admin .tester-only { display: flex; }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<header>
-  <nav>
-    <div class="nav-logo-wrap">
-      <a class="nav-logo" href="/">
-        <img class="nav-logo-img" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt="" onerror="this.style.display='none'"/>
-        Moon<span class="nav-dot">·</span>Tiers
-      </a>
+<header class="page-header">
+  <a href="/" class="header-logo">
+    <img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt=""/>
+    Moon<span class="dot">·</span>Tiers
+  </a>
+  
+  <nav class="header-nav">
+    <a href="/" class="header-link">Clasificación</a>
+    <a href="/tickets.html" class="header-link active">Tickets</a>
+    <a href="/admin.html" class="header-link admin-only tester-only">Panel</a>
+  </nav>
+
+  <div class="user-menu" id="userMenu" style="position:relative">
+    <img class="user-avatar" id="userAvatar" src="" alt=""/>
+    <div class="user-info">
+      <span class="user-name" id="userName">Cargando...</span>
+      <span class="user-role" id="userRole">usuario</span>
     </div>
-    <ul class="nav-links">
-      <li><a class="nav-a" href="/">Clasificación</a></li>
-      <li><a class="nav-a active" href="/tickets.html">Tickets</a></li>
-    </ul>
-    <div class="nav-search-wrap" style="gap:12px">
-      <!-- Nav user button -->
-      <div class="nav-dropdown" id="navDropdown">
-        <button class="nav-user-btn" id="navUserBtn" onclick="toggleDropdown()">
-          <span id="navUserText">Iniciar sesión</span>
-        </button>
-        <div class="nav-dropdown-menu" id="navDropdownMenu">
-          <div class="dropdown-header" id="dropdownUsername">Cuenta</div>
-          <div class="dropdown-sep"></div>
-          <a class="dropdown-item" href="/tickets.html">🎟 Mis Tickets</a>
-          <a class="dropdown-item" id="adminPanelLink" href="/admin.html" style="display:none">⚙️ Panel Admin</a>
-          <div class="dropdown-sep"></div>
-          <div class="dropdown-item danger" onclick="doLogout()">🚪 Cerrar sesión</div>
-        </div>
+    <div class="user-dropdown" id="userDropdown">
+      <div class="dropdown-item" onclick="window.location.href='/tickets.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Mis Tickets
+      </div>
+      <div class="dropdown-item admin-only tester-only" onclick="window.location.href='/admin.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Panel Admin
+      </div>
+      <div class="dropdown-item danger" onclick="logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Cerrar Sesión
       </div>
     </div>
-  </nav>
+  </div>
 </header>
 
-<!-- AUTH OVERLAY -->
-<div class="auth-overlay" id="authOverlay">
-  <div class="auth-box">
-    <div class="auth-steps" id="authSteps">
-      <div class="auth-step active" id="stepInd0">1 · Nick</div>
-      <div class="auth-step" id="stepInd1">2 · Código</div>
-    </div>
+<div class="page-container">
+  <div class="main-content">
+    <h1 class="page-title">🎫 Sistema de Tickets</h1>
+    <p class="page-desc">Solicita una evaluación para subir a High Tier (HT3+)</p>
 
-    <!-- Step 1: username -->
-    <div class="wizard-step active" id="authStep0">
-      <h2>Iniciar sesión</h2>
-      <p>Introduce tu nick de Minecraft para recibir un código de verificación en el juego.</p>
-      <div class="field">
-        <label>Tu nick de Minecraft</label>
-        <input type="text" id="authUsername" placeholder="EjemploJugador" maxlength="16" autocomplete="off"/>
-      </div>
-      <p style="font-size:.8rem;color:var(--clr-muted);margin:0 0 20px">⚠️ Debes estar conectado al servidor para recibir el código.</p>
-      <button class="btn btn-primary btn-full" onclick="sendCode()">
-        <span id="sendCodeTxt">Enviar código al juego</span>
-      </button>
-    </div>
+    <div id="alertBox" class="alert-box" style="display:none"></div>
 
-    <!-- Step 2: code -->
-    <div class="wizard-step" id="authStep1">
-      <h2>Introduce el código</h2>
-      <p>Revisa el chat del juego. Introduce el código de <strong>9 dígitos</strong> que aparece en pantalla.</p>
-      <div class="field">
-        <label>Código de verificación</label>
-        <input type="text" id="authCode" class="code-input" placeholder="000-000-000" maxlength="11" autocomplete="off"/>
-      </div>
-      <button class="btn btn-primary btn-full" onclick="verifyCode()" style="margin-bottom:10px">
-        <span id="verifyCodeTxt">Verificar código</span>
-      </button>
-      <button class="btn btn-secondary btn-full btn-sm" onclick="goAuthStep(0)">← Cambiar nombre</button>
-    </div>
-  </div>
-</div>
-
-<!-- MAIN CONTENT -->
-<div class="page-wrap">
-
-  <!-- How it works -->
-  <div class="how-section">
-    <h2>🎟 ¿Cómo funciona el sistema de tickets?</h2>
-    <div class="steps-list">
-      <div class="step-item">
-        <div class="step-num">1</div>
-        <div class="step-title">Inicia sesión</div>
-        <div class="step-desc">Conecta tu cuenta de Minecraft verificando tu identidad con un código.</div>
-      </div>
-      <div class="step-item">
-        <div class="step-num">2</div>
-        <div class="step-title">Crea un ticket</div>
-        <div class="step-desc">Elige el kit y el tier al que quieres optar (HT3 en adelante requiere test).</div>
-      </div>
-      <div class="step-item">
-        <div class="step-num">3</div>
-        <div class="step-title">Espera asignación</div>
-        <div class="step-desc">Un tester revisará tu solicitud y te asignará un horario disponible.</div>
-      </div>
-      <div class="step-item">
-        <div class="step-num">4</div>
-        <div class="step-title">Haz el test</div>
-        <div class="step-desc">Conéctate al servidor en el horario acordado. El tester evaluará tu nivel.</div>
-      </div>
-      <div class="step-item">
-        <div class="step-num">5</div>
-        <div class="step-title">Resultado</div>
-        <div class="step-desc">Si superas el test, tu tier se actualiza automáticamente. ¡Enhorabuena!</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ticket list view -->
-  <div id="listView">
-    <div class="page-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-        <div>
-          <h1>Mis Tickets</h1>
-          <p>Gestiona tus solicitudes de verificación de tier.</p>
+    <div class="content-grid">
+      <!-- Ticket List -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-title">Mis Tickets</span>
+          <span class="section-badge" id="ticketCount">0</span>
         </div>
-        <button class="btn btn-primary" onclick="showCreateWizard()">+ Nuevo Ticket</button>
-      </div>
-    </div>
-
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="filterTickets('all',this)">Todos</button>
-      <button class="tab-btn" onclick="filterTickets('pending',this)">Pendientes</button>
-      <button class="tab-btn" onclick="filterTickets('scheduled',this)">Programados</button>
-      <button class="tab-btn" onclick="filterTickets('completed',this)">Completados</button>
-    </div>
-
-    <div class="tickets-grid" id="ticketsList">
-      <div class="empty-state">
-        <div class="icon">📭</div>
-        <h3>Cargando tickets...</h3>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ticket detail view -->
-  <div id="detailView" style="display:none">
-    <div style="margin-bottom:16px">
-      <button class="btn btn-secondary btn-sm" onclick="backToList()">← Volver a tickets</button>
-    </div>
-    <div id="ticketDetailContent"></div>
-  </div>
-
-  <!-- Create wizard modal (inline overlay) -->
-  <div class="auth-overlay" id="createOverlay" style="display:none">
-    <div class="auth-box" style="max-width:560px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h2 style="margin:0">Nuevo Ticket</h2>
-        <button class="btn btn-secondary btn-sm" onclick="hideCreateWizard()">✕ Cancelar</button>
-      </div>
-
-      <div class="auth-steps" id="wizardSteps">
-        <div class="auth-step active" id="wStepInd0">Kit</div>
-        <div class="auth-step" id="wStepInd1">Tier</div>
-        <div class="auth-step" id="wStepInd2">Confirmar</div>
-      </div>
-
-      <!-- Wizard step 0: Kit -->
-      <div class="wizard-step active" id="wStep0">
-        <div class="wizard-title">¿Para qué kit?</div>
-        <div class="wizard-desc">Selecciona el kit en el que quieres realizar el test.</div>
-        <div class="kit-grid" id="kitGrid"></div>
-        <button class="btn btn-primary" onclick="wizNext(0)" id="kitNextBtn" disabled>Siguiente →</button>
-      </div>
-
-      <!-- Wizard step 1: Tier -->
-      <div class="wizard-step" id="wStep1">
-        <div class="wizard-title">¿A qué tier aspiras?</div>
-        <div class="wizard-desc">Elige el tier que crees que mereces. Los testers evaluarán tu nivel.</div>
-        <div class="tier-grid" id="tierGrid">
-          <div class="tier-card" data-tier="HT3" onclick="selectTier(this,'HT3')">
-            <div class="tier-card-name tier-HT3">HT3</div><div class="tier-card-pts">≥ 2000 pts</div>
+        <div class="section-body">
+          <div class="ticket-list" id="ticketList">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+              <h3>No tienes tickets</h3>
+              <p>Crea uno para solicitar subir de tier</p>
+            </div>
           </div>
-          <div class="tier-card" data-tier="LT2" onclick="selectTier(this,'LT2')">
-            <div class="tier-card-name tier-LT2">LT2</div><div class="tier-card-pts">≥ 3000 pts</div>
-          </div>
-          <div class="tier-card" data-tier="HT2" onclick="selectTier(this,'HT2')">
-            <div class="tier-card-name tier-HT2">HT2</div><div class="tier-card-pts">≥ 4500 pts</div>
-          </div>
-          <div class="tier-card" data-tier="LT1" onclick="selectTier(this,'LT1')">
-            <div class="tier-card-name tier-LT1">LT1</div><div class="tier-card-pts">≥ 6500 pts</div>
-          </div>
-          <div class="tier-card" data-tier="HT1" onclick="selectTier(this,'HT1')">
-            <div class="tier-card-name tier-HT1">HT1</div><div class="tier-card-pts">≥ 9000 pts</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary" onclick="wizBack(1)">← Atrás</button>
-          <button class="btn btn-primary" onclick="wizNext(1)" id="tierNextBtn" disabled>Siguiente →</button>
         </div>
       </div>
 
-      <!-- Wizard step 2: Confirm -->
-      <div class="wizard-step" id="wStep2">
-        <div class="wizard-title">Confirmar solicitud</div>
-        <div class="wizard-desc">Revisa los detalles antes de enviar tu ticket.</div>
-        <div class="detail-info" style="margin-bottom:20px" id="wizardSummary"></div>
-        <div class="notif-bar">
-          ℹ️ Recibirás una respuesta en este ticket cuando un tester te asigne un horario. Mantente atento.
+      <!-- Create Ticket -->
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-title">Nuevo Ticket</span>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary" onclick="wizBack(2)">← Atrás</button>
-          <button class="btn btn-primary" onclick="submitTicket()" id="submitBtn">🎟 Enviar ticket</button>
+        <div class="section-body">
+          <form class="create-form" id="createForm">
+            <div class="form-group">
+              <label>Kit para el test</label>
+              <select class="form-select" id="kitSelect" required>
+                <option value="">Selecciona un kit...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Tier objetivo</label>
+              <div class="tier-options" id="tierOptions">
+                <div class="tier-option" data-tier="HT3">
+                  <div class="tier-name" style="color:#22c55e">HT3</div>
+                  <div class="tier-desc">High Tier 3</div>
+                </div>
+                <div class="tier-option" data-tier="HT2">
+                  <div class="tier-name" style="color:#3b82f6">HT2</div>
+                  <div class="tier-desc">High Tier 2</div>
+                </div>
+                <div class="tier-option" data-tier="HT1">
+                  <div class="tier-name" style="color:#a855f7">HT1</div>
+                  <div class="tier-desc">High Tier 1</div>
+                </div>
+                <div class="tier-option" data-tier="LT5">
+                  <div class="tier-name" style="color:#f59e0b">LT5</div>
+                  <div class="tier-desc">Low Tier 5</div>
+                </div>
+              </div>
+              <input type="hidden" id="selectedTier" required/>
+            </div>
+
+            <div class="info-box">
+              <strong>📋 Requisitos:</strong><br>
+              • Debes tener al menos <strong>LT1</strong> en el kit seleccionado<br>
+              • Un tester evaluará tu habilidad en partidas<br>
+              • Debes grabar el test completo<br>
+              • Solo puedes solicitar cada tier una vez
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+              Crear Ticket
+            </button>
+          </form>
+
+          <div class="how-it-works">
+            <h4>¿Cómo funciona?</h4>
+            <div class="steps">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text"><strong>Crea un ticket</strong> seleccionando el kit y tier deseado.</div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text"><strong>Un tester te contactará</strong> para agendar el test en un horario disponible.</div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text"><strong>Realiza el test</strong> en el servidor. Graba todo el proceso.</div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-text"><strong>Recibe tu resultado</strong> y, si apruebas, tu tier se actualizará automáticamente.</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
-
 </div>
-
-<!-- TOAST -->
-<div id="toastEl" style="display:none" class="toast"></div>
 
 <script>
-const API = '';  // same origin
-let token = localStorage.getItem('mt_token') || null;
+const API_BASE = '';
 let currentUser = null;
-let allTickets = [];
-let currentFilter = 'all';
-let selectedKit = null;
-let selectedTier = null;
 
-// ── Startup ────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
-  if (token) {
-    const ok = await loadMe();
-    if (!ok) { token = null; localStorage.removeItem('mt_token'); }
-  }
-  if (!currentUser) {
-    showAuthOverlay();
-  } else {
-    hideAuthOverlay();
-    loadTickets();
-    loadKits();
-  }
-});
-
-// ── Auth ──────────────────────────────────────────────────────────────────
-function showAuthOverlay() {
-  document.getElementById('authOverlay').style.display = 'flex';
-}
-function hideAuthOverlay() {
-  document.getElementById('authOverlay').style.display = 'none';
-}
-
-let authUsername = '';
-
-async function sendCode() {
-  authUsername = document.getElementById('authUsername').value.trim();
-  if (!authUsername) { toast('Introduce tu nick.', 'error'); return; }
-  const btn = document.getElementById('sendCodeTxt');
-  btn.innerHTML = '<span class="spinner"></span>';
-  try {
-    const r = await api('POST', '/api/auth/register', { username: authUsername });
-    toast(r.message || 'Código enviado.', 'success');
-    goAuthStep(1);
-  } catch(e) {
-    toast(e.message || 'Error al enviar código.', 'error');
-  } finally { btn.textContent = 'Enviar código al juego'; }
-}
-
-async function verifyCode() {
-  const code = document.getElementById('authCode').value.replace(/-/g,'').trim();
-  if (code.length !== 9) { toast('El código debe tener 9 dígitos.', 'error'); return; }
-  const btn = document.getElementById('verifyCodeTxt');
-  btn.innerHTML = '<span class="spinner"></span>';
-  try {
-    const r = await api('POST', '/api/auth/verify', { username: authUsername, code });
-    token = r.token;
-    currentUser = r.user;
-    localStorage.setItem('mt_token', token);
-    hideAuthOverlay();
-    updateNavUser();
-    loadTickets();
-    loadKits();
-    toast('¡Sesión iniciada! Bienvenido, ' + currentUser.username, 'success');
-  } catch(e) {
-    toast(e.message || 'Código incorrecto.', 'error');
-  } finally { btn.textContent = 'Verificar código'; }
-}
-
-function goAuthStep(n) {
-  [0,1].forEach(i => {
-    document.getElementById('authStep'+i).classList.toggle('active', i===n);
-    document.getElementById('stepInd'+i).classList.toggle('active', i===n);
-    if (i < n) document.getElementById('stepInd'+i).classList.add('done');
-  });
-}
-
-async function loadMe() {
-  try {
-    currentUser = await api('GET', '/api/auth/me');
-    updateNavUser();
-    return true;
-  } catch { return false; }
-}
-
-function updateNavUser() {
-  if (!currentUser) return;
-  const btn = document.getElementById('navUserBtn');
-  const uuid = currentUser.uuid || '';
-  const faceUrl = uuid ? `https://crafatar.com/avatars/${uuid}?size=32&overlay` : '';
-  btn.innerHTML = (faceUrl ? `<img src="${faceUrl}" onerror="this.style.display='none'" alt=""/>` : '') +
-    `<span>${currentUser.username}</span>`;
-  document.getElementById('dropdownUsername').textContent = currentUser.username + ' · ' + roleLabel(currentUser.role);
-  if (currentUser.role !== 'user') {
-    document.getElementById('adminPanelLink').style.display = '';
-  }
-}
-
-function roleLabel(role) {
-  return role === 'admin' ? '⭐ Admin' : role === 'tester' ? '🔬 Tester' : '👤 Usuario';
-}
-
-async function doLogout() {
-  await api('POST', '/api/auth/logout').catch(()=>{});
-  localStorage.removeItem('mt_token');
-  token = null; currentUser = null;
-  location.reload();
-}
-
-function toggleDropdown() {
-  if (!currentUser) { showAuthOverlay(); return; }
-  document.getElementById('navDropdownMenu').classList.toggle('open');
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('#navDropdown')) document.getElementById('navDropdownMenu').classList.remove('open');
-});
-
-// ── Tickets ───────────────────────────────────────────────────────────────
-async function loadTickets() {
-  try {
-    allTickets = await api('GET', '/api/tickets');
-    renderTickets(allTickets, currentFilter);
-  } catch(e) {
-    document.getElementById('ticketsList').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error al cargar tickets</h3><p>' + (e.message||'') + '</p></div>';
-  }
-}
-
-function renderTickets(list, filter) {
-  const filtered = filter === 'all' ? list : list.filter(t => {
-    if (filter === 'completed') return t.status === 'completed' || t.status === 'rejected';
-    return t.status === filter;
-  });
-  const el = document.getElementById('ticketsList');
-  if (!filtered.length) {
-    el.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>No hay tickets</h3><p>No tienes tickets en esta categoría.</p></div>';
+// Check auth
+async function checkAuth() {
+  const session = localStorage.getItem('session');
+  if (!session) {
+    window.location.href = '/login.html';
     return;
   }
-  el.innerHTML = filtered.map(t => `
-    <div class="ticket-card" onclick="openTicket('${t.id}')">
-      <div class="ticket-card-header">
-        <span class="ticket-id">#${t.id}</span>
-        <span class="status-badge status-${t.status}">${statusLabel(t.status)}</span>
-        <span class="status-badge" style="background:rgba(255,255,255,.06);color:var(--clr-muted);font-weight:600">${t.targetTier}</span>
-      </div>
-      <div class="ticket-title">Kit: <strong style="text-transform:capitalize">${t.kit}</strong> → Tier <span class="tier-${t.targetTier}">${t.targetTier}</span></div>
-      <div class="ticket-meta">
-        <span>📅 ${fmtDate(t.createdAt)}</span>
-        ${t.assignedTester ? `<span>👤 Tester: ${t.assignedTester}</span>` : '<span>⏳ Sin asignar</span>'}
-        ${t.slot ? `<span>🗓 ${t.slot.date} ${t.slot.time}</span>` : ''}
-        <span>💬 ${t.messages ? t.messages.length : 0} mensajes</span>
-      </div>
-    </div>
-  `).join('');
-}
 
-function filterTickets(filter, btn) {
-  currentFilter = filter;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTickets(allTickets, filter);
-}
-
-async function openTicket(id) {
-  document.getElementById('listView').style.display = 'none';
-  document.getElementById('detailView').style.display = 'block';
-  document.getElementById('ticketDetailContent').innerHTML = '<div class="empty-state"><div class="icon">⏳</div><h3>Cargando...</h3></div>';
   try {
-    const t = await api('GET', '/api/tickets/' + id);
-    renderTicketDetail(t);
-  } catch(e) {
-    document.getElementById('ticketDetailContent').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error al cargar ticket</h3></div>';
-  }
-}
-
-function backToList() {
-  document.getElementById('detailView').style.display = 'none';
-  document.getElementById('listView').style.display = 'block';
-  loadTickets();
-}
-
-function renderTicketDetail(t) {
-  const isStaff = currentUser && currentUser.role !== 'user';
-  const isOpen  = !['completed','rejected'].includes(t.status);
-
-  let staffActions = '';
-  if (isStaff) {
-    staffActions = `
-      <button class="btn btn-sm btn-secondary" onclick="showSchedulePanel('${t.id}')">📅 Asignar horario</button>
-    `;
-    if (currentUser.role === 'admin') {
-      staffActions += `
-        <button class="btn btn-sm btn-success" onclick="showResolveModal('${t.id}','approved')">✅ Aprobar</button>
-        <button class="btn btn-sm btn-danger" onclick="showResolveModal('${t.id}','rejected')">❌ Rechazar</button>
-      `;
-    }
-  }
-
-  const slotInfo = t.slot ? `
-    <div class="info-block" style="border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.05)">
-      <div class="info-label">📅 Horario</div>
-      <div class="info-value">${t.slot.date} · ${t.slot.time} CET</div>
-      <div style="font-size:.75rem;color:var(--clr-muted);margin-top:2px">Tester: ${t.slot.testerName}</div>
-    </div>` : '';
-
-  document.getElementById('ticketDetailContent').innerHTML = `
-    <div class="detail-header">
-      <div class="detail-title-row">
-        <div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-            <span class="ticket-id">#${t.id}</span>
-            <span class="status-badge status-${t.status}">${statusLabel(t.status)}</span>
-          </div>
-          <h2 class="detail-title">Kit: ${t.kit.charAt(0).toUpperCase()+t.kit.slice(1)} → <span class="tier-${t.targetTier}">${t.targetTier}</span></h2>
-        </div>
-        <div class="detail-actions">${staffActions}</div>
-      </div>
-      <div class="detail-info">
-        <div class="info-block">
-          <div class="info-label">Solicitante</div>
-          <div class="info-value">${t.username}</div>
-        </div>
-        <div class="info-block">
-          <div class="info-label">Tier objetivo</div>
-          <div class="info-value tier-${t.targetTier}">${t.targetTier}</div>
-        </div>
-        <div class="info-block">
-          <div class="info-label">Estado</div>
-          <div class="info-value"><span class="status-badge status-${t.status}">${statusLabel(t.status)}</span></div>
-        </div>
-        <div class="info-block">
-          <div class="info-label">Creado</div>
-          <div class="info-value">${fmtDate(t.createdAt)}</div>
-        </div>
-        ${t.assignedTester ? `<div class="info-block"><div class="info-label">Tester asignado</div><div class="info-value">${t.assignedTester}</div></div>` : ''}
-        ${slotInfo}
-      </div>
-    </div>
-
-    <!-- Schedule panel placeholder -->
-    <div id="schedulePanel_${t.id}" style="display:none"></div>
-
-    <!-- Chat -->
-    <div class="chat-section">
-      <div class="chat-header">💬 Mensajes del ticket</div>
-      <div class="chat-messages" id="chatMessages_${t.id}">
-        ${renderMessages(t.messages, t.id)}
-      </div>
-      ${isOpen ? `
-      <div class="chat-input-row">
-        <textarea id="chatInput_${t.id}" placeholder="Escribe un mensaje..." onkeydown="chatKeydown(event,'${t.id}')"></textarea>
-        <button class="btn btn-primary btn-sm" onclick="sendMessage('${t.id}')">Enviar</button>
-      </div>` : `<div style="padding:14px 20px;color:var(--clr-muted);font-size:.85rem;border-top:1px solid var(--clr-border)">🔒 Ticket cerrado</div>`}
-    </div>
-  `;
-  scrollChat(t.id);
-}
-
-function renderMessages(msgs, ticketId) {
-  if (!msgs || !msgs.length) return '<div style="color:var(--clr-muted);font-size:.85rem;text-align:center;padding:20px">Sin mensajes aún.</div>';
-  return msgs.map(m => {
-    const isOwn = currentUser && m.author === currentUser.username && m.role !== 'system';
-    return `
-      <div class="chat-msg">
-        <div class="chat-msg-header">
-          <span class="chat-author ${m.role}">${m.role === 'system' ? '⚙️ Sistema' : m.author}</span>
-          <span class="chat-time">${fmtTime(m.ts)}</span>
-        </div>
-        <div class="chat-bubble ${m.role === 'system' ? 'system' : ''} ${isOwn ? 'own' : ''}">${escHtml(m.content)}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-async function sendMessage(ticketId) {
-  const inp = document.getElementById('chatInput_' + ticketId);
-  const content = inp.value.trim();
-  if (!content) return;
-  try {
-    await api('POST', '/api/tickets/' + ticketId + '/message', { content });
-    inp.value = '';
-    // Reload ticket
-    const t = await api('GET', '/api/tickets/' + ticketId);
-    document.getElementById('chatMessages_' + ticketId).innerHTML = renderMessages(t.messages, ticketId);
-    scrollChat(ticketId);
-  } catch(e) { toast(e.message || 'Error al enviar mensaje.', 'error'); }
-}
-
-function chatKeydown(e, id) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(id); }
-}
-
-function scrollChat(id) {
-  const el = document.getElementById('chatMessages_' + id);
-  if (el) el.scrollTop = el.scrollHeight;
-}
-
-// ── Schedule panel ────────────────────────────────────────────────────────
-async function showSchedulePanel(ticketId) {
-  const panel = document.getElementById('schedulePanel_' + ticketId);
-  if (!panel) return;
-  panel.style.display = 'block';
-  panel.innerHTML = '<div class="schedule-section"><h3>⏳ Cargando horarios...</h3></div>';
-  try {
-    const schedules = await api('GET', '/api/schedules');
-    if (!schedules.length) {
-      panel.innerHTML = '<div class="schedule-section"><h3>Sin horarios disponibles</h3></div>';
+    const res = await fetch(API_BASE + '/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + session }
+    });
+    const data = await res.json();
+    
+    if (data.error) {
+      localStorage.removeItem('session');
+      window.location.href = '/login.html';
       return;
     }
-    let html = '<div class="schedule-section"><h3>📅 Asignar horario</h3><p>Selecciona un slot disponible para el test.</p><div class="slots-grid" id="slotsGrid_' + ticketId + '">';
-    const DAYS = ['','Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-    schedules.forEach(ts => {
-      ts.slots.filter(s => s.available).forEach(s => {
-        html += `<div class="slot-card" onclick="selectSlot(this,'${s.id}','${ticketId}')">
-          <div class="slot-day">${ts.testerName} · ${DAYS[s.dayOfWeek]}</div>
-          <div class="slot-time">${s.time}</div>
-          <div class="slot-date">Próxima ocurrencia</div>
-        </div>`;
-      });
-    });
-    html += `</div>
-      <div style="margin-top:16px;display:flex;gap:8px">
-        <button class="btn btn-primary btn-sm" id="confirmSlotBtn_${ticketId}" onclick="confirmSlot('${ticketId}')" disabled>Confirmar horario</button>
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('schedulePanel_${ticketId}').style.display='none'">Cancelar</button>
-      </div>
-    </div>`;
-    panel.innerHTML = html;
-  } catch(e) { toast('Error al cargar horarios.', 'error'); }
-}
 
-let selectedSlot = {};
-function selectSlot(el, slotId, ticketId) {
-  document.querySelectorAll('#slotsGrid_' + ticketId + ' .slot-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedSlot[ticketId] = slotId;
-  document.getElementById('confirmSlotBtn_' + ticketId).disabled = false;
-}
-
-async function confirmSlot(ticketId) {
-  const slotId = selectedSlot[ticketId];
-  if (!slotId) return;
-  try {
-    await api('PUT', '/api/tickets/' + ticketId + '/schedule', { slotId });
-    toast('Horario asignado correctamente.', 'success');
-    openTicket(ticketId);
-  } catch(e) { toast(e.message || 'Error al asignar horario.', 'error'); }
-}
-
-// ── Resolve ───────────────────────────────────────────────────────────────
-function showResolveModal(ticketId, resolution) {
-  const existing = document.getElementById('resolveModal');
-  if (existing) existing.remove();
-
-  let tierOptions = ['HT3','LT2','HT2','LT1','HT1'].map(t => `<option value="${t}">${t}</option>`).join('');
-  let tierPtsMap = {HT3:2000,LT2:3000,HT2:4500,LT1:6500,HT1:9000};
-
-  const modal = document.createElement('div');
-  modal.id = 'resolveModal';
-  modal.className = 'auth-overlay';
-  modal.innerHTML = `
-    <div class="auth-box" style="max-width:420px">
-      <h2>${resolution === 'approved' ? '✅ Aprobar ticket' : '❌ Rechazar ticket'}</h2>
-      <p style="margin-bottom:20px">${resolution === 'approved' ? 'Selecciona el tier que se asignará al jugador.' : 'Indica el motivo del rechazo (opcional).'}</p>
-      ${resolution === 'approved' ? `
-        <div class="field"><label>Tier asignado</label>
-          <select id="resolveNewTier" onchange="updateResolvePoints()">${tierOptions}</select>
-        </div>
-        <div class="field"><label>Puntos asignados</label>
-          <input type="number" id="resolveNewPoints" value="2000" min="0" max="99999"/>
-        </div>` : `
-        <div class="field"><label>Razón del rechazo (opcional)</label>
-          <textarea id="resolveReason" placeholder="Ej: Nivel insuficiente para HT3, necesita más práctica en combate..."></textarea>
-        </div>`}
-      <div style="display:flex;gap:8px;margin-top:20px">
-        <button class="btn btn-secondary" onclick="document.getElementById('resolveModal').remove()">Cancelar</button>
-        <button class="btn ${resolution==='approved'?'btn-success':'btn-danger'}" onclick="doResolve('${ticketId}','${resolution}')">
-          ${resolution === 'approved' ? 'Confirmar aprobación' : 'Confirmar rechazo'}
-        </button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  if (resolution === 'approved') {
-    document.getElementById('resolveNewTier').addEventListener('change', function() {
-      document.getElementById('resolveNewPoints').value = tierPtsMap[this.value] || 2000;
-    });
+    currentUser = data;
+    document.getElementById('userName').textContent = data.username;
+    document.getElementById('userRole').textContent = data.role;
+    document.getElementById('userAvatar').src = `https://mc-heads.net/avatar/${data.username}/32`;
+    document.body.classList.add('role-' + data.role);
+    
+    loadKits();
+    loadTickets();
+  } catch (err) {
+    window.location.href = '/login.html';
   }
 }
 
-async function doResolve(ticketId, resolution) {
-  const payload = { resolution };
-  if (resolution === 'approved') {
-    payload.newTier    = document.getElementById('resolveNewTier').value;
-    payload.newPoints  = parseInt(document.getElementById('resolveNewPoints').value);
-  } else {
-    payload.reason = document.getElementById('resolveReason')?.value || '';
-  }
-  try {
-    await api('PUT', '/api/tickets/' + ticketId + '/resolve', payload);
-    document.getElementById('resolveModal')?.remove();
-    toast(resolution === 'approved' ? '¡Ticket aprobado!' : 'Ticket rechazado.', resolution === 'approved' ? 'success' : 'info');
-    openTicket(ticketId);
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
+// User menu toggle
+document.getElementById('userMenu').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('userDropdown').classList.toggle('show');
+});
+
+document.addEventListener('click', () => {
+  document.getElementById('userDropdown').classList.remove('show');
+});
+
+function logout() {
+  fetch(API_BASE + '/api/auth/logout', {
+    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('session') }
+  });
+  localStorage.removeItem('session');
+  localStorage.removeItem('user');
+  window.location.href = '/login.html';
 }
 
-// ── Create wizard ─────────────────────────────────────────────────────────
-function showCreateWizard() {
-  selectedKit = null; selectedTier = null;
-  setWizardStep(0);
-  document.getElementById('createOverlay').style.display = 'flex';
-}
-function hideCreateWizard() {
-  document.getElementById('createOverlay').style.display = 'none';
-}
-
+// Load kits
 async function loadKits() {
   try {
-    const kits = await api('GET', '/api/kits');
-    const grid = document.getElementById('kitGrid');
-    if (!grid) return;
-    grid.innerHTML = kits.map(k => `
-      <div class="kit-card" onclick="selectKit(this,'${k}')">
-        <img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/iron_sword.png" alt="" onerror="this.style.display='none'"/>
-        <div class="kit-card-name">${k}</div>
-      </div>
-    `).join('');
-  } catch {}
+    const res = await fetch(API_BASE + '/api/kits');
+    const kits = await res.json();
+    const select = document.getElementById('kitSelect');
+    kits.forEach(kit => {
+      const opt = document.createElement('option');
+      opt.value = kit;
+      opt.textContent = kit.charAt(0).toUpperCase() + kit.slice(1);
+      select.appendChild(opt);
+    });
+  } catch (err) {}
 }
 
-function selectKit(el, kit) {
-  document.querySelectorAll('.kit-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedKit = kit;
-  document.getElementById('kitNextBtn').disabled = false;
-}
-
-function selectTier(el, tier) {
-  document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedTier = tier;
-  document.getElementById('tierNextBtn').disabled = false;
-}
-
-function wizNext(step) {
-  if (step === 0 && !selectedKit) { toast('Selecciona un kit.', 'error'); return; }
-  if (step === 1 && !selectedTier) { toast('Selecciona un tier.', 'error'); return; }
-  if (step === 1) {
-    document.getElementById('wizardSummary').innerHTML = `
-      <div class="info-block"><div class="info-label">Kit</div><div class="info-value" style="text-transform:capitalize">${selectedKit}</div></div>
-      <div class="info-block"><div class="info-label">Tier objetivo</div><div class="info-value tier-${selectedTier}">${selectedTier}</div></div>
-    `;
-  }
-  setWizardStep(step + 1);
-}
-
-function wizBack(step) { setWizardStep(step - 1); }
-
-function setWizardStep(n) {
-  [0,1,2].forEach(i => {
-    document.getElementById('wStep'+i).classList.toggle('active', i===n);
-    const ind = document.getElementById('wStepInd'+i);
-    ind.classList.toggle('active', i===n);
-    if (i < n) ind.classList.add('done'); else ind.classList.remove('done');
+// Tier selection
+document.querySelectorAll('.tier-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    if (opt.classList.contains('disabled')) return;
+    document.querySelectorAll('.tier-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    document.getElementById('selectedTier').value = opt.dataset.tier;
   });
-}
+});
 
-async function submitTicket() {
-  if (!selectedKit || !selectedTier) return;
-  document.getElementById('submitBtn').disabled = true;
-  document.getElementById('submitBtn').innerHTML = '<span class="spinner"></span> Enviando...';
+// Load tickets
+async function loadTickets() {
   try {
-    const t = await api('POST', '/api/tickets', { kit: selectedKit, targetTier: selectedTier });
-    hideCreateWizard();
-    toast('¡Ticket #' + t.id + ' creado!', 'success');
-    loadTickets();
-    openTicket(t.id);
-  } catch(e) {
-    toast(e.message || 'Error al crear ticket.', 'error');
-  } finally {
-    document.getElementById('submitBtn').disabled = false;
-    document.getElementById('submitBtn').textContent = '🎟 Enviar ticket';
+    const res = await fetch(API_BASE + '/api/tickets/list', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('session') }
+    });
+    const tickets = await res.json();
+    
+    document.getElementById('ticketCount').textContent = tickets.length;
+    
+    if (tickets.length === 0) return;
+    
+    const list = document.getElementById('ticketList');
+    list.innerHTML = '';
+    
+    tickets.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'ticket-item';
+      item.onclick = () => window.location.href = `/ticket.html?id=${t.id}`;
+      
+      const statusText = {
+        'pending': 'Pendiente',
+        'scheduled': 'Agendado',
+        'in_progress': 'En Progreso',
+        'completed': 'Completado',
+        'rejected': 'Rechazado'
+      };
+      
+      item.innerHTML = `
+        <div class="ticket-top">
+          <span class="ticket-id">${t.id}</span>
+          <span class="ticket-status ${t.status}">${statusText[t.status] || t.status}</span>
+        </div>
+        <div class="ticket-info">
+          <span class="ticket-kit">${t.kit}</span>
+          <span class="ticket-tier">→ ${t.targetTier}</span>
+        </div>
+        <div class="ticket-date">${new Date(t.createdAt).toLocaleDateString('es-ES')}</div>
+      `;
+      list.appendChild(item);
+    });
+  } catch (err) {}
+}
+
+// Create ticket
+document.getElementById('createForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const kit = document.getElementById('kitSelect').value;
+  const targetTier = document.getElementById('selectedTier').value;
+  
+  if (!kit || !targetTier) {
+    showAlert('Selecciona un kit y un tier', 'error');
+    return;
   }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creando...';
+
+  try {
+    const res = await fetch(API_BASE + '/api/tickets/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('session')
+      },
+      body: JSON.stringify({ kit, targetTier })
+    });
+    
+    const data = await res.json();
+    
+    if (data.error) {
+      showAlert(data.error, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Crear Ticket';
+      return;
+    }
+
+    showAlert('¡Ticket creado! Un tester te contactará pronto.', 'success');
+    loadTickets();
+    document.getElementById('createForm').reset();
+    document.querySelectorAll('.tier-option').forEach(o => o.classList.remove('selected'));
+    btn.disabled = false;
+    btn.textContent = 'Crear Ticket';
+  } catch (err) {
+    showAlert('Error de conexión', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Crear Ticket';
+  }
+});
+
+function showAlert(msg, type) {
+  const box = document.getElementById('alertBox');
+  box.textContent = msg;
+  box.className = 'alert-box ' + type;
+  box.style.display = 'block';
+  setTimeout(() => box.style.display = 'none', 5000);
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────
-async function api(method, path, body) {
-  const opts = {
-    method,
-    headers: { 'Content-Type':'application/json', 'X-Token': token || '' }
-  };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(path, opts);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || 'Error ' + r.status);
-  return data;
-}
-
-function fmtDate(ts) {
-  if (!ts) return '-';
-  return new Date(ts).toLocaleDateString('es-ES', {day:'2-digit',month:'short',year:'numeric'});
-}
-
-function fmtTime(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) + ' ' +
-         d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-}
-
-function escHtml(s) {
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-}
-
-function statusLabel(s) {
-  const m = {pending:'Pendiente',scheduled:'Programado',testing:'En test',completed:'Completado',rejected:'Rechazado'};
-  return m[s] || s;
-}
-
-let toastTimer;
-function toast(msg, type='info') {
-  const el = document.getElementById('toastEl');
-  el.className = 'toast toast-' + type;
-  el.textContent = msg;
-  el.style.display = 'flex';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
-}
+checkAuth();
 </script>
 </body>
 </html>

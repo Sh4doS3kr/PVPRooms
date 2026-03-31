@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Moon Tiers — Iniciar Sesión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(ellipse at 50% 0%, rgba(99,76,255,.08) 0%, transparent 50%);
+}
+
+.auth-card {
+  background: linear-gradient(145deg, rgba(15,17,23,.95), rgba(26,29,46,.9));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,.5);
+  backdrop-filter: blur(20px);
+}
+
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  margin-bottom: 2rem;
+}
+
+.auth-logo img {
+  width: 36px;
+  height: 36px;
+  image-rendering: pixelated;
+}
+
+.auth-logo span {
+  font-family: 'Geist Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.auth-logo .dot { color: var(--accent2); }
+
+.auth-title {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+  color: var(--text);
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: .9rem;
+  margin-bottom: 2rem;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1.5rem;
+  background: rgba(255,255,255,.03);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: .7rem 1rem;
+  text-align: center;
+  font-size: .85rem;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .2s ease;
+  color: var(--muted);
+  border: none;
+  background: transparent;
+}
+
+.auth-tab.active {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99,76,255,.3);
+}
+
+.auth-tab:not(.active):hover {
+  color: var(--text);
+  background: rgba(255,255,255,.05);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.form-label {
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--sub);
+}
+
+.form-input {
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: .85rem 1rem;
+  font-family: inherit;
+  font-size: .95rem;
+  color: var(--text);
+  outline: none;
+  transition: all .2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,76,255,.15);
+}
+
+.form-input::placeholder {
+  color: var(--muted);
+}
+
+.auth-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border: none;
+  border-radius: 10px;
+  padding: 1rem;
+  font-family: inherit;
+  font-size: .95rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  margin-top: .5rem;
+  transition: all .2s ease;
+  box-shadow: 0 4px 15px rgba(99,76,255,.3);
+}
+
+.auth-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99,76,255,.4);
+}
+
+.auth-btn:active {
+  transform: translateY(0);
+}
+
+.auth-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.verification-box {
+  background: rgba(99,76,255,.1);
+  border: 1px solid rgba(99,76,255,.3);
+  border-radius: 12px;
+  padding: 1.2rem;
+  margin-top: 1rem;
+  display: none;
+}
+
+.verification-box.show { display: block; }
+
+.verification-code {
+  font-family: 'Geist Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent2);
+  text-align: center;
+  letter-spacing: 3px;
+  margin: .8rem 0;
+  user-select: all;
+}
+
+.verification-text {
+  font-size: .85rem;
+  color: var(--sub);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.verification-text code {
+  background: rgba(255,255,255,.1);
+  padding: .2rem .5rem;
+  border-radius: 4px;
+  font-family: 'Geist Mono', monospace;
+  color: var(--text);
+}
+
+.auth-error {
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.3);
+  border-radius: 10px;
+  padding: .8rem 1rem;
+  color: #f87171;
+  font-size: .85rem;
+  display: none;
+}
+
+.auth-error.show { display: block; }
+
+.auth-success {
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.3);
+  border-radius: 10px;
+  padding: .8rem 1rem;
+  color: #4ade80;
+  font-size: .85rem;
+  display: none;
+}
+
+.auth-success.show { display: block; }
+
+.auth-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+.auth-link a {
+  color: var(--accent2);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-link a:hover { text-decoration: underline; }
+
+.steps-list {
+  margin: 1rem 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps-list li {
+  position: relative;
+  padding-left: 2rem;
+  margin-bottom: .8rem;
+  font-size: .85rem;
+  color: var(--sub);
+  line-height: 1.5;
+  counter-increment: step;
+}
+
+.steps-list li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  font-weight: 700;
+  color: white;
+}
+
+.back-link {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--muted);
+  font-size: .85rem;
+  text-decoration: none;
+  padding: .5rem .8rem;
+  border-radius: 8px;
+  transition: all .2s ease;
+}
+
+.back-link:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.05);
+}
+
+.back-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 480px) {
+  .auth-card { padding: 1.5rem; }
+  .back-link { top: 1rem; left: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<a href="/" class="back-link">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M19 12H5M12 19l-7-7 7-7"/>
+  </svg>
+  Volver
+</a>
+
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt=""/>
+      <span>Moon<span class="dot">·</span>Tiers</span>
+    </div>
+
+    <h1 class="auth-title">Bienvenido</h1>
+    <p class="auth-subtitle">Accede para gestionar tus tickets de tier</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Iniciar Sesión</button>
+      <button class="auth-tab" data-tab="register">Registrarse</button>
+    </div>
+
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-success" id="authSuccess"></div>
+
+    <!-- Login Form -->
+    <form class="auth-form" id="loginForm">
+      <div class="form-group">
+        <label class="form-label">Nombre de Minecraft</label>
+        <input type="text" class="form-input" id="loginUsername" placeholder="Tu nick exacto en MC" required minlength="3" maxlength="16"/>
+      </div>
+      <button type="submit" class="auth-btn" id="loginBtn">Iniciar Sesión</button>
+      
+      <div class="verification-box" id="loginVerify">
+        <p class="verification-text">Entra al servidor y escribe:</p>
+        <div class="verification-code" id="loginCode"></div>
+        <p class="verification-text">Comando: <code>/verify CÓDIGO</code></p>
+      </div>
+    </form>
+
+    <!-- Register Form -->
+    <form class="auth-form" id="registerForm" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Nombre de Minecraft</label>
+        <input type="text" class="form-input" id="regUsername" placeholder="Tu nick exacto en MC" required minlength="3" maxlength="16"/>
+      </div>
+      
+      <button type="submit" class="auth-btn" id="regBtn">Crear Cuenta</button>
+      
+      <div class="verification-box" id="regVerify">
+        <p class="verification-text" style="font-weight:600;color:var(--text)">¡Cuenta creada!</p>
+        <p class="verification-text">Ahora verifica tu cuenta:</p>
+        <ol class="steps-list">
+          <li>Entra al servidor de Minecraft</li>
+          <li>Escribe el comando con tu código</li>
+          <li>Vuelve aquí e inicia sesión</li>
+        </ol>
+        <div class="verification-code" id="regCode"></div>
+        <p class="verification-text">Comando: <code>/verify CÓDIGO</code></p>
+      </div>
+    </form>
+
+    <div class="auth-link">
+      ¿Necesitas ayuda? <a href="https://discord.gg/moonpvp" target="_blank">Discord</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '';
+
+// Tab switching
+document.querySelectorAll('.auth-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    
+    const isLogin = tab.dataset.tab === 'login';
+    document.getElementById('loginForm').style.display = isLogin ? 'flex' : 'none';
+    document.getElementById('registerForm').style.display = isLogin ? 'none' : 'flex';
+    hideMessages();
+  });
+});
+
+function showError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.classList.add('show');
+  document.getElementById('authSuccess').classList.remove('show');
+}
+
+function showSuccess(msg) {
+  const el = document.getElementById('authSuccess');
+  el.textContent = msg;
+  el.classList.add('show');
+  document.getElementById('authError').classList.remove('show');
+}
+
+function hideMessages() {
+  document.getElementById('authError').classList.remove('show');
+  document.getElementById('authSuccess').classList.remove('show');
+}
+
+// Login
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('loginUsername').value.trim();
+  const btn = document.getElementById('loginBtn');
+  
+  btn.disabled = true;
+  btn.textContent = 'Verificando...';
+  hideMessages();
+  
+  try {
+    const res = await fetch(API_BASE + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    
+    const data = await res.json();
+    
+    if (data.error) {
+      showError(data.error);
+      btn.disabled = false;
+      btn.textContent = 'Iniciar Sesión';
+      return;
+    }
+    
+    if (data.needsVerify) {
+      document.getElementById('loginCode').textContent = data.code;
+      document.getElementById('loginVerify').classList.add('show');
+      showSuccess('Debes verificar que estás online');
+      btn.textContent = 'Esperando verificación...';
+      
+      // Poll for verification
+      pollLogin(username);
+      return;
+    }
+    
+    if (data.session) {
+      localStorage.setItem('session', data.session);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      showSuccess('¡Sesión iniciada!');
+      setTimeout(() => window.location.href = '/tickets.html', 500);
+    }
+  } catch (err) {
+    showError('Error de conexión');
+    btn.disabled = false;
+    btn.textContent = 'Iniciar Sesión';
+  }
+});
+
+async function pollLogin(username) {
+  const btn = document.getElementById('loginBtn');
+  
+  for (let i = 0; i < 60; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    
+    try {
+      const res = await fetch(API_BASE + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      
+      const data = await res.json();
+      
+      if (data.session) {
+        localStorage.setItem('session', data.session);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        showSuccess('¡Verificado!');
+        setTimeout(() => window.location.href = '/tickets.html', 500);
+        return;
+      }
+    } catch (e) {}
+  }
+  
+  showError('Tiempo de espera agotado. Intenta de nuevo.');
+  btn.disabled = false;
+  btn.textContent = 'Iniciar Sesión';
+}
+
+// Register
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('regUsername').value.trim();
+  const btn = document.getElementById('regBtn');
+  
+  btn.disabled = true;
+  btn.textContent = 'Creando cuenta...';
+  hideMessages();
+  
+  try {
+    const res = await fetch(API_BASE + '/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    
+    const data = await res.json();
+    
+    if (data.error) {
+      showError(data.error);
+      btn.disabled = false;
+      btn.textContent = 'Crear Cuenta';
+      return;
+    }
+    
+    if (data.code) {
+      document.getElementById('regCode').textContent = data.code;
+      document.getElementById('regVerify').classList.add('show');
+      showSuccess('¡Cuenta creada! Ahora verifica.');
+      btn.textContent = 'Cuenta creada ✓';
+    }
+  } catch (err) {
+    showError('Error de conexión');
+    btn.disabled = false;
+    btn.textContent = 'Crear Cuenta';
+  }
+});
+
+// Check if already logged in
+const session = localStorage.getItem('session');
+if (session) {
+  fetch(API_BASE + '/api/auth/me', {
+    headers: { 'Authorization': 'Bearer ' + session }
+  }).then(r => r.json()).then(data => {
+    if (!data.error) {
+      window.location.href = '/tickets.html';
+    }
+  }).catch(() => {});
+}
+</script>
+</body>
+</html>

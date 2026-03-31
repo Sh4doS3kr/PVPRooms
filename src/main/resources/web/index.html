@@ -76,7 +76,6 @@
       <li><a class="nav-a" href="#main">Clasificación</a></li>
       <li><a class="nav-a" href="#stats">Estadísticas</a></li>
       <li><a class="nav-a" href="#tierInfo">¿Cómo funciona?</a></li>
-      <li><a class="nav-a" href="/tickets.html">🎟 Tickets</a></li>
     </ul>
     <div class="nav-search-wrap">
       <div class="nav-search">
@@ -88,20 +87,10 @@
         <span class="srv-dot" id="srvDot"></span>
         <span id="srvStatus">Conectando…</span>
       </div>
-      <!-- Auth nav button -->
-      <div style="position:relative" id="navAuthWrap">
-        <button id="navAuthBtn" onclick="navAuthClick()" style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:10px;cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:600;color:var(--clr-text);transition:.2s" onmouseover="this.style.borderColor='var(--clr-accent)'" onmouseout="if(!_navOpen)this.style.borderColor='var(--clr-border)'">
-          <span id="navAuthTxt">Iniciar sesión</span>
-        </button>
-        <div id="navAuthMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:var(--clr-card);border:1px solid var(--clr-border);border-radius:14px;padding:8px;min-width:200px;z-index:999;box-shadow:0 16px 48px rgba(0,0,0,.5)">
-          <div id="navAuthName" style="padding:8px 12px 4px;font-size:.75rem;font-weight:700;color:var(--clr-muted);letter-spacing:.06em;text-transform:uppercase">Cuenta</div>
-          <div style="height:1px;background:var(--clr-border);margin:6px 0"></div>
-          <a href="/tickets.html" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--clr-text);text-decoration:none;transition:.15s" onmouseover="this.style.background='var(--clr-bg)'" onmouseout="this.style.background=''">🎟 Mis Tickets</a>
-          <a id="navAdminLink" href="/admin.html" style="display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--clr-text);text-decoration:none;transition:.15s" onmouseover="this.style.background='var(--clr-bg)'" onmouseout="this.style.background=''">⚙️ Panel Staff</a>
-          <div style="height:1px;background:var(--clr-border);margin:6px 0"></div>
-          <div onclick="navLogout()" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:500;color:#f87171;transition:.15s" onmouseover="this.style.background='rgba(248,113,113,.05)'" onmouseout="this.style.background=''">🚪 Cerrar sesión</div>
-        </div>
-      </div>
+      <a href="/login.html" class="login-btn" id="loginBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="loginText">Iniciar sesión</span>
+      </a>
     </div>
   </nav>
 </header>
@@ -815,52 +804,24 @@ async function measurePing() {
 measurePing();
 setInterval(measurePing, 2000);
 
-init();
-
-// ── Nav auth button ───────────────────────────────────────────────────────
-var _navOpen = false;
-var _navUser = null;
-
-(async function initNavAuth() {
-  const t = localStorage.getItem('mt_token');
-  if (!t) return;
-  try {
-    const r = await fetch('/api/auth/me', { headers: { 'X-Token': t } });
-    if (!r.ok) return;
-    _navUser = await r.json();
-    const uuid = _navUser.uuid || '';
-    const faceUrl = uuid ? 'https://crafatar.com/avatars/' + uuid + '?size=32&overlay' : '';
-    const btn = document.getElementById('navAuthBtn');
-    btn.innerHTML = (faceUrl ? '<img src="' + faceUrl + '" onerror="this.style.display=\'none\'" style="width:24px;height:24px;border-radius:4px;image-rendering:pixelated" alt=""/>' : '') +
-      '<span>' + _navUser.username + '</span>';
-    document.getElementById('navAuthName').textContent = _navUser.username + ' · ' + (_navUser.role === 'admin' ? '⭐ Admin' : _navUser.role === 'tester' ? '🔬 Tester' : '👤 Usuario');
-    if (_navUser.role !== 'user') {
-      var al = document.getElementById('navAdminLink');
-      if (al) al.style.display = 'flex';
-    }
-  } catch(e) {}
+// Check login status
+(function checkLogin() {
+  const session = localStorage.getItem('session');
+  const btn = document.getElementById('loginBtn');
+  const text = document.getElementById('loginText');
+  if (!session) return;
+  
+  fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + session } })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) return;
+      btn.innerHTML = `<img src="https://mc-heads.net/avatar/${data.username}/22" alt=""/><span>${data.username}</span>`;
+      btn.href = '/tickets.html';
+    })
+    .catch(() => {});
 })();
 
-function navAuthClick() {
-  if (!_navUser) { window.location.href = '/tickets.html'; return; }
-  _navOpen = !_navOpen;
-  document.getElementById('navAuthMenu').style.display = _navOpen ? 'block' : 'none';
-}
-
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#navAuthWrap')) {
-    _navOpen = false;
-    var m = document.getElementById('navAuthMenu');
-    if (m) m.style.display = 'none';
-  }
-});
-
-async function navLogout() {
-  const t = localStorage.getItem('mt_token');
-  if (t) await fetch('/api/auth/logout', { method:'POST', headers:{'X-Token':t,'Content-Type':'application/json'} }).catch(()=>{});
-  localStorage.removeItem('mt_token');
-  location.reload();
-}
+init();
 </script>
 
 <!-- Monetag InPage Push -->

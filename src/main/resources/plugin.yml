@@ -85,8 +85,15 @@ commands:
     usage: /party <create|invite|accept|deny|leave|kick|disband|list>
     permission: pvprooms.party
     aliases: [p, grupo]
+  verify:
+    description: Verificar cuenta web con código
+    usage: /verify <código>
+    permission: pvprooms.verify
 
 permissions:
+  pvprooms.verify:
+    description: Verificar cuenta web
+    default: true
   pvprooms.kit:
     description: Access /kit commands (admin only)
     default: op

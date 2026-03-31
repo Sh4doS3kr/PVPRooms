@@ -26,7 +26,6 @@ import com.pvprooms.listeners.PhysicalTrimCrateListener;
 import com.pvprooms.listeners.LobbyListener;
 import com.pvprooms.listeners.ChatListener;
 import com.pvprooms.api.TierApiServer;
-import com.pvprooms.api.TicketManager;
 import com.pvprooms.listeners.SpearListener;
 import com.pvprooms.listeners.AttributeSwapListener;
 import com.pvprooms.bot.BotManager;
@@ -343,6 +342,8 @@ public class PvPRoomsPro extends JavaPlugin {
 
         AdminNpcHoloCommand adminNpcHoloCmd = new AdminNpcHoloCommand(this);
         // Admin command already registered, just add NPC/Holo subcommands via the existing /admin
+
+        getCommand("verify").setExecutor(new VerifyCommand(this));
     }
 
     private void registerListeners() {

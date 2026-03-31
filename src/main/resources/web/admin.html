@@ -3,979 +3,535 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Moon·Tiers — Panel de Staff</title>
+<title>Moon Tiers — Panel de Administración</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
 <style>
-:root {
-  --clr-admin:  #c084fc;
-  --clr-tester: #60a5fa;
-  --clr-user:   #4ade80;
-  --clr-system: #94a3b8;
-  --status-pending:   #f59e0b;
-  --status-scheduled: #60a5fa;
-  --status-testing:   #c084fc;
-  --status-completed: #4ade80;
-  --status-rejected:  #f87171;
+.page-container { min-height: 100vh; padding-top: 80px; }
+
+.page-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 60px;
+  background: rgba(10,10,15,.95); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem; z-index: 100;
 }
 
-.page-wrap { max-width:1200px;margin:0 auto;padding:90px 20px 60px; }
+.header-left { display: flex; align-items: center; gap: 1rem; }
 
-/* Sidebar layout */
-.admin-layout { display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:start; }
-.sidebar {
-  position:sticky;top:80px;
-  background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px;padding:16px;
+.header-logo {
+  display: flex; align-items: center; gap: .5rem;
+  font-family: 'Geist Mono', monospace; font-size: 1rem;
+  font-weight: 700; color: var(--text); text-decoration: none;
 }
-.sidebar-title { font-size:.73rem;font-weight:800;color:var(--clr-muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 8px 12px; }
-.sidebar-item {
-  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
-  cursor:pointer;font-size:.88rem;font-weight:500;color:var(--clr-muted);
-  transition:.15s;text-decoration:none;
-}
-.sidebar-item:hover { background:var(--clr-bg);color:var(--clr-text); }
-.sidebar-item.active { background:rgba(139,92,246,.1);color:var(--clr-accent); }
-.sidebar-item .badge {
-  margin-left:auto;background:var(--clr-accent);color:#fff;
-  border-radius:99px;font-size:.7rem;font-weight:700;padding:1px 7px;
-}
-.sidebar-sep { height:1px;background:var(--clr-border);margin:8px 0; }
+.header-logo img { width: 24px; height: 24px; image-rendering: pixelated; }
+.header-logo .dot { color: var(--accent2); }
 
-/* Cards */
-.content-panel { display:none; }
-.content-panel.active { display:block; }
-.panel-header { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px; }
-.panel-title  { font-size:1.4rem;font-weight:800;margin:0; }
-.panel-sub    { font-size:.85rem;color:var(--clr-muted);margin-top:4px; }
+.header-nav { display: flex; align-items: center; gap: .5rem; }
 
-/* Ticket table */
-.ticket-table { width:100%;border-collapse:separate;border-spacing:0;font-size:.88rem; }
-.ticket-table th {
-  padding:10px 14px;text-align:left;font-size:.73rem;font-weight:700;
-  color:var(--clr-muted);text-transform:uppercase;letter-spacing:.05em;
-  background:var(--clr-bg);border-bottom:1px solid var(--clr-border);
+.header-link {
+  color: var(--muted); font-size: .85rem; font-weight: 500;
+  padding: .5rem .8rem; border-radius: 8px; transition: all .2s ease;
+  text-decoration: none;
 }
-.ticket-table th:first-child { border-radius:10px 0 0 0; }
-.ticket-table th:last-child  { border-radius:0 10px 0 0; }
-.ticket-table td {
-  padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle;
-}
-.ticket-table tr:hover td { background:rgba(255,255,255,.02); }
-.ticket-table tr:last-child td { border-bottom:none; }
-.table-wrap { background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px;overflow:hidden; }
+.header-link:hover { color: var(--text); background: rgba(255,255,255,.05); }
+.header-link.active { color: var(--accent2); }
 
-/* Status badges */
+.user-pill {
+  display: flex; align-items: center; gap: .6rem;
+  background: rgba(255,255,255,.05); padding: .4rem .8rem .4rem .4rem;
+  border-radius: 20px; cursor: pointer;
+}
+.user-pill img { width: 28px; height: 28px; border-radius: 50%; image-rendering: pixelated; }
+.user-pill span { font-size: .85rem; font-weight: 500; }
+
+.main-content { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+.page-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+}
+
+.page-title { font-size: 1.8rem; font-weight: 700; }
+.page-title .icon { margin-right: .5rem; }
+
+.role-badge {
+  font-size: .75rem; font-weight: 600; padding: .4rem .8rem;
+  border-radius: 20px; text-transform: uppercase;
+}
+.role-badge.admin { background: rgba(239,68,68,.15); color: #f87171; }
+.role-badge.tester { background: rgba(59,130,246,.15); color: #60a5fa; }
+
+.tabs {
+  display: flex; gap: .3rem; margin-bottom: 1.5rem;
+  background: rgba(255,255,255,.03); padding: 4px; border-radius: 12px;
+  width: fit-content;
+}
+
+.tab {
+  padding: .6rem 1.2rem; font-size: .85rem; font-weight: 500;
+  border-radius: 10px; cursor: pointer; transition: all .2s ease;
+  color: var(--muted); border: none; background: transparent;
+}
+.tab.active { background: var(--accent); color: white; }
+.tab:not(.active):hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+.section-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem;
+}
+
+.section-header {
+  padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.section-title { font-size: 1rem; font-weight: 600; }
+
+.section-badge {
+  background: var(--accent); color: white;
+  font-size: .7rem; font-weight: 600; padding: .25rem .6rem; border-radius: 20px;
+}
+
+.section-body { padding: 1.5rem; }
+
+/* Tables */
+.data-table { width: 100%; border-collapse: collapse; }
+
+.data-table th {
+  text-align: left; font-size: .75rem; font-weight: 600;
+  color: var(--muted); text-transform: uppercase; padding: .8rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table td {
+  padding: .8rem 1rem; border-bottom: 1px solid var(--border);
+  font-size: .9rem;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: rgba(255,255,255,.02); }
+
+.user-cell {
+  display: flex; align-items: center; gap: .6rem;
+}
+.user-cell img { width: 28px; height: 28px; border-radius: 6px; image-rendering: pixelated; }
+.user-cell span { font-weight: 500; }
+
+.role-select {
+  background: rgba(255,255,255,.05); border: 1px solid var(--border2);
+  border-radius: 6px; padding: .4rem .6rem; font-family: inherit;
+  font-size: .8rem; color: var(--text); cursor: pointer;
+}
+
 .status-badge {
-  padding:3px 10px;border-radius:6px;font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  font-size: .7rem; font-weight: 600; padding: .2rem .5rem;
+  border-radius: 6px; text-transform: uppercase;
 }
-.status-pending   { background:rgba(245,158,11,.15);color:var(--status-pending); }
-.status-scheduled { background:rgba(96,165,250,.15);color:var(--status-scheduled); }
-.status-testing   { background:rgba(192,132,252,.15);color:var(--status-testing); }
-.status-completed { background:rgba(74,222,128,.15);color:var(--status-completed); }
-.status-rejected  { background:rgba(248,113,113,.15);color:var(--status-rejected); }
-.role-admin  { color:var(--clr-admin);font-weight:700; }
-.role-tester { color:var(--clr-tester);font-weight:700; }
-.role-user   { color:var(--clr-user);font-weight:500; }
+.status-badge.pending { background: rgba(234,179,8,.15); color: #fbbf24; }
+.status-badge.scheduled { background: rgba(59,130,246,.15); color: #60a5fa; }
+.status-badge.in_progress { background: rgba(168,85,247,.15); color: #c084fc; }
+.status-badge.completed { background: rgba(34,197,94,.15); color: #4ade80; }
 
-/* Buttons */
-.btn         { display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600;transition:.2s; }
-.btn-primary { background:var(--clr-accent);color:#fff; }
-.btn-primary:hover { background:#7c3aed; }
-.btn-secondary { background:var(--clr-bg);border:1px solid var(--clr-border);color:var(--clr-text); }
-.btn-secondary:hover { border-color:var(--clr-accent); }
-.btn-danger  { background:#dc2626;color:#fff; }
-.btn-danger:hover { background:#b91c1c; }
-.btn-success { background:#16a34a;color:#fff; }
-.btn-success:hover { background:#15803d; }
-.btn-sm      { padding:5px 12px;font-size:.78rem; }
-.btn:disabled { opacity:.4;cursor:not-allowed; }
-
-/* Filters */
-.filter-row { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center; }
-.filter-select {
-  padding:8px 12px;background:var(--clr-bg);border:1px solid var(--clr-border);
-  border-radius:9px;color:var(--clr-text);font-family:inherit;font-size:.85rem;
-  outline:none;cursor:pointer;
+.action-btn-sm {
+  background: var(--accent); border: none; border-radius: 6px;
+  padding: .4rem .8rem; font-family: inherit; font-size: .8rem;
+  font-weight: 500; color: white; cursor: pointer; transition: all .15s ease;
 }
-.filter-select:focus { border-color:var(--clr-accent); }
+.action-btn-sm:hover { background: var(--accent2); }
 
-/* Ticket detail side panel */
-.split-layout { display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start; }
-.detail-main  { min-width:0; }
-.detail-side  { position:sticky;top:80px; }
-
-/* Form elements */
-.field       { margin-bottom:16px; }
-.field label { display:block;font-size:.78rem;font-weight:700;color:var(--clr-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em; }
-.field input, .field select, .field textarea {
-  width:100%;padding:9px 12px;background:var(--clr-bg);border:1px solid var(--clr-border);
-  border-radius:9px;color:var(--clr-text);font-family:inherit;font-size:.88rem;outline:none;transition:.2s;box-sizing:border-box;
+/* Set Tier Form */
+.set-tier-form {
+  display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;
 }
-.field input:focus,.field select:focus,.field textarea:focus { border-color:var(--clr-accent); }
-.field textarea { resize:vertical;min-height:72px; }
 
-/* Chat */
-.chat-section { background:var(--clr-card);border:1px solid var(--clr-border);border-radius:16px; }
-.chat-header  { padding:14px 18px;border-bottom:1px solid var(--clr-border);font-weight:700;font-size:.9rem; }
-.chat-messages { padding:14px 18px;display:flex;flex-direction:column;gap:10px;max-height:450px;overflow-y:auto; }
-.chat-msg { display:flex;flex-direction:column;gap:3px; }
-.chat-msg-header { display:flex;align-items:center;gap:8px; }
-.chat-author { font-size:.8rem;font-weight:700; }
-.chat-author.admin  { color:var(--clr-admin); }
-.chat-author.tester { color:var(--clr-tester); }
-.chat-author.user   { color:var(--clr-user); }
-.chat-author.system { color:var(--clr-system); }
-.chat-time   { font-size:.7rem;color:var(--clr-muted); }
-.chat-bubble {
-  padding:9px 13px;border-radius:9px;font-size:.86rem;line-height:1.5;
-  background:var(--clr-bg);border:1px solid var(--clr-border);max-width:90%;white-space:pre-wrap;
+.form-group { display: flex; flex-direction: column; gap: .4rem; }
+.form-group label { font-size: .75rem; color: var(--muted); }
+
+.form-input, .form-select {
+  background: rgba(255,255,255,.05); border: 1px solid var(--border2);
+  border-radius: 8px; padding: .6rem .8rem; font-family: inherit;
+  font-size: .9rem; color: var(--text); outline: none;
 }
-.chat-bubble.system { background:rgba(148,163,184,.05);border-color:rgba(148,163,184,.1);font-style:italic; }
-.chat-bubble.own    { background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.3); }
-.chat-input-row { padding:12px 18px;border-top:1px solid var(--clr-border);display:flex;gap:8px;align-items:flex-end; }
-.chat-input-row textarea { flex:1;resize:none;min-height:40px; }
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
 
-/* Info blocks */
-.info-block  { background:var(--clr-bg);border-radius:10px;padding:11px 14px; }
-.info-label  { font-size:.7rem;font-weight:700;color:var(--clr-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px; }
-.info-value  { font-size:.9rem;font-weight:600; }
-.detail-info { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px; }
-
-/* Stats bar */
-.stats-cards { display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px; }
-.stat-card   {
-  background:var(--clr-card);border:1px solid var(--clr-border);border-radius:14px;
-  padding:16px;text-align:center;
+.submit-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border: none; border-radius: 8px; padding: .6rem 1.5rem;
+  font-family: inherit; font-size: .9rem; font-weight: 600;
+  color: white; cursor: pointer; transition: all .2s ease;
 }
-.stat-card-val { font-size:2rem;font-weight:800; }
-.stat-card-lbl { font-size:.75rem;color:var(--clr-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em; }
+.submit-btn:hover { transform: translateY(-1px); }
 
-/* Schedule editor */
-.slots-table { width:100%; }
-.slots-table td { padding:6px 8px;vertical-align:middle; }
-.slot-row { display:flex;align-items:center;gap:8px;padding:8px;background:var(--clr-bg);border-radius:9px;margin-bottom:6px; }
-.slot-toggle { width:36px;height:20px;border-radius:99px;border:none;cursor:pointer;position:relative;transition:.2s; }
-.slot-toggle.on  { background:#16a34a; }
-.slot-toggle.off { background:#475569; }
-.slot-toggle::after { content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;transition:.2s; }
-.slot-toggle.on::after  { left:calc(100% - 17px); }
-.slot-toggle.off::after { left:3px; }
-
-/* Users table */
-.user-avatar { width:28px;height:28px;border-radius:4px;image-rendering:pixelated;vertical-align:middle;margin-right:8px; }
-
-/* Tier selector */
-.tier-select-grid { display:flex;gap:8px;flex-wrap:wrap; }
-.tier-opt {
-  padding:6px 16px;border-radius:8px;border:1.5px solid var(--clr-border);
-  cursor:pointer;font-weight:700;font-size:.9rem;transition:.2s;background:var(--clr-bg);
+.alert {
+  padding: .8rem 1rem; border-radius: 8px; font-size: .85rem;
+  margin-bottom: 1rem; display: none;
 }
-.tier-opt:hover { border-color:var(--clr-accent); }
-.tier-opt.selected { border-color:var(--clr-accent);background:rgba(139,92,246,.1); }
-.tier-HT3 { color:#f97316; } .tier-LT2 { color:#ef4444; } .tier-HT2 { color:#dc2626; }
-.tier-LT1 { color:#ec4899; } .tier-HT1 { color:#f43f5e; }
+.alert.show { display: block; }
+.alert.success { background: rgba(34,197,94,.1); color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
+.alert.error { background: rgba(239,68,68,.1); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
 
-/* Toast */
-.toast { position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 18px;border-radius:11px;font-weight:600;font-size:.85rem;display:flex;align-items:center;gap:8px;max-width:340px;animation:slideIn .3s ease; }
-.toast-error   { background:#dc2626;color:#fff; }
-.toast-success { background:#16a34a;color:#fff; }
-.toast-info    { background:var(--clr-accent);color:#fff; }
-@keyframes slideIn { from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1} }
-
-.spinner { width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block; }
-@keyframes spin { to{transform:rotate(360deg)} }
-
-/* Nav */
-.nav-user-btn {
-  display:flex;align-items:center;gap:8px;padding:6px 14px;
-  background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:10px;
-  cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:600;color:var(--clr-text);transition:.2s;
+/* Stats Cards */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem; margin-bottom: 1.5rem;
 }
-.nav-user-btn:hover { border-color:var(--clr-accent); }
-.nav-user-btn img { width:26px;height:26px;border-radius:4px;image-rendering:pixelated; }
-.nav-dropdown { position:relative; }
-.nav-dropdown-menu {
-  position:absolute;right:0;top:calc(100% + 8px);background:var(--clr-card);
-  border:1px solid var(--clr-border);border-radius:14px;padding:8px;min-width:200px;
-  z-index:999;box-shadow:0 16px 48px rgba(0,0,0,.5);display:none;
-}
-.nav-dropdown-menu.open { display:block; }
-.dropdown-item {
-  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
-  cursor:pointer;font-size:.88rem;font-weight:500;color:var(--clr-text);transition:.15s;text-decoration:none;
-}
-.dropdown-item:hover { background:var(--clr-bg);color:var(--clr-accent); }
-.dropdown-item.danger:hover { color:#f87171; }
-.dropdown-header { padding:8px 12px 4px;font-size:.73rem;font-weight:700;color:var(--clr-muted);letter-spacing:.06em;text-transform:uppercase; }
-.dropdown-sep { height:1px;background:var(--clr-border);margin:6px 0; }
 
-/* Empty */
-.empty-state { text-align:center;padding:40px 20px;color:var(--clr-muted); }
-.empty-state .icon { font-size:2.5rem;margin-bottom:10px; }
-
-@media(max-width:900px) {
-  .admin-layout { grid-template-columns:1fr; }
-  .sidebar { position:static; }
-  .split-layout { grid-template-columns:1fr; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.2rem;
 }
-@media(max-width:600px) { .page-wrap { padding:80px 12px 40px; } }
+
+.stat-value { font-size: 2rem; font-weight: 700; color: var(--text); }
+.stat-label { font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+
+.empty-state {
+  text-align: center; padding: 3rem; color: var(--muted);
+}
+
+.admin-only { display: none; }
+body.role-admin .admin-only { display: block; }
+body.role-admin .admin-only-flex { display: flex; }
+
+@media (max-width: 768px) {
+  .data-table { display: block; overflow-x: auto; }
+  .set-tier-form { flex-direction: column; }
+  .form-group { width: 100%; }
+}
 </style>
 </head>
 <body>
 
-<header>
-  <nav>
-    <div class="nav-logo-wrap">
-      <a class="nav-logo" href="/">
-        <img class="nav-logo-img" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt="" onerror="this.style.display='none'"/>
-        Moon<span class="nav-dot">·</span>Tiers
-      </a>
-    </div>
-    <ul class="nav-links">
-      <li><a class="nav-a" href="/">Clasificación</a></li>
-      <li><a class="nav-a" href="/tickets.html">Tickets</a></li>
-      <li><a class="nav-a active" href="/admin.html">Staff</a></li>
-    </ul>
-    <div class="nav-search-wrap" style="gap:12px">
-      <div class="nav-dropdown" id="navDropdown">
-        <button class="nav-user-btn" id="navUserBtn" onclick="toggleDropdown()">
-          <span id="navUserText">Cargando…</span>
-        </button>
-        <div class="nav-dropdown-menu" id="navDropdownMenu">
-          <div class="dropdown-header" id="dropdownUsername">Staff</div>
-          <div class="dropdown-sep"></div>
-          <a class="dropdown-item" href="/tickets.html">🎟 Tickets</a>
-          <a class="dropdown-item" href="/admin.html">⚙️ Panel Staff</a>
-          <div class="dropdown-sep"></div>
-          <div class="dropdown-item danger" onclick="doLogout()">🚪 Cerrar sesión</div>
-        </div>
-      </div>
-    </div>
-  </nav>
+<header class="page-header">
+  <div class="header-left">
+    <a href="/" class="header-logo">
+      <img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt=""/>
+      Moon<span class="dot">·</span>Tiers
+    </a>
+    <nav class="header-nav">
+      <a href="/" class="header-link">Clasificación</a>
+      <a href="/tickets.html" class="header-link">Tickets</a>
+      <a href="/admin.html" class="header-link active">Panel</a>
+    </nav>
+  </div>
+  <div class="user-pill" onclick="window.location.href='/tickets.html'">
+    <img id="userAvatar" src="" alt=""/>
+    <span id="userName">...</span>
+  </div>
 </header>
 
-<!-- Access denied overlay -->
-<div class="auth-overlay" id="accessDenied" style="display:none">
-  <div style="background:var(--clr-card);border:1px solid var(--clr-border);border-radius:20px;padding:40px;text-align:center;max-width:400px">
-    <div style="font-size:3rem;margin-bottom:16px">🚫</div>
-    <h2 style="margin:0 0 8px">Acceso denegado</h2>
-    <p style="color:var(--clr-muted);margin:0 0 20px">Esta página es solo para staff (Admin/Tester).</p>
-    <a href="/" class="btn btn-primary">Volver al inicio</a>
-  </div>
-</div>
+<div class="page-container">
+  <div class="main-content">
+    <div class="page-title-row">
+      <h1 class="page-title"><span class="icon">⚙️</span>Panel de Control</h1>
+      <span class="role-badge" id="roleBadge">cargando</span>
+    </div>
 
-<div class="page-wrap" id="mainContent" style="display:none">
-  <div class="admin-layout">
+    <div class="alert" id="alertBox"></div>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-title">Panel de Staff</div>
-      <div class="sidebar-item active" onclick="showPanel('tickets',this)">
-        🎟 Tickets <span class="badge" id="pendingCount">0</span>
-      </div>
-      <div class="sidebar-item" onclick="showPanel('chat',this)">
-        💬 Ticket activo
-      </div>
-      <div class="sidebar-sep"></div>
-      <div class="sidebar-item" onclick="showPanel('schedule',this)">
-        📅 Mi horario
-      </div>
-      <div class="sidebar-item admin-only" onclick="showPanel('users',this)" style="display:none">
-        👥 Usuarios
-      </div>
-      <div class="sidebar-sep"></div>
-      <div class="sidebar-item" onclick="showPanel('stats',this)">
-        📊 Estadísticas
-      </div>
-    </aside>
+    <div class="tabs">
+      <button class="tab active" data-panel="tickets">📋 Tickets</button>
+      <button class="tab admin-only" data-panel="users">👥 Usuarios</button>
+      <button class="tab admin-only" data-panel="tiers">🏆 Gestionar Tiers</button>
+    </div>
 
-    <!-- Main content -->
-    <main>
-
-      <!-- ── PANEL: Tickets ── -->
-      <div class="content-panel active" id="panel-tickets">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">Gestión de Tickets</h2>
-            <div class="panel-sub">Revisa y gestiona las solicitudes de los jugadores.</div>
-          </div>
+    <!-- Tickets Panel -->
+    <div class="panel active" id="panel-tickets">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-label">Pendientes</div>
         </div>
-
-        <div class="filter-row">
-          <select class="filter-select" id="statusFilter" onchange="applyFilters()">
-            <option value="">Todos los estados</option>
-            <option value="pending">Pendientes</option>
-            <option value="scheduled">Programados</option>
-            <option value="testing">En test</option>
-            <option value="completed">Completados</option>
-            <option value="rejected">Rechazados</option>
-          </select>
-          <select class="filter-select" id="tierFilter" onchange="applyFilters()">
-            <option value="">Todos los tiers</option>
-            <option value="HT3">HT3</option>
-            <option value="LT2">LT2</option>
-            <option value="HT2">HT2</option>
-            <option value="LT1">LT1</option>
-            <option value="HT1">HT1</option>
-          </select>
-          <button class="btn btn-secondary btn-sm" onclick="loadTickets()">🔄 Actualizar</button>
+        <div class="stat-card">
+          <div class="stat-value" id="statScheduled">0</div>
+          <div class="stat-label">Programados</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statCompleted">0</div>
+          <div class="stat-label">Completados</div>
+        </div>
+      </div>
 
-        <div class="table-wrap">
-          <table class="ticket-table" id="ticketsTable">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-title">Todos los Tickets</span>
+          <span class="section-badge" id="ticketCount">0</span>
+        </div>
+        <div class="section-body" style="padding:0;overflow-x:auto">
+          <table class="data-table">
             <thead>
               <tr>
-                <th>ID</th><th>Jugador</th><th>Kit</th><th>Tier</th>
-                <th>Estado</th><th>Tester</th><th>Fecha</th><th>Acciones</th>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Kit</th>
+                <th>Tier</th>
+                <th>Estado</th>
+                <th>Tester</th>
+                <th>Fecha</th>
+                <th>Acción</th>
               </tr>
             </thead>
-            <tbody id="ticketsBody">
-              <tr><td colspan="8" class="empty-state">⏳ Cargando...</td></tr>
-            </tbody>
+            <tbody id="ticketsTable"></tbody>
           </table>
         </div>
       </div>
+    </div>
 
-      <!-- ── PANEL: Chat / Ticket detail ── -->
-      <div class="content-panel" id="panel-chat">
-        <div id="chatPanelContent">
-          <div class="empty-state">
-            <div class="icon">💬</div>
-            <h3>Selecciona un ticket</h3>
-            <p>Haz clic en "Chat" en la tabla de tickets para abrir la conversación.</p>
-          </div>
+    <!-- Users Panel (Admin Only) -->
+    <div class="panel" id="panel-users">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-title">Usuarios Registrados</span>
+          <span class="section-badge" id="userCount">0</span>
         </div>
-      </div>
-
-      <!-- ── PANEL: Schedule ── -->
-      <div class="content-panel" id="panel-schedule">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">Mi Horario</h2>
-            <div class="panel-sub">Configura los slots disponibles para tests. Los jugadores verán estos horarios al programar su test.</div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="saveSchedule()">💾 Guardar</button>
-        </div>
-        <div id="scheduleEditor">⏳ Cargando...</div>
-      </div>
-
-      <!-- ── PANEL: Users (admin only) ── -->
-      <div class="content-panel" id="panel-users">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">Gestión de Usuarios</h2>
-            <div class="panel-sub">Administra los roles y permisos de los usuarios registrados.</div>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="ticket-table" id="usersTable">
+        <div class="section-body" style="padding:0;overflow-x:auto">
+          <table class="data-table">
             <thead>
-              <tr><th>Jugador</th><th>Rol</th><th>Registrado</th><th>Acciones</th></tr>
+              <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Verificado</th>
+                <th>Registrado</th>
+                <th>Cambiar Rol</th>
+              </tr>
             </thead>
-            <tbody id="usersBody">
-              <tr><td colspan="4" class="empty-state">⏳ Cargando...</td></tr>
-            </tbody>
+            <tbody id="usersTable"></tbody>
           </table>
         </div>
       </div>
+    </div>
 
-      <!-- ── PANEL: Stats ── -->
-      <div class="content-panel" id="panel-stats">
-        <div class="panel-header">
-          <h2 class="panel-title">Estadísticas</h2>
+    <!-- Set Tier Panel (Admin Only) -->
+    <div class="panel" id="panel-tiers">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-title">Establecer Tier Manualmente</span>
         </div>
-        <div class="stats-cards" id="statsCards">
-          <div class="stat-card"><div class="stat-card-val" id="statTotal">—</div><div class="stat-card-lbl">Total tickets</div></div>
-          <div class="stat-card"><div class="stat-card-val" style="color:var(--status-pending)" id="statPending">—</div><div class="stat-card-lbl">Pendientes</div></div>
-          <div class="stat-card"><div class="stat-card-val" style="color:var(--status-scheduled)" id="statScheduled">—</div><div class="stat-card-lbl">Programados</div></div>
-          <div class="stat-card"><div class="stat-card-val" style="color:var(--status-completed)" id="statCompleted">—</div><div class="stat-card-lbl">Completados</div></div>
-          <div class="stat-card"><div class="stat-card-val" style="color:var(--status-rejected)" id="statRejected">—</div><div class="stat-card-lbl">Rechazados</div></div>
+        <div class="section-body">
+          <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.5rem">
+            Usa esta función para establecer directamente el tier de un jugador sin necesidad de test.
+          </p>
+          <form class="set-tier-form" id="setTierForm">
+            <div class="form-group">
+              <label>Nombre de usuario</label>
+              <input type="text" class="form-input" id="tierUsername" placeholder="Nombre exacto" required/>
+            </div>
+            <div class="form-group">
+              <label>Kit</label>
+              <select class="form-select" id="tierKit" required>
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tier</label>
+              <select class="form-select" id="tierLevel" required>
+                <option value="HT1">HT1 - High Tier 1</option>
+                <option value="HT2">HT2 - High Tier 2</option>
+                <option value="HT3">HT3 - High Tier 3</option>
+                <option value="LT5">LT5 - Low Tier 5</option>
+                <option value="LT4">LT4 - Low Tier 4</option>
+                <option value="LT3">LT3 - Low Tier 3</option>
+                <option value="LT2">LT2 - Low Tier 2</option>
+                <option value="LT1">LT1 - Low Tier 1</option>
+              </select>
+            </div>
+            <button type="submit" class="submit-btn">Establecer Tier</button>
+          </form>
         </div>
       </div>
-
-    </main>
+    </div>
   </div>
 </div>
 
-<!-- Toast -->
-<div id="toastEl" style="display:none" class="toast"></div>
-
 <script>
-const API = '';
-let token = localStorage.getItem('mt_token') || null;
+const API_BASE = '';
 let currentUser = null;
-let allTickets = [];
-let scheduleData = {};
 
-// ── Startup ────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
-  if (!token) { showDenied(); return; }
+async function checkAuth() {
+  const session = localStorage.getItem('session');
+  if (!session) { window.location.href = '/login.html'; return; }
+
   try {
-    currentUser = await api('GET', '/api/auth/me');
-    if (currentUser.role === 'user') { showDenied(); return; }
-    initUI();
-    loadTickets();
-    loadSchedule();
-    if (currentUser.role === 'admin') {
-      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
-      loadUsers();
+    const res = await fetch(API_BASE + '/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + session }
+    });
+    const data = await res.json();
+    if (data.error || (data.role !== 'admin' && data.role !== 'tester')) {
+      window.location.href = '/tickets.html';
+      return;
     }
-  } catch { showDenied(); }
+    currentUser = data;
+    document.body.classList.add('role-' + data.role);
+    document.getElementById('userName').textContent = data.username;
+    document.getElementById('userAvatar').src = `https://mc-heads.net/avatar/${data.username}/28`;
+    
+    const badge = document.getElementById('roleBadge');
+    badge.textContent = data.role;
+    badge.className = 'role-badge ' + data.role;
+    
+    loadKits();
+    loadTickets();
+    if (data.role === 'admin') loadUsers();
+  } catch (err) {
+    window.location.href = '/login.html';
+  }
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+  });
 });
 
-function showDenied() {
-  document.getElementById('accessDenied').style.display = 'flex';
+async function loadKits() {
+  try {
+    const res = await fetch(API_BASE + '/api/kits');
+    const kits = await res.json();
+    const select = document.getElementById('tierKit');
+    kits.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k;
+      opt.textContent = k;
+      select.appendChild(opt);
+    });
+  } catch (err) {}
 }
 
-function initUI() {
-  document.getElementById('mainContent').style.display = 'block';
-  // Update nav
-  const btn = document.getElementById('navUserBtn');
-  const uuid = currentUser.uuid || '';
-  btn.innerHTML = (uuid ? `<img src="https://crafatar.com/avatars/${uuid}?size=32&overlay" onerror="this.style.display='none'" alt=""/>` : '') +
-    `<span>${currentUser.username}</span>`;
-  document.getElementById('dropdownUsername').textContent = currentUser.username;
-}
-
-function showPanel(name, el) {
-  document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  if (el) el.classList.add('active');
-}
-
-// ── Tickets ───────────────────────────────────────────────────────────────
 async function loadTickets() {
   try {
-    allTickets = await api('GET', '/api/tickets');
-    applyFilters();
-    updateStats();
-    const pending = allTickets.filter(t => t.status === 'pending').length;
-    document.getElementById('pendingCount').textContent = pending;
-  } catch(e) {
-    document.getElementById('ticketsBody').innerHTML = '<tr><td colspan="8" class="empty-state">⚠️ Error al cargar</td></tr>';
-  }
-}
-
-function applyFilters() {
-  const statusF = document.getElementById('statusFilter').value;
-  const tierF   = document.getElementById('tierFilter').value;
-  let filtered  = allTickets;
-  if (statusF) filtered = filtered.filter(t => t.status === statusF);
-  if (tierF)   filtered = filtered.filter(t => t.targetTier === tierF);
-  renderTable(filtered);
-}
-
-function renderTable(list) {
-  if (!list.length) {
-    document.getElementById('ticketsBody').innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="icon">📭</div><h3>No hay tickets</h3></div></td></tr>';
-    return;
-  }
-  document.getElementById('ticketsBody').innerHTML = list.map(t => `
-    <tr>
-      <td><span style="font-family:'Geist Mono',monospace;font-size:.8rem;color:var(--clr-muted)">#${t.id}</span></td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          ${t.uuid ? `<img class="user-avatar" src="https://crafatar.com/avatars/${t.uuid}?size=32&overlay" onerror="this.style.display='none'" alt=""/>` : ''}
-          <strong>${t.username}</strong>
-        </div>
-      </td>
-      <td style="text-transform:capitalize">${t.kit}</td>
-      <td><strong class="tier-${t.targetTier}">${t.targetTier}</strong></td>
-      <td><span class="status-badge status-${t.status}">${statusLabel(t.status)}</span></td>
-      <td>${t.assignedTester ? `<span style="color:var(--clr-tester)">${t.assignedTester}</span>` : `<span style="color:var(--clr-muted)">—</span>`}</td>
-      <td style="font-size:.8rem;color:var(--clr-muted)">${fmtDate(t.createdAt)}</td>
-      <td>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-secondary" onclick="openChat('${t.id}')">💬 Chat</button>
-          ${!['completed','rejected'].includes(t.status) ? `
-          <button class="btn btn-sm btn-secondary" onclick="quickSchedule('${t.id}')">📅</button>
-          ${currentUser.role === 'admin' ? `
-          <button class="btn btn-sm btn-success" title="Aprobar" onclick="quickResolve('${t.id}','approved')">✅</button>
-          <button class="btn btn-sm btn-danger"  title="Rechazar" onclick="quickResolve('${t.id}','rejected')">❌</button>
-          ` : ''}
-          ` : ''}
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function updateStats() {
-  document.getElementById('statTotal').textContent     = allTickets.length;
-  document.getElementById('statPending').textContent   = allTickets.filter(t=>t.status==='pending').length;
-  document.getElementById('statScheduled').textContent = allTickets.filter(t=>t.status==='scheduled').length;
-  document.getElementById('statCompleted').textContent = allTickets.filter(t=>t.status==='completed').length;
-  document.getElementById('statRejected').textContent  = allTickets.filter(t=>t.status==='rejected').length;
-}
-
-// ── Chat / Ticket detail ──────────────────────────────────────────────────
-async function openChat(ticketId) {
-  showPanel('chat', document.querySelector('.sidebar-item:nth-child(3)'));
-  document.getElementById('chatPanelContent').innerHTML = '<div class="empty-state"><div class="icon">⏳</div><h3>Cargando...</h3></div>';
-  try {
-    const t = await api('GET', '/api/tickets/' + ticketId);
-    renderChatPanel(t);
-  } catch(e) {
-    document.getElementById('chatPanelContent').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error</h3></div>';
-  }
-}
-
-function renderChatPanel(t) {
-  const isOpen = !['completed','rejected'].includes(t.status);
-  const slotInfo = t.slot ? `<div class="info-block" style="grid-column:1/-1"><div class="info-label">📅 Horario programado</div><div class="info-value">${t.slot.date} · ${t.slot.time} CET — Tester: ${t.slot.testerName}</div></div>` : '';
-
-  document.getElementById('chatPanelContent').innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <button class="btn btn-secondary btn-sm" onclick="showPanel('tickets'); loadTickets()">← Volver</button>
-      <h2 style="margin:0;font-size:1.1rem">Ticket #${t.id} — ${t.username} · <span class="tier-${t.targetTier}">${t.targetTier}</span></h2>
-      <span class="status-badge status-${t.status}" style="margin-left:auto">${statusLabel(t.status)}</span>
-    </div>
-
-    <div class="split-layout">
-      <div class="detail-main">
-        <div class="chat-section">
-          <div class="chat-header">💬 Conversación</div>
-          <div class="chat-messages" id="chatMsg_${t.id}">
-            ${renderMessages(t.messages)}
+    const res = await fetch(API_BASE + '/api/tickets/list', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('session') }
+    });
+    const tickets = await res.json();
+    
+    document.getElementById('ticketCount').textContent = tickets.length;
+    document.getElementById('statPending').textContent = tickets.filter(t => t.status === 'pending').length;
+    document.getElementById('statScheduled').textContent = tickets.filter(t => t.status === 'scheduled').length;
+    document.getElementById('statCompleted').textContent = tickets.filter(t => t.status === 'completed').length;
+    
+    const tbody = document.getElementById('ticketsTable');
+    if (tickets.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No hay tickets</td></tr>';
+      return;
+    }
+    
+    const statusText = { pending: 'Pendiente', scheduled: 'Agendado', in_progress: 'En Progreso', completed: 'Completado' };
+    tbody.innerHTML = tickets.map(t => `
+      <tr>
+        <td><code style="font-size:.75rem">${t.id}</code></td>
+        <td>
+          <div class="user-cell">
+            <img src="https://mc-heads.net/avatar/${t.username}/28" alt=""/>
+            <span>${t.username}</span>
           </div>
-          ${isOpen ? `
-          <div class="chat-input-row">
-            <textarea id="chatInp_${t.id}" placeholder="Escribe un mensaje..." onkeydown="chatKey(event,'${t.id}')"></textarea>
-            <button class="btn btn-primary btn-sm" onclick="sendMsg('${t.id}')">Enviar</button>
-          </div>` : `<div style="padding:12px 18px;color:var(--clr-muted);font-size:.82rem;border-top:1px solid var(--clr-border)">🔒 Ticket cerrado</div>`}
-        </div>
-      </div>
-
-      <div class="detail-side">
-        <div class="chat-section" style="margin-bottom:14px">
-          <div class="chat-header">ℹ️ Información</div>
-          <div style="padding:14px">
-            <div class="detail-info">
-              <div class="info-block"><div class="info-label">Kit</div><div class="info-value" style="text-transform:capitalize">${t.kit}</div></div>
-              <div class="info-block"><div class="info-label">Tier</div><div class="info-value tier-${t.targetTier}">${t.targetTier}</div></div>
-              <div class="info-block"><div class="info-label">Creado</div><div class="info-value" style="font-size:.8rem">${fmtDate(t.createdAt)}</div></div>
-              <div class="info-block"><div class="info-label">Tester</div><div class="info-value" style="color:var(--clr-tester)">${t.assignedTester || 'Sin asignar'}</div></div>
-              ${slotInfo}
-            </div>
-          </div>
-        </div>
-
-        ${isOpen ? `
-        <div class="chat-section">
-          <div class="chat-header">⚡ Acciones rápidas</div>
-          <div style="padding:14px;display:flex;flex-direction:column;gap:8px">
-            <button class="btn btn-secondary" onclick="showScheduleForTicket('${t.id}')">📅 Asignar horario</button>
-            <button class="btn btn-secondary" onclick="setStatus('${t.id}','testing')">🔬 Marcar como En test</button>
-            ${currentUser.role === 'admin' ? `
-            <hr style="border-color:var(--clr-border);margin:4px 0"/>
-            <button class="btn btn-success" onclick="openApproveModal('${t.id}')">✅ Aprobar y subir tier</button>
-            <button class="btn btn-danger" onclick="openRejectModal('${t.id}')">❌ Rechazar</button>
-            ` : ''}
-            ${currentUser.role === 'admin' ? `
-            <hr style="border-color:var(--clr-border);margin:4px 0"/>
-            <label style="font-size:.75rem;color:var(--clr-muted);font-weight:700">Asignar tester:</label>
-            <div style="display:flex;gap:6px">
-              <input type="text" id="assignTesterInput_${t.id}" placeholder="Nick del tester" style="flex:1;padding:7px 10px;background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:8px;color:var(--clr-text);font-family:inherit;font-size:.82rem;outline:none"/>
-              <button class="btn btn-sm btn-primary" onclick="doAssign('${t.id}')">OK</button>
-            </div>` : ''}
-          </div>
-        </div>` : ''}
-
-        <!-- Schedule sub-panel -->
-        <div id="schedSubPanel_${t.id}" style="display:none;margin-top:14px"></div>
-      </div>
-    </div>
-  `;
-  scrollChat2(t.id);
+        </td>
+        <td>${t.kit}</td>
+        <td style="color:var(--accent2)">${t.targetTier}</td>
+        <td><span class="status-badge ${t.status}">${statusText[t.status] || t.status}</span></td>
+        <td>${t.assignedTester || '-'}</td>
+        <td style="font-size:.8rem;color:var(--muted)">${new Date(t.createdAt).toLocaleDateString('es-ES')}</td>
+        <td><button class="action-btn-sm" onclick="window.location.href='/ticket.html?id=${t.id}'">Ver</button></td>
+      </tr>
+    `).join('');
+  } catch (err) {}
 }
 
-function renderMessages(msgs) {
-  if (!msgs || !msgs.length) return '<div style="color:var(--clr-muted);font-size:.82rem;text-align:center;padding:16px">Sin mensajes.</div>';
-  return msgs.map(m => {
-    const isOwn = currentUser && m.author === currentUser.username && m.role !== 'system';
-    return `<div class="chat-msg">
-      <div class="chat-msg-header">
-        <span class="chat-author ${m.role}">${m.role === 'system' ? '⚙️ Sistema' : m.author}</span>
-        <span class="chat-time">${fmtTime(m.ts)}</span>
-      </div>
-      <div class="chat-bubble ${m.role==='system'?'system':''} ${isOwn?'own':''}">${escHtml(m.content)}</div>
-    </div>`;
-  }).join('');
-}
-
-async function sendMsg(ticketId) {
-  const inp = document.getElementById('chatInp_' + ticketId);
-  const content = inp.value.trim();
-  if (!content) return;
-  try {
-    await api('POST', '/api/tickets/' + ticketId + '/message', { content });
-    inp.value = '';
-    const t = await api('GET', '/api/tickets/' + ticketId);
-    document.getElementById('chatMsg_' + ticketId).innerHTML = renderMessages(t.messages);
-    scrollChat2(ticketId);
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
-}
-
-function chatKey(e, id) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(id); }
-}
-
-function scrollChat2(id) {
-  const el = document.getElementById('chatMsg_' + id);
-  if (el) el.scrollTop = el.scrollHeight;
-}
-
-async function doAssign(ticketId) {
-  const tester = document.getElementById('assignTesterInput_' + ticketId)?.value?.trim();
-  if (!tester) return;
-  try {
-    await api('PUT', '/api/tickets/' + ticketId + '/assign', { tester });
-    toast('Tester asignado.', 'success');
-    openChat(ticketId);
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
-}
-
-async function setStatus(ticketId, status) {
-  try {
-    await api('PUT', '/api/tickets/' + ticketId + '/status', { status });
-    toast('Estado actualizado.', 'success');
-    openChat(ticketId);
-    loadTickets();
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
-}
-
-// ── Schedule assignment from ticket ─────────────────────────────────────
-async function showScheduleForTicket(ticketId) {
-  const panel = document.getElementById('schedSubPanel_' + ticketId);
-  if (!panel) return;
-  panel.style.display = 'block';
-  panel.innerHTML = '<div class="chat-section"><div class="chat-header">📅 Seleccionar horario</div><div style="padding:14px">⏳ Cargando...</div></div>';
-  try {
-    const schedules = await api('GET', '/api/schedules');
-    const DAYS = ['','Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-    let slotsHtml = '';
-    schedules.forEach(ts => {
-      ts.slots.filter(s => s.available).forEach(s => {
-        slotsHtml += `<div style="background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:9px;padding:10px;cursor:pointer;margin-bottom:6px;transition:.2s" 
-          onclick="pickSlotForTicket(this,'${s.id}','${ticketId}')" class="slot-opt">
-          <strong>${ts.testerName}</strong> · ${DAYS[s.dayOfWeek]} ${s.time}
-        </div>`;
-      });
-    });
-    panel.innerHTML = `<div class="chat-section">
-      <div class="chat-header">📅 Seleccionar horario</div>
-      <div style="padding:14px">
-        <div id="slotsOpts_${ticketId}">${slotsHtml || '<p style="color:var(--clr-muted)">Sin slots disponibles.</p>'}</div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary btn-sm" id="confirmSlot_${ticketId}" onclick="confirmSlotForTicket('${ticketId}')" disabled>Confirmar</button>
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('schedSubPanel_${ticketId}').style.display='none'">Cancelar</button>
-        </div>
-      </div>
-    </div>`;
-  } catch { panel.innerHTML = '<p style="color:var(--clr-muted);padding:14px">Error.</p>'; }
-}
-
-let pickedSlots = {};
-function pickSlotForTicket(el, slotId, ticketId) {
-  document.querySelectorAll('#slotsOpts_' + ticketId + ' .slot-opt').forEach(e => e.style.borderColor = 'var(--clr-border)');
-  el.style.borderColor = 'var(--clr-accent)';
-  pickedSlots[ticketId] = slotId;
-  const btn = document.getElementById('confirmSlot_' + ticketId);
-  if (btn) btn.disabled = false;
-}
-
-async function confirmSlotForTicket(ticketId) {
-  const slotId = pickedSlots[ticketId];
-  if (!slotId) return;
-  try {
-    await api('PUT', '/api/tickets/' + ticketId + '/schedule', { slotId });
-    toast('Horario asignado.', 'success');
-    openChat(ticketId);
-    loadTickets();
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
-}
-
-// ── Quick schedule / resolve from table ──────────────────────────────────
-async function quickSchedule(ticketId) {
-  openChat(ticketId);
-  setTimeout(() => showScheduleForTicket(ticketId), 300);
-}
-
-function quickResolve(ticketId, res) {
-  openChat(ticketId);
-  setTimeout(() => {
-    if (res === 'approved') openApproveModal(ticketId);
-    else openRejectModal(ticketId);
-  }, 300);
-}
-
-// ── Approve / Reject modals ───────────────────────────────────────────────
-const TIER_PTS = {HT3:2000,LT2:3000,HT2:4500,LT1:6500,HT1:9000};
-
-function openApproveModal(ticketId) {
-  const existing = document.getElementById('approveModal');
-  if (existing) existing.remove();
-  const modal = document.createElement('div');
-  modal.id = 'approveModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);z-index:1000;display:flex;align-items:center;justify-content:center';
-  modal.innerHTML = `
-    <div style="background:var(--clr-card);border:1px solid var(--clr-border);border-radius:20px;padding:32px;max-width:440px;width:100%">
-      <h2 style="margin:0 0 16px">✅ Aprobar ticket #${ticketId}</h2>
-      <div class="field"><label>Tier otorgado</label>
-        <div class="tier-select-grid" id="approveTierGrid">
-          ${['HT3','LT2','HT2','LT1','HT1'].map(t=>`<div class="tier-opt tier-${t}" onclick="selectApproveTier(this,'${t}')">${t}</div>`).join('')}
-        </div>
-      </div>
-      <div class="field" style="margin-top:12px"><label>Puntos asignados</label>
-        <input type="number" id="approvePoints" value="2000" min="0"/>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:20px">
-        <button class="btn btn-secondary" onclick="document.getElementById('approveModal').remove()">Cancelar</button>
-        <button class="btn btn-success" id="doApproveBtn" onclick="doApprove('${ticketId}')" disabled>Confirmar aprobación</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-}
-
-let selectedApproveTier = null;
-function selectApproveTier(el, tier) {
-  document.querySelectorAll('#approveTierGrid .tier-opt').forEach(e => e.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedApproveTier = tier;
-  document.getElementById('approvePoints').value = TIER_PTS[tier] || 2000;
-  document.getElementById('doApproveBtn').disabled = false;
-}
-
-async function doApprove(ticketId) {
-  if (!selectedApproveTier) return;
-  try {
-    await api('PUT', '/api/tickets/' + ticketId + '/resolve', {
-      resolution: 'approved',
-      newTier: selectedApproveTier,
-      newPoints: parseInt(document.getElementById('approvePoints').value)
-    });
-    document.getElementById('approveModal')?.remove();
-    toast('✅ Ticket aprobado. Tier actualizado.', 'success');
-    openChat(ticketId);
-    loadTickets();
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
-}
-
-function openRejectModal(ticketId) {
-  const existing = document.getElementById('rejectModal');
-  if (existing) existing.remove();
-  const modal = document.createElement('div');
-  modal.id = 'rejectModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);z-index:1000;display:flex;align-items:center;justify-content:center';
-  modal.innerHTML = `
-    <div style="background:var(--clr-card);border:1px solid var(--clr-border);border-radius:20px;padding:32px;max-width:440px;width:100%">
-      <h2 style="margin:0 0 16px">❌ Rechazar ticket #${ticketId}</h2>
-      <div class="field"><label>Razón (opcional)</label>
-        <textarea id="rejectReason" placeholder="Ej: Nivel insuficiente para HT3. Practicar más el combo..." style="min-height:100px"></textarea>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button class="btn btn-secondary" onclick="document.getElementById('rejectModal').remove()">Cancelar</button>
-        <button class="btn btn-danger" onclick="doReject('${ticketId}')">Confirmar rechazo</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-}
-
-async function doReject(ticketId) {
-  const reason = document.getElementById('rejectReason')?.value || '';
-  try {
-    await api('PUT', '/api/tickets/' + ticketId + '/resolve', { resolution: 'rejected', reason });
-    document.getElementById('rejectModal')?.remove();
-    toast('Ticket rechazado.', 'info');
-    openChat(ticketId);
-    loadTickets();
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
-}
-
-// ── Schedule editor ────────────────────────────────────────────────────────
-async function loadSchedule() {
-  try {
-    const schedules = await api('GET', '/api/schedules');
-    const mySchedule = schedules.find(s => s.testerName === currentUser.username);
-    scheduleData = mySchedule || { testerName: currentUser.username, slots: [] };
-    renderScheduleEditor();
-  } catch { document.getElementById('scheduleEditor').textContent = 'Error al cargar horario.'; }
-}
-
-function renderScheduleEditor() {
-  const DAYS = ['','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-  const grouped = {};
-  scheduleData.slots.forEach(s => {
-    if (!grouped[s.dayOfWeek]) grouped[s.dayOfWeek] = [];
-    grouped[s.dayOfWeek].push(s);
-  });
-
-  let html = '<div style="display:flex;flex-direction:column;gap:16px">';
-  for (let day = 1; day <= 7; day++) {
-    const slots = grouped[day] || [];
-    html += `<div>
-      <div style="font-weight:700;margin-bottom:8px;color:var(--clr-muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em">${DAYS[day]}</div>
-      <div id="daySlots_${day}">`;
-    slots.forEach((s, i) => {
-      html += slotRowHtml(day, i, s.time, s.available);
-    });
-    html += `</div>
-      <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addSlot(${day})">+ Añadir slot</button>
-    </div>`;
-  }
-  html += '</div>';
-  document.getElementById('scheduleEditor').innerHTML = html;
-}
-
-function slotRowHtml(day, idx, time, available) {
-  return `<div class="slot-row" id="slot_${day}_${idx}">
-    <input type="time" value="${time}" onchange="updateSlot(${day},${idx},'time',this.value)"
-      style="background:var(--clr-bg);border:1px solid var(--clr-border);border-radius:8px;padding:6px 10px;color:var(--clr-text);font-family:inherit"/>
-    <button class="slot-toggle ${available?'on':'off'}" onclick="toggleSlot(${day},${idx},this)" title="${available?'Disponible':'No disponible'}"></button>
-    <span style="font-size:.8rem;color:var(--clr-muted);flex:1">${available?'Disponible':'No disponible'}</span>
-    <button class="btn btn-sm btn-danger" onclick="removeSlot(${day},${idx})">✕</button>
-  </div>`;
-}
-
-function addSlot(day) {
-  const container = document.getElementById('daySlots_' + day);
-  const daySlots  = scheduleData.slots.filter(s => s.dayOfWeek === day);
-  const idx = daySlots.length;
-  const newSlot = { id: currentUser.username + '-' + day + '-' + (idx+1), dayOfWeek: day, time: '20:00', available: true };
-  scheduleData.slots.push(newSlot);
-  const div = document.createElement('div');
-  div.innerHTML = slotRowHtml(day, idx, '20:00', true);
-  container.appendChild(div.firstElementChild);
-}
-
-function removeSlot(day, idx) {
-  const daySlots = scheduleData.slots.filter(s => s.dayOfWeek === day);
-  const slot = daySlots[idx];
-  if (slot) {
-    const globalIdx = scheduleData.slots.indexOf(slot);
-    if (globalIdx >= 0) scheduleData.slots.splice(globalIdx, 1);
-  }
-  renderScheduleEditor();
-}
-
-function updateSlot(day, idx, field, value) {
-  const daySlots = scheduleData.slots.filter(s => s.dayOfWeek === day);
-  if (daySlots[idx]) daySlots[idx][field] = value;
-}
-
-function toggleSlot(day, idx, btn) {
-  const daySlots = scheduleData.slots.filter(s => s.dayOfWeek === day);
-  if (daySlots[idx]) {
-    daySlots[idx].available = !daySlots[idx].available;
-    btn.classList.toggle('on', daySlots[idx].available);
-    btn.classList.toggle('off', !daySlots[idx].available);
-    btn.nextElementSibling.textContent = daySlots[idx].available ? 'Disponible' : 'No disponible';
-  }
-}
-
-async function saveSchedule() {
-  try {
-    // Rebuild IDs
-    scheduleData.slots.forEach((s, i) => {
-      s.id = `${currentUser.username}-${s.dayOfWeek}-${s.time.replace(':','')}`;
-    });
-    await api('PUT', '/api/schedules', { testerName: currentUser.username, slots: scheduleData.slots });
-    toast('Horario guardado correctamente.', 'success');
-  } catch(e) { toast(e.message || 'Error al guardar.', 'error'); }
-}
-
-// ── Users ─────────────────────────────────────────────────────────────────
 async function loadUsers() {
   try {
-    const users = await api('GET', '/api/admin/users');
-    renderUsers(users);
-  } catch { document.getElementById('usersBody').innerHTML = '<tr><td colspan="4">Error</td></tr>'; }
+    const res = await fetch(API_BASE + '/api/admin/users', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('session') }
+    });
+    const users = await res.json();
+    
+    document.getElementById('userCount').textContent = users.length;
+    
+    const tbody = document.getElementById('usersTable');
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>
+          <div class="user-cell">
+            <img src="https://mc-heads.net/avatar/${u.username}/28" alt=""/>
+            <span>${u.username}</span>
+          </div>
+        </td>
+        <td><span class="role-badge ${u.role}">${u.role}</span></td>
+        <td>${u.verified ? '✓ Sí' : '✗ No'}</td>
+        <td style="font-size:.8rem;color:var(--muted)">${new Date(u.createdAt).toLocaleDateString('es-ES')}</td>
+        <td>
+          <select class="role-select" onchange="changeRole('${u.username}', this.value)">
+            <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuario</option>
+            <option value="tester" ${u.role === 'tester' ? 'selected' : ''}>Tester</option>
+            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+          </select>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {}
 }
 
-function renderUsers(users) {
-  document.getElementById('usersBody').innerHTML = users.map(u => `
-    <tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          ${u.uuid ? `<img class="user-avatar" src="https://crafatar.com/avatars/${u.uuid}?size=32&overlay" onerror="this.style.display='none'" alt=""/>` : ''}
-          <strong>${u.username}</strong>
-        </div>
-      </td>
-      <td><span class="role-${u.role}">${roleLabel(u.role)}</span></td>
-      <td style="font-size:.8rem;color:var(--clr-muted)">${fmtDate(u.createdAt)}</td>
-      <td>
-        <select class="filter-select" style="padding:5px 10px" onchange="setRole('${u.username}',this.value)">
-          <option value="user"   ${u.role==='user'  ?'selected':''}>Usuario</option>
-          <option value="tester" ${u.role==='tester'?'selected':''}>Tester</option>
-          <option value="admin"  ${u.role==='admin' ?'selected':''}>Admin</option>
-        </select>
-      </td>
-    </tr>
-  `).join('');
-}
-
-async function setRole(username, role) {
+async function changeRole(username, role) {
   try {
-    await api('PUT', '/api/admin/users/' + username + '/role', { role });
-    toast('Rol de ' + username + ' actualizado a ' + role + '.', 'success');
-  } catch(e) { toast(e.message || 'Error.', 'error'); }
+    const res = await fetch(API_BASE + '/api/admin/set-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('session')
+      },
+      body: JSON.stringify({ username, role })
+    });
+    if (res.ok) {
+      showAlert('Rol actualizado', 'success');
+    }
+  } catch (err) {
+    showAlert('Error al cambiar rol', 'error');
+  }
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────
-function toggleDropdown() {
-  document.getElementById('navDropdownMenu').classList.toggle('open');
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('#navDropdown')) document.getElementById('navDropdownMenu').classList.remove('open');
+document.getElementById('setTierForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('tierUsername').value.trim();
+  const kit = document.getElementById('tierKit').value;
+  const tier = document.getElementById('tierLevel').value;
+
+  try {
+    const res = await fetch(API_BASE + '/api/admin/set-tier', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('session')
+      },
+      body: JSON.stringify({ username, kit, tier })
+    });
+    
+    const data = await res.json();
+    if (data.error) {
+      showAlert(data.error, 'error');
+    } else {
+      showAlert(`Tier de ${username} en ${kit} establecido a ${tier}`, 'success');
+      document.getElementById('setTierForm').reset();
+    }
+  } catch (err) {
+    showAlert('Error de conexión', 'error');
+  }
 });
 
-async function doLogout() {
-  await api('POST', '/api/auth/logout').catch(()=>{});
-  localStorage.removeItem('mt_token');
-  location.href = '/';
+function showAlert(msg, type) {
+  const box = document.getElementById('alertBox');
+  box.textContent = msg;
+  box.className = 'alert show ' + type;
+  setTimeout(() => box.classList.remove('show'), 4000);
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────
-async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type':'application/json', 'X-Token': token || '' } };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(path, opts);
-  const data = await r.json().catch(()=>({}));
-  if (!r.ok) throw new Error(data.error || 'Error ' + r.status);
-  return data;
-}
-
-function fmtDate(ts) {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
-}
-function fmtTime(ts) {
-  if (!ts) return '';
-  return new Date(ts).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) + ' ' +
-         new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-}
-function escHtml(s) {
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-}
-function statusLabel(s) {
-  return {pending:'Pendiente',scheduled:'Programado',testing:'En test',completed:'Completado',rejected:'Rechazado'}[s]||s;
-}
-function roleLabel(r) {
-  return {admin:'⭐ Admin',tester:'🔬 Tester',user:'👤 Usuario'}[r]||r;
-}
-
-let toastTimer;
-function toast(msg, type='info') {
-  const el = document.getElementById('toastEl');
-  el.className = 'toast toast-' + type;
-  el.textContent = msg;
-  el.style.display = 'flex';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>{ el.style.display='none'; }, 3500);
-}
+checkAuth();
 </script>
 </body>
 </html>
