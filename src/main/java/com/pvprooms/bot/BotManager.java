@@ -95,7 +95,9 @@ public class BotManager {
 
         // Create instance world
         String matchId = "bot_" + uuid.toString().substring(0, 8);
-        String instanceWorldName = "arena_" + matchId;
+        // World name must match ArenaInstanceManager's naming: prefix + matchId
+        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        String instanceWorldName = instancePrefix + matchId;
         World instanceWorld = plugin.getArenaInstanceManager().createInstance(template, matchId);
         
         if (instanceWorld == null) {
