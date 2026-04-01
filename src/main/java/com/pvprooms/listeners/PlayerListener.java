@@ -451,7 +451,10 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onWorldLoad(WorldLoadEvent event) {
-        applyNoMobGamerules(event.getWorld());
+        World w = event.getWorld();
+        applyNoMobGamerules(w);
+        // Disable auto-save on every world that loads — prevents the 5-min HDD spike
+        w.setAutoSave(false);
     }
 
     private boolean isMob(org.bukkit.entity.Entity entity) {

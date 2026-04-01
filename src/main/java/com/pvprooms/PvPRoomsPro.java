@@ -428,6 +428,17 @@ public class PvPRoomsPro extends JavaPlugin {
         w.setThundering(false);
         w.setWeatherDuration(Integer.MAX_VALUE);
         getLogger().info("Lobby world '" + w.getName() + "': siempre día, sin lluvia.");
+
+        // Disable Paper's default 6000-tick (5-minute) auto-save on ALL loaded worlds.
+        // This eliminates the periodic DimensionDataStorage.saveAndJoin() main-thread spike.
+        // Safe because: lobby terrain is static (block break/place cancelled), player data
+        // is saved on logout, and Paper always saves all worlds on proper server shutdown.
+        int disabled = 0;
+        for (org.bukkit.World world : Bukkit.getWorlds()) {
+            world.setAutoSave(false);
+            disabled++;
+        }
+        getLogger().info("[PvPRooms] Auto-save desactivado en " + disabled + " mundo(s) — se guardará solo al apagar el servidor.");
     }
 
     // ── Utility ────────────────────────────────────────────────────────────
