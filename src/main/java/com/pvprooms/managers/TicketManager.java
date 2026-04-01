@@ -284,9 +284,9 @@ public class TicketManager {
         String requestKey = username + ":" + tier.toLowerCase();
         if (tierRequests.containsKey(requestKey)) {
             long lastRequest = tierRequests.get(requestKey);
-            // Allow new request after 12 hours
-            if (System.currentTimeMillis() - lastRequest < 12 * 60 * 60 * 1000L) {
-                return new TicketResult(false, null, "Ya tienes una solicitud pendiente para este tier. Espera 12 horas para volver a solicitar.");
+            // Allow new request after 2 days
+            if (System.currentTimeMillis() - lastRequest < 2 * 24 * 60 * 60 * 1000L) {
+                return new TicketResult(false, null, "Ya tienes una solicitud pendiente para este tier. Espera 2 días para volver a solicitar.");
             }
         }
         
