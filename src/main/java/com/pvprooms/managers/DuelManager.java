@@ -316,16 +316,21 @@ public class DuelManager {
 
         // Destroy or return the arena world to the pool
         String worldName = duel.getCurrentWorldName();
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (plugin.getWorldPoolManager().isPoolWorld(worldName)) {
-                    plugin.getWorldPoolManager().returnWorld(worldName, duel.getArenaTemplate());
-                } else {
-                    plugin.getArenaInstanceManager().destroyInstance(worldName);
-                }
+        Runnable worldCleanup = () -> {
+            if (plugin.getWorldPoolManager().isPoolWorld(worldName)) {
+                plugin.getWorldPoolManager().returnWorld(worldName, duel.getArenaTemplate());
+            } else {
+                plugin.getArenaInstanceManager().destroyInstance(worldName);
             }
-        }.runTaskLater(plugin, 5L);
+        };
+        // During shutdown the scheduler rejects new tasks — run synchronously instead
+        if (!plugin.isEnabled()) {
+            worldCleanup.run();
+        } else {
+            new BukkitRunnable() {
+                @Override public void run() { worldCleanup.run(); }
+            }.runTaskLater(plugin, 5L);
+        }
     }
 
     // ── BO3 round logic ────────────────────────────────────────────────────
