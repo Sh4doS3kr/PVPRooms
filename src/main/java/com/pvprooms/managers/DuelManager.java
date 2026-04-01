@@ -11,6 +11,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -116,25 +117,32 @@ public class DuelManager {
         preparePlayer(p1);
         preparePlayer(p2);
 
-        // Teleport to instance spawns
-        p1.teleport(template.getSpawn1(instanceWorld));
-        p2.teleport(template.getSpawn2(instanceWorld));
-
-        // Give kit
-        plugin.getKitManager().applyKit(p1, kitName);
-        plugin.getKitManager().applyKit(p2, kitName);
-
-        // Quitar scoreboard de cola antes de empezar
-        plugin.getScoreboardManager().clearScoreboard(p1);
-        plugin.getScoreboardManager().clearScoreboard(p2);
-
-        // Notificar emparejamiento
+        // Notify match found & clear queue scoreboard before teleport
         String modeTag = bo3 ? " §8[§bBO3§8]" : "";
         p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
+        plugin.getScoreboardManager().clearScoreboard(p1);
+        plugin.getScoreboardManager().clearScoreboard(p2);
 
-        // Start countdown
-        startCountdown(duel, instanceWorld);
+        // Teleport async — chunk loading happens off the main thread, eliminating the
+        // ~4000ms spike caused by synchronous chunk I/O during cross-world teleport.
+        final Player fp1 = p1, fp2 = p2;
+        final World iw = instanceWorld;
+        final String kit = kitName;
+        CompletableFuture.allOf(
+                fp1.teleportAsync(template.getSpawn1(iw)),
+                fp2.teleportAsync(template.getSpawn2(iw))
+        ).thenRun(() -> {
+            Player cp1 = Bukkit.getPlayer(fp1.getUniqueId());
+            Player cp2 = Bukkit.getPlayer(fp2.getUniqueId());
+            if (cp1 == null || cp2 == null) {
+                endDuel(duel, cp1 != null ? duel.getPlayer1() : (cp2 != null ? duel.getPlayer2() : null), "disconnect");
+                return;
+            }
+            plugin.getKitManager().applyKit(cp1, kit);
+            plugin.getKitManager().applyKit(cp2, kit);
+            startCountdown(duel, iw);
+        });
     }
 
     // ── Countdown ─────────────────────────────────────────────────────────
@@ -422,13 +430,13 @@ public class DuelManager {
             // Return the dirty world to pool for async reset
             plugin.getWorldPoolManager().returnWorld(oldWorldName, duel.getArenaTemplate());
 
-            // Teleport spectators to the fresh world before returning old world
+            // Spectators: async teleport to fresh world (fire-and-forget)
+            Location specLoc = duel.getArenaTemplate().getSpawn1(freshWorld).add(0, 2, 0);
             for (UUID specUUID : duel.getSpectators()) {
                 Player spec = Bukkit.getPlayer(specUUID);
-                if (spec != null) spec.teleport(duel.getArenaTemplate().getSpawn1(freshWorld).add(0, 2, 0));
+                if (spec != null) spec.teleportAsync(specLoc);
             }
 
-            // Start next round right away
             Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
             Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
             if (rp1 == null || rp2 == null) {
@@ -438,12 +446,24 @@ public class DuelManager {
             }
             preparePlayer(rp1);
             preparePlayer(rp2);
-            rp1.teleport(duel.getArenaTemplate().getSpawn1(freshWorld));
-            rp2.teleport(duel.getArenaTemplate().getSpawn2(freshWorld));
-            plugin.getKitManager().applyKit(rp1, duel.getKitName());
-            plugin.getKitManager().applyKit(rp2, duel.getKitName());
-            duel.setStartTimeMillis(System.currentTimeMillis());
-            startCountdown(duel, freshWorld);
+            final Player frp1 = rp1, frp2 = rp2;
+            final World fw = freshWorld;
+            CompletableFuture.allOf(
+                    frp1.teleportAsync(duel.getArenaTemplate().getSpawn1(fw)),
+                    frp2.teleportAsync(duel.getArenaTemplate().getSpawn2(fw))
+            ).thenRun(() -> {
+                Player cp1 = Bukkit.getPlayer(frp1.getUniqueId());
+                Player cp2 = Bukkit.getPlayer(frp2.getUniqueId());
+                if (cp1 == null || cp2 == null) {
+                    UUID winner = cp1 != null ? duel.getPlayer1() : (cp2 != null ? duel.getPlayer2() : null);
+                    endDuel(duel, winner, "disconnect");
+                    return;
+                }
+                plugin.getKitManager().applyKit(cp1, duel.getKitName());
+                plugin.getKitManager().applyKit(cp2, duel.getKitName());
+                duel.setStartTimeMillis(System.currentTimeMillis());
+                startCountdown(duel, fw);
+            });
             return;
         }
 
@@ -460,19 +480,32 @@ public class DuelManager {
                         endDuel(duel, winner, "disconnect");
                         return;
                     }
-                    // Teleport spectators back into the reset world
+                    // Spectators: async teleport back
+                    Location specLoc2 = duel.getArenaTemplate().getSpawn1(w).add(0, 2, 0);
                     for (UUID specUUID : duel.getSpectators()) {
                         Player spec = Bukkit.getPlayer(specUUID);
-                        if (spec != null) spec.teleport(duel.getArenaTemplate().getSpawn1(w).add(0, 2, 0));
+                        if (spec != null) spec.teleportAsync(specLoc2);
                     }
                     preparePlayer(rp1);
                     preparePlayer(rp2);
-                    rp1.teleport(duel.getArenaTemplate().getSpawn1(w));
-                    rp2.teleport(duel.getArenaTemplate().getSpawn2(w));
-                    plugin.getKitManager().applyKit(rp1, duel.getKitName());
-                    plugin.getKitManager().applyKit(rp2, duel.getKitName());
-                    duel.setStartTimeMillis(System.currentTimeMillis());
-                    startCountdown(duel, w);
+                    final Player frp1 = rp1, frp2 = rp2;
+                    final World rw = w;
+                    CompletableFuture.allOf(
+                            frp1.teleportAsync(duel.getArenaTemplate().getSpawn1(rw)),
+                            frp2.teleportAsync(duel.getArenaTemplate().getSpawn2(rw))
+                    ).thenRun(() -> {
+                        Player cp1 = Bukkit.getPlayer(frp1.getUniqueId());
+                        Player cp2 = Bukkit.getPlayer(frp2.getUniqueId());
+                        if (cp1 == null || cp2 == null) {
+                            UUID win2 = cp1 != null ? duel.getPlayer1() : (cp2 != null ? duel.getPlayer2() : null);
+                            endDuel(duel, win2, "disconnect");
+                            return;
+                        }
+                        plugin.getKitManager().applyKit(cp1, duel.getKitName());
+                        plugin.getKitManager().applyKit(cp2, duel.getKitName());
+                        duel.setStartTimeMillis(System.currentTimeMillis());
+                        startCountdown(duel, rw);
+                    });
                 }
         );
     }
