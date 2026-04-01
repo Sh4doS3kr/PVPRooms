@@ -497,6 +497,9 @@ public class DuelManager {
 
         // Hide spectator from combatants
         hideSpectatorFromAll(spectator, duel);
+
+        // Show spectator scoreboard with duel info
+        plugin.getScoreboardManager().showSpectatorScoreboard(spectator, duel);
         return true;
     }
 
@@ -671,6 +674,7 @@ public class DuelManager {
 
     public int getActiveDuelCount()            { return activeDuels.size(); }
     public Collection<Duel> getActiveDuels()   { return activeDuels.values(); }
+    public Duel getDuelById(UUID duelId)       { return activeDuels.get(duelId); }
 
     // ── Utility ────────────────────────────────────────────────────────────
 

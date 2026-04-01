@@ -79,6 +79,13 @@ public class ScoreboardManager {
                     showLobbyScoreboard(p);
                 } else if (queuePlayers.containsKey(uuid)) {
                     refreshQueueScoreboard(p);
+                } else if (spectatorDuels.containsKey(uuid)) {
+                    // Refresh spectator scoreboard with live health/score
+                    UUID duelId = spectatorDuels.get(uuid);
+                    Duel duel = plugin.getDuelManager().getDuelById(duelId);
+                    if (duel != null && duel.getState() == Duel.State.FIGHTING) {
+                        refreshSpectatorScoreboard(p, duel);
+                    }
                 }
             }
         }, interval, interval);
@@ -305,6 +312,68 @@ public class ScoreboardManager {
         tl(obj, s,   regionLine(), -1);
     }
 
+    // ── Spectator scoreboard ─────────────────────────────────────────────────
+
+    /** Spectators watching a duel: uuid → duelId */
+    private final Map<UUID, UUID> spectatorDuels = new HashMap<>();
+
+    public void showSpectatorScoreboard(Player spectator, Duel duel) {
+        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) return;
+        if (spectator == null || duel == null) return;
+
+        UUID uuid = spectator.getUniqueId();
+        spectatorDuels.put(uuid, duel.getId());
+        lobbyPlayers.remove(uuid);
+        queuePlayers.remove(uuid);
+
+        refreshSpectatorScoreboard(spectator, duel);
+    }
+
+    private void refreshSpectatorScoreboard(Player spectator, Duel duel) {
+        Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+        Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+        String name1 = p1 != null ? p1.getName() : "?";
+        String name2 = p2 != null ? p2.getName() : "?";
+
+        int w1 = duel.getWins1();
+        int w2 = duel.getWins2();
+        int target = duel.isBo3() ? 10 : 1;
+        String scoreStr = "§a" + w1 + " §7- §c" + w2 + " §8(a " + target + ")";
+
+        // Health info
+        String hp1 = p1 != null ? formatHealth(p1) : "§c???";
+        String hp2 = p2 != null ? formatHealth(p2) : "§c???";
+
+        Objective obj = getOrCreate(spectator, "pvpspec", "&e&l👁 &6&lESPECTANDO");
+
+        int s = 0;
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
+        tl(obj, s++, " ", 14);
+        tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), 13);
+        tl(obj, s++, leg("&e⏱ &fModo: " + (duel.isBo3() ? "&6Tier (a 10)" : "&aELO")), 12);
+        tl(obj, s++, " ", 11);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 10);
+        tl(obj, s++, " ", 9);
+        tl(obj, s++, leg("&a▸ &f" + name1), 8);
+        tl(obj, s++, leg("  &7Vida: " + hp1 + " &8• &6" + w1 + " wins"), 7);
+        tl(obj, s++, " ", 6);
+        tl(obj, s++, leg("&c▸ &f" + name2), 5);
+        tl(obj, s++, leg("  &7Vida: " + hp2 + " &8• &6" + w2 + " wins"), 4);
+        tl(obj, s++, " ", 3);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 2);
+        tl(obj, s++, leg("  &c/pvpleave &8para salir"), 1);
+        tl(obj, s,   pingLine(spectator), 0);
+    }
+
+    private String formatHealth(Player p) {
+        double hp = p.getHealth();
+        double max = 20.0;
+        var attr = p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+        if (attr != null) max = attr.getValue();
+        String col = hp > max * 0.5 ? "§a" : hp > max * 0.25 ? "§e" : "§c";
+        return col + String.format("%.0f", hp) + "§7/§f" + (int) max + " §c❤";
+    }
+
     // ── Clear ──────────────────────────────────────────────────────────────
 
     public void clearScoreboard(Player player) {
@@ -314,6 +383,7 @@ public class ScoreboardManager {
         lobbyPlayers.remove(uuid);
         queuePlayers.remove(uuid);
         queueJoinTimes.remove(uuid);
+        spectatorDuels.remove(uuid);
         player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
     }
 
@@ -322,6 +392,7 @@ public class ScoreboardManager {
         UUID uuid = player.getUniqueId();
         queuePlayers.remove(uuid);
         queueJoinTimes.remove(uuid);
+        spectatorDuels.remove(uuid);
         // Force lobby board creation on next call by removing stale duel/queue board
         activeBoards.remove(uuid);
         showLobbyScoreboard(player);
