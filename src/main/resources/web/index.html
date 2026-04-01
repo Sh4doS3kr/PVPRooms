@@ -771,7 +771,7 @@ function renderTable(players){
     const playerCC = (p.pais||p.countryCode||'').toLowerCase();
     const cc = playerCC || 'xx';
     const countryName = playerCC ? (COUNTRY_NAMES[playerCC]||playerCC.toUpperCase()) : '—';
-    const countryDisplay = countryName;
+    const countryDisplay = countryName.length > 7 ? countryName.slice(0,7) : countryName;
     const pts = currentKit==='overall'?p.puntosTotales:(p.kits&&p.kits[currentKit]?p.kits[currentKit].puntos:0);
     const elo = p.elo??0;
     const eloC = eloColor(elo);
