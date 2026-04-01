@@ -506,6 +506,9 @@ public class PlayerListener implements Listener {
         // Block /tp commands that bypass the arena during countdown
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.getState() == Duel.State.COUNTDOWN) {
+            // Spectators are allowed to teleport freely (they follow the world swap)
+            if (duel.getSpectators().contains(player.getUniqueId())) return;
+
             PlayerTeleportEvent.TeleportCause cause = event.getCause();
             if (cause == PlayerTeleportEvent.TeleportCause.COMMAND
                     || cause == PlayerTeleportEvent.TeleportCause.PLUGIN) {

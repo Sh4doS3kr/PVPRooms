@@ -422,6 +422,12 @@ public class DuelManager {
             // Return the dirty world to pool for async reset
             plugin.getWorldPoolManager().returnWorld(oldWorldName, duel.getArenaTemplate());
 
+            // Teleport spectators to the fresh world before returning old world
+            for (UUID specUUID : duel.getSpectators()) {
+                Player spec = Bukkit.getPlayer(specUUID);
+                if (spec != null) spec.teleport(duel.getArenaTemplate().getSpawn1(freshWorld).add(0, 2, 0));
+            }
+
             // Start next round right away
             Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
             Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
@@ -453,6 +459,11 @@ public class DuelManager {
                         UUID winner = rp1 != null ? duel.getPlayer1() : (rp2 != null ? duel.getPlayer2() : null);
                         endDuel(duel, winner, "disconnect");
                         return;
+                    }
+                    // Teleport spectators back into the reset world
+                    for (UUID specUUID : duel.getSpectators()) {
+                        Player spec = Bukkit.getPlayer(specUUID);
+                        if (spec != null) spec.teleport(duel.getArenaTemplate().getSpawn1(w).add(0, 2, 0));
                     }
                     preparePlayer(rp1);
                     preparePlayer(rp2);
