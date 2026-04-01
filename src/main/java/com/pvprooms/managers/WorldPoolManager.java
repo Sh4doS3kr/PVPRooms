@@ -147,6 +147,12 @@ public class WorldPoolManager {
         if (!isPoolWorld(worldName)) return;
         if (resetting.contains(worldName)) return;
 
+        // During shutdown, skip async reset — world will be cleaned on next startup
+        if (!plugin.isEnabled()) {
+            inUse.remove(worldName);
+            return;
+        }
+
         inUse.remove(worldName);
         resetting.add(worldName);
 
