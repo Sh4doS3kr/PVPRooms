@@ -69,6 +69,10 @@ public class ScoreboardManager {
     public void startLobbyTask() {
         int interval = plugin.getConfig().getInt("scoreboard.update-interval", 20);
         updateTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            // Skip non-critical scoreboard updates during severe lag
+            var lagMon = plugin.getLagMonitor();
+            if (lagMon != null && lagMon.isSevere()) return;
+
             for (Player p : Bukkit.getOnlinePlayers()) {
                 UUID uuid = p.getUniqueId();
                 if (lobbyPlayers.containsKey(uuid)) {

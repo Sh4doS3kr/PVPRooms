@@ -509,8 +509,8 @@ public class PlayerListener implements Listener {
             PlayerTeleportEvent.TeleportCause cause = event.getCause();
             if (cause == PlayerTeleportEvent.TeleportCause.COMMAND
                     || cause == PlayerTeleportEvent.TeleportCause.PLUGIN) {
-                // Allow only teleports within the same instance world
-                if (!to.getWorld().getName().equals(duel.getInstanceWorldName())) {
+                // Allow only teleports within the same instance world (use currentWorldName to handle pool swaps)
+                if (!to.getWorld().getName().equals(duel.getCurrentWorldName())) {
                     event.setCancelled(true);
                     player.sendMessage(plugin.prefix() + "§cNo puedes teletransportarte durante la cuenta atrás.");
                 }

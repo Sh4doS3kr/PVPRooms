@@ -40,6 +40,9 @@ public class WorldPoolManager {
     /** Pool worlds currently in use (borrowed) */
     private final Set<String> inUse = ConcurrentHashMap.newKeySet();
 
+    /** When true, defer new world copies (set by LagMonitor during severe lag) */
+    private volatile boolean paused = false;
+
     public static final String POOL_PREFIX = "pvp_pool_";
 
     public WorldPoolManager(PvPRoomsPro plugin) {
@@ -163,6 +166,21 @@ public class WorldPoolManager {
                     + readyPools.getOrDefault(template.getName(), new ConcurrentLinkedQueue<>()).size() + ")");
         });
     }
+
+    // ── Lag mitigation ───────────────────────────────────────────────────────
+
+    /**
+     * Called by LagMonitor: pause/resume background world warming.
+     * Active duels are never affected — only idle background copies are deferred.
+     */
+    public void setPaused(boolean paused) {
+        if (this.paused != paused) {
+            this.paused = paused;
+            plugin.getLogger().info("[Pool] Background world warming " + (paused ? "PAUSADO (lag detectado)" : "reanudado"));
+        }
+    }
+
+    public boolean isPaused() { return paused; }
 
     // ── Query ────────────────────────────────────────────────────────────────
 

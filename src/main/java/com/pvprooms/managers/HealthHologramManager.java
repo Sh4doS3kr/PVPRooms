@@ -25,8 +25,8 @@ public class HealthHologramManager {
 
     /** Y offset above the player's feet (≈ top of head + a little extra) */
     private static final double OFFSET_Y = 2.35;
-    /** Ticks between position + name updates */
-    private static final long UPDATE_INTERVAL = 2L;
+    /** Ticks between position + name updates — adjusted dynamically by LagMonitor */
+    private volatile long updateInterval = 2L;
 
     private final PvPRoomsPro plugin;
 
@@ -64,9 +64,17 @@ public class HealthHologramManager {
                 stand2.teleport(b.getLocation().add(0, OFFSET_Y, 0));
                 stand2.setCustomName(healthLabel(b));
             }
-        }, 0L, UPDATE_INTERVAL);
+        }, 0L, updateInterval);
 
         tasks.put(duel.getId(), task);
+    }
+
+    /**
+     * Called by LagMonitor to throttle hologram updates during lag.
+     * Existing tasks keep their original interval; only new duels use the new value.
+     */
+    public void setUpdateInterval(long ticks) {
+        this.updateInterval = Math.max(1L, ticks);
     }
 
     /** Call when the duel ends (any reason). */

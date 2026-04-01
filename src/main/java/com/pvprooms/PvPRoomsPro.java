@@ -35,6 +35,7 @@ import com.pvprooms.managers.TierManager;
 import com.pvprooms.model.TrimCrate;
 import com.pvprooms.model.PhysicalTrimCrate;
 import com.pvprooms.util.RegionDetector;
+import com.pvprooms.util.LagMonitor;
 import com.pvprooms.weapons.SpearItem;
 import com.pvprooms.managers.*;
 import org.bukkit.Bukkit;
@@ -97,6 +98,7 @@ public class PvPRoomsPro extends JavaPlugin {
     private com.pvprooms.discord.DiscordBot discordBot;
     private StaffManager staffManager;
     private WorldPoolManager worldPoolManager;
+    private LagMonitor lagMonitor;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -198,6 +200,10 @@ public class PvPRoomsPro extends JavaPlugin {
             discordBot.start(discordToken);
         }
 
+        // Start lag monitor (must be last — needs all managers ready)
+        lagMonitor = new LagMonitor(this);
+        lagMonitor.start();
+
         getLogger().info("§aPvPRoomsPro enabled successfully!");
         getLogger().info("§7Kits loaded: " + kitManager.getAllKits().size());
         getLogger().info("§7Arenas loaded: " + arenaManager.getAllArenas().size());
@@ -205,6 +211,9 @@ public class PvPRoomsPro extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Shutdown lag monitor first
+        if (lagMonitor != null) lagMonitor.shutdown();
+
         // Shutdown world pool (unload without deleting for fast next startup)
         if (worldPoolManager != null) worldPoolManager.shutdown();
 
@@ -485,4 +494,24 @@ public class PvPRoomsPro extends JavaPlugin {
     public com.pvprooms.managers.TicketManager getTicketManager() { return ticketManager; }
     public StaffManager          getStaffManager()            { return staffManager; }
     public WorldPoolManager      getWorldPoolManager()        { return worldPoolManager; }
+    public LagMonitor            getLagMonitor()               { return lagMonitor; }
+
+    /**
+     * Called by LagMonitor on every lag level transition.
+     * Apply or remove mitigations across all managers.
+     */
+    public void applyLagMitigation(LagMonitor.LagLevel level) {
+        // Hologram update rate: 2 ticks normal, 6 ticks mild, skip when severe
+        if (healthHologramManager != null) {
+            switch (level) {
+                case NORMAL -> healthHologramManager.setUpdateInterval(2L);
+                case MILD   -> healthHologramManager.setUpdateInterval(6L);
+                case SEVERE -> healthHologramManager.setUpdateInterval(10L);
+            }
+        }
+        // WorldPool: pause warming new worlds during lag to avoid HDD spikes
+        if (worldPoolManager != null) {
+            worldPoolManager.setPaused(level == LagMonitor.LagLevel.SEVERE);
+        }
+    }
 }
