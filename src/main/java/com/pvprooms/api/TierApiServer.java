@@ -2,8 +2,6 @@ package com.pvprooms.api;
 
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.managers.TierManager;
-import com.pvprooms.managers.TicketManager;
-import com.pvprooms.managers.TicketManager.*;
 import com.pvprooms.model.Tier;
 import com.pvprooms.model.TierTitle;
 import com.sun.net.httpserver.HttpExchange;
@@ -11,14 +9,20 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.*;
 import java.net.InetSocketAddress;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 /**
- * Servidor HTTP embebido que expone la API de tiers, tickets y sirve la web.
+ * Servidor HTTP embebido que expone la API de tiers y sirve la web.
+ *
+ * Rutas:
+ *   GET /                      → index.html
+ *   GET /api/top               → top 100 jugadores (puntuación total)
+ *   GET /api/top/{kit}         → top 100 para un kit
+ *   GET /api/kits              → lista de kits
+ *   GET /api/player/{nombre}   → datos de un jugador
+ *   GET /api/stats             → estadísticas del servidor
  */
 public class TierApiServer {
 
@@ -34,35 +38,28 @@ public class TierApiServer {
     public void start() {
         try {
             server = HttpServer.create(new InetSocketAddress(port), 50);
-            // Existing endpoints
             server.createContext("/api/top",    this::handleTop);
             server.createContext("/api/kits",   this::handleKits);
             server.createContext("/api/player", this::handlePlayer);
             server.createContext("/api/stats",  this::handleStats);
-            
-            // Auth endpoints
-            server.createContext("/api/auth/register", this::handleRegister);
-            server.createContext("/api/auth/login", this::handleLogin);
-            server.createContext("/api/auth/logout", this::handleLogout);
-            server.createContext("/api/auth/me", this::handleMe);
-            server.createContext("/api/auth/check-online", this::handleCheckOnline);
-            
-            // Ticket endpoints
+            // Auth & Ticket endpoints
+            server.createContext("/api/auth/register",  this::handleRegister);
+            server.createContext("/api/auth/login",     this::handleLogin);
+            server.createContext("/api/auth/logout",    this::handleLogout);
+            server.createContext("/api/auth/session",   this::handleSession);
             server.createContext("/api/tickets/create", this::handleTicketCreate);
-            server.createContext("/api/tickets/list", this::handleTicketList);
-            server.createContext("/api/tickets/get", this::handleTicketGet);
-            server.createContext("/api/tickets/message", this::handleTicketMessage);
+            server.createContext("/api/tickets/list",   this::handleTicketList);
+            server.createContext("/api/tickets/view",   this::handleTicketView);
+            server.createContext("/api/tickets/message",this::handleTicketMessage);
+            server.createContext("/api/tickets/claim",  this::handleTicketClaim);
+            server.createContext("/api/tickets/status", this::handleTicketStatus);
             server.createContext("/api/tickets/schedule", this::handleTicketSchedule);
-            server.createContext("/api/tickets/complete", this::handleTicketComplete);
-            server.createContext("/api/tickets/slots", this::handleTicketSlots);
-            
-            // Admin endpoints
-            server.createContext("/api/admin/users", this::handleAdminUsers);
-            server.createContext("/api/admin/tickets", this::handleAdminTickets);
-            server.createContext("/api/admin/set-tier", this::handleAdminSetTier);
-            server.createContext("/api/admin/set-role", this::handleAdminSetRole);
-            server.createContext("/api/admin/assign", this::handleAdminAssign);
-            
+            server.createContext("/api/tickets/result", this::handleTicketResult);
+            server.createContext("/api/slots",          this::handleSlots);
+            // Admin-only endpoints
+            server.createContext("/api/admin/users",    this::handleAdminUsers);
+            server.createContext("/api/admin/logs",     this::handleAdminLogs);
+            server.createContext("/api/admin/user",     this::handleAdminUserAction);
             server.createContext("/",           this::handleRoot);
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
@@ -190,7 +187,9 @@ public class TierApiServer {
         int wins = stats.wins(), losses = stats.losses();
         int kills = stats.kills(), deaths = stats.deaths();
         int streak = stats.currentStreak(), bestStreak = stats.bestStreak();
+        int hits = stats.hits(), swings = stats.swings();
         double kdr = stats.getKDR();
+        double accuracy = stats.getAccuracy();
         double winrate = (wins + losses) > 0 ? (double) wins / (wins + losses) * 100 : 0;
 
         // Ping (if online)
@@ -242,6 +241,9 @@ public class TierApiServer {
                 + ",\"winrate\":"         + String.format(java.util.Locale.US, "%.1f", winrate)
                 + ",\"streak\":"          + streak
                 + ",\"bestStreak\":"      + bestStreak
+                + ",\"hits\":"            + hits
+                + ",\"swings\":"          + swings
+                + ",\"accuracy\":"        + String.format(java.util.Locale.US, "%.1f", accuracy)
                 + ",\"ping\":"            + ping
                 + ",\"online\":"          + online
                 + (focusTier != null ? ",\"focusTier\":\"" + esc(focusTier) + "\",\"focusPts\":" + focusPts : "")
@@ -272,530 +274,23 @@ public class TierApiServer {
         try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
     }
 
-    private void corsPost(HttpExchange ex) {
-        ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+    private void cors(HttpExchange ex) {
+        ex.getResponseHeaders().set("Access-Control-Allow-Origin",  "*");
         ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         ex.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        ex.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+        // Prevent caching - always get fresh data
+        ex.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
+        ex.getResponseHeaders().set("Pragma", "no-cache");
+        ex.getResponseHeaders().set("Expires", "0");
     }
 
-    private void cors(HttpExchange ex) {
-        corsPost(ex);
-    }
-
+    /** Handles OPTIONS preflight. Returns true if it was a preflight (caller should return). */
     private boolean preflight(HttpExchange ex) throws IOException {
         if (ex.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
-            corsPost(ex);
             ex.sendResponseHeaders(204, -1);
             return true;
         }
         return false;
-    }
-
-    private String getClientIP(HttpExchange ex) {
-        String xff = ex.getRequestHeaders().getFirst("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
-        return ex.getRemoteAddress().getAddress().getHostAddress();
-    }
-
-    private String getSessionFromHeader(HttpExchange ex) {
-        String auth = ex.getRequestHeaders().getFirst("Authorization");
-        if (auth != null && auth.startsWith("Bearer ")) {
-            return auth.substring(7);
-        }
-        return null;
-    }
-
-    private Map<String, String> parseBody(HttpExchange ex) throws IOException {
-        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> params = new HashMap<>();
-        if (body.isBlank()) return params;
-        
-        // Handle JSON body
-        if (body.startsWith("{")) {
-            body = body.substring(1, body.length() - 1);
-            for (String pair : body.split(",")) {
-                String[] kv = pair.split(":", 2);
-                if (kv.length == 2) {
-                    String key = kv[0].trim().replaceAll("^\"|\"$", "");
-                    String val = kv[1].trim().replaceAll("^\"|\"$", "");
-                    params.put(key, val);
-                }
-            }
-        } else {
-            // URL encoded
-            for (String pair : body.split("&")) {
-                String[] kv = pair.split("=", 2);
-                if (kv.length == 2) {
-                    params.put(URLDecoder.decode(kv[0], StandardCharsets.UTF_8),
-                               URLDecoder.decode(kv[1], StandardCharsets.UTF_8));
-                }
-            }
-        }
-        return params;
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // AUTH HANDLERS
-    // ══════════════════════════════════════════════════════════════════════════
-
-    private void handleRegister(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String username = body.get("username");
-        if (username == null || username.isBlank() || username.length() < 3 || username.length() > 16) {
-            sendError(ex, 400, "Nombre de usuario inválido (3-16 caracteres)"); return;
-        }
-
-        String ip = getClientIP(ex);
-        String result = plugin.getTicketManager().startRegistration(username, ip);
-
-        if (result == null) {
-            sendError(ex, 429, "Demasiadas solicitudes. Espera unos segundos."); return;
-        }
-        if (result.equals("EXISTS")) {
-            sendError(ex, 409, "Este usuario ya está registrado"); return;
-        }
-
-        sendJson(ex, "{\"success\":true,\"code\":\"" + result + "\",\"message\":\"Entra al servidor de Minecraft y usa /verify " + result + "\"}");
-    }
-
-    private void handleLogin(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String username = body.get("username");
-        if (username == null || username.isBlank()) {
-            sendError(ex, 400, "Nombre de usuario requerido"); return;
-        }
-
-        String ip = getClientIP(ex);
-        String result = plugin.getTicketManager().login(username, ip);
-
-        if (result == null) {
-            sendError(ex, 401, "Usuario no encontrado o no verificado"); return;
-        }
-        if (result.startsWith("VERIFY:")) {
-            String code = result.substring(7);
-            sendJson(ex, "{\"needsVerify\":true,\"code\":\"" + code + "\",\"message\":\"Debes estar online en el servidor. Usa /verify " + code + "\"}");
-            return;
-        }
-
-        WebUser user = plugin.getTicketManager().getUserBySession(result);
-        sendJson(ex, "{\"success\":true,\"session\":\"" + result + "\",\"user\":" + userJson(user) + "}");
-    }
-
-    private void handleLogout(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        String session = getSessionFromHeader(ex);
-        if (session != null) {
-            plugin.getTicketManager().logout(session);
-        }
-        sendJson(ex, "{\"success\":true}");
-    }
-
-    private void handleMe(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        String session = getSessionFromHeader(ex);
-        if (session == null) {
-            sendError(ex, 401, "No autenticado"); return;
-        }
-        WebUser user = plugin.getTicketManager().getUserBySession(session);
-        if (user == null) {
-            sendError(ex, 401, "Sesión inválida"); return;
-        }
-        sendJson(ex, userJson(user));
-    }
-
-    private void handleCheckOnline(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        String[] parts = ex.getRequestURI().getPath().split("/");
-        String username = parts.length > 4 ? parts[4] : null;
-        if (username == null) {
-            sendError(ex, 400, "Username required"); return;
-        }
-        boolean online = plugin.getServer().getPlayerExact(username) != null;
-        sendJson(ex, "{\"online\":" + online + "}");
-    }
-
-    private String userJson(WebUser user) {
-        return "{\"username\":\"" + esc(user.username) + "\""
-             + ",\"role\":\"" + esc(user.role) + "\""
-             + ",\"verified\":" + user.verified
-             + ",\"createdAt\":" + user.createdAt + "}";
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // TICKET HANDLERS
-    // ══════════════════════════════════════════════════════════════════════════
-
-    private void handleTicketCreate(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null) {
-            sendError(ex, 401, "No autenticado"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String kit = body.get("kit");
-        String targetTier = body.get("targetTier");
-
-        if (kit == null || targetTier == null) {
-            sendError(ex, 400, "Kit y tier objetivo requeridos"); return;
-        }
-
-        String ip = getClientIP(ex);
-        Ticket ticket = plugin.getTicketManager().createTicket(user.username, kit, targetTier, ip);
-
-        if (ticket == null) {
-            sendError(ex, 409, "Ya tienes un ticket pendiente para este kit o ya solicitaste este tier"); return;
-        }
-
-        sendJson(ex, "{\"success\":true,\"ticket\":" + ticketJson(ticket) + "}");
-    }
-
-    private void handleTicketList(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null) {
-            sendError(ex, 401, "No autenticado"); return;
-        }
-
-        List<Ticket> tickets;
-        if ("admin".equals(user.role)) {
-            tickets = plugin.getTicketManager().getAllTickets();
-        } else if ("tester".equals(user.role)) {
-            tickets = plugin.getTicketManager().getTicketsForTester(user.username);
-            // Also include pending unassigned tickets
-            tickets.addAll(plugin.getTicketManager().getAllPendingTickets().stream()
-                .filter(t -> t.assignedTester == null)
-                .collect(Collectors.toList()));
-        } else {
-            tickets = plugin.getTicketManager().getTicketsForUser(user.username);
-        }
-
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < tickets.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append(ticketJson(tickets.get(i)));
-        }
-        sb.append("]");
-        sendJson(ex, sb.toString());
-    }
-
-    private void handleTicketGet(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null) {
-            sendError(ex, 401, "No autenticado"); return;
-        }
-
-        String[] parts = ex.getRequestURI().getPath().split("/");
-        String ticketId = parts.length > 4 ? parts[4] : null;
-        if (ticketId == null) {
-            sendError(ex, 400, "ID de ticket requerido"); return;
-        }
-
-        Ticket ticket = plugin.getTicketManager().getTicket(ticketId);
-        if (ticket == null) {
-            sendError(ex, 404, "Ticket no encontrado"); return;
-        }
-
-        // Check access
-        if (!"admin".equals(user.role) && !"tester".equals(user.role) 
-            && !ticket.username.equalsIgnoreCase(user.username)) {
-            sendError(ex, 403, "Sin acceso a este ticket"); return;
-        }
-
-        sendJson(ex, ticketJson(ticket));
-    }
-
-    private void handleTicketMessage(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null) {
-            sendError(ex, 401, "No autenticado"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String ticketId = body.get("ticketId");
-        String message = body.get("message");
-
-        if (ticketId == null || message == null || message.isBlank()) {
-            sendError(ex, 400, "ticketId y message requeridos"); return;
-        }
-
-        Ticket ticket = plugin.getTicketManager().getTicket(ticketId);
-        if (ticket == null) {
-            sendError(ex, 404, "Ticket no encontrado"); return;
-        }
-
-        // Check access
-        if (!"admin".equals(user.role) && !"tester".equals(user.role)
-            && !ticket.username.equalsIgnoreCase(user.username)) {
-            sendError(ex, 403, "Sin acceso a este ticket"); return;
-        }
-
-        plugin.getTicketManager().addMessage(ticketId, user.username, user.role, message);
-        sendJson(ex, "{\"success\":true}");
-    }
-
-    private void handleTicketSchedule(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null || (!"admin".equals(user.role) && !"tester".equals(user.role))) {
-            sendError(ex, 403, "Sin permisos"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String ticketId = body.get("ticketId");
-        String date = body.get("date");
-        String time = body.get("time");
-
-        if (ticketId == null || date == null || time == null) {
-            sendError(ex, 400, "ticketId, date y time requeridos"); return;
-        }
-
-        plugin.getTicketManager().scheduleTicket(ticketId, date, time);
-        sendJson(ex, "{\"success\":true}");
-    }
-
-    private void handleTicketComplete(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null || (!"admin".equals(user.role) && !"tester".equals(user.role))) {
-            sendError(ex, 403, "Sin permisos"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String ticketId = body.get("ticketId");
-        String result = body.get("result"); // "approved" or "denied"
-        String newTier = body.get("newTier");
-
-        if (ticketId == null || result == null) {
-            sendError(ex, 400, "ticketId y result requeridos"); return;
-        }
-
-        plugin.getTicketManager().completeTicket(ticketId, result, newTier);
-        sendJson(ex, "{\"success\":true}");
-    }
-
-    private void handleTicketSlots(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-
-        String[] parts = ex.getRequestURI().getPath().split("/");
-        String tester = parts.length > 4 ? parts[4] : "420Sleeptyx";
-        String date = parts.length > 5 ? parts[5] : java.time.LocalDate.now().toString();
-
-        List<TimeSlot> slots = plugin.getTicketManager().getAvailableSlots(tester, date);
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < slots.size(); i++) {
-            if (i > 0) sb.append(",");
-            TimeSlot s = slots.get(i);
-            sb.append("{\"start\":\"").append(esc(s.start)).append("\"")
-              .append(",\"end\":\"").append(esc(s.end)).append("\"}");
-        }
-        sb.append("]");
-        sendJson(ex, sb.toString());
-    }
-
-    private String ticketJson(Ticket t) {
-        StringBuilder msgs = new StringBuilder("[");
-        for (int i = 0; i < t.messages.size(); i++) {
-            if (i > 0) msgs.append(",");
-            ChatMessage m = t.messages.get(i);
-            msgs.append("{\"sender\":\"").append(esc(m.sender)).append("\"")
-                .append(",\"role\":\"").append(esc(m.role)).append("\"")
-                .append(",\"message\":\"").append(esc(m.message)).append("\"")
-                .append(",\"timestamp\":").append(m.timestamp).append("}");
-        }
-        msgs.append("]");
-
-        return "{\"id\":\"" + esc(t.id) + "\""
-             + ",\"username\":\"" + esc(t.username) + "\""
-             + ",\"kit\":\"" + esc(t.kit) + "\""
-             + ",\"targetTier\":\"" + esc(t.targetTier) + "\""
-             + ",\"status\":\"" + esc(t.status) + "\""
-             + ",\"assignedTester\":" + (t.assignedTester != null ? "\"" + esc(t.assignedTester) + "\"" : "null")
-             + ",\"scheduledDate\":" + (t.scheduledDate != null ? "\"" + esc(t.scheduledDate) + "\"" : "null")
-             + ",\"scheduledTime\":" + (t.scheduledTime != null ? "\"" + esc(t.scheduledTime) + "\"" : "null")
-             + ",\"createdAt\":" + t.createdAt
-             + ",\"updatedAt\":" + t.updatedAt
-             + ",\"result\":" + (t.result != null ? "\"" + esc(t.result) + "\"" : "null")
-             + ",\"newTier\":" + (t.newTier != null ? "\"" + esc(t.newTier) + "\"" : "null")
-             + ",\"messages\":" + msgs + "}";
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // ADMIN HANDLERS
-    // ══════════════════════════════════════════════════════════════════════════
-
-    private void handleAdminUsers(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null || !"admin".equals(user.role)) {
-            sendError(ex, 403, "Solo administradores"); return;
-        }
-
-        List<WebUser> users = plugin.getTicketManager().getAllUsers();
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < users.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append(userJson(users.get(i)));
-        }
-        sb.append("]");
-        sendJson(ex, sb.toString());
-    }
-
-    private void handleAdminTickets(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null || !"admin".equals(user.role)) {
-            sendError(ex, 403, "Solo administradores"); return;
-        }
-
-        List<Ticket> tickets = plugin.getTicketManager().getAllTickets();
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < tickets.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append(ticketJson(tickets.get(i)));
-        }
-        sb.append("]");
-        sendJson(ex, sb.toString());
-    }
-
-    private void handleAdminSetTier(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null || !"admin".equals(user.role)) {
-            sendError(ex, 403, "Solo administradores"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String username = body.get("username");
-        String kit = body.get("kit");
-        String tier = body.get("tier");
-
-        if (username == null || kit == null || tier == null) {
-            sendError(ex, 400, "username, kit y tier requeridos"); return;
-        }
-
-        boolean success = plugin.getTicketManager().setUserTier(username, kit, tier);
-        if (!success) {
-            sendError(ex, 400, "Error al establecer tier"); return;
-        }
-        sendJson(ex, "{\"success\":true}");
-    }
-
-    private void handleAdminSetRole(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null || !"admin".equals(user.role)) {
-            sendError(ex, 403, "Solo administradores"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String username = body.get("username");
-        String role = body.get("role");
-
-        if (username == null || role == null) {
-            sendError(ex, 400, "username y role requeridos"); return;
-        }
-
-        boolean success = plugin.getTicketManager().setUserRole(username, role);
-        if (!success) {
-            sendError(ex, 404, "Usuario no encontrado"); return;
-        }
-        sendJson(ex, "{\"success\":true}");
-    }
-
-    private void handleAdminAssign(HttpExchange ex) throws IOException {
-        corsPost(ex);
-        if (preflight(ex)) return;
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendError(ex, 405, "Method not allowed"); return;
-        }
-
-        String session = getSessionFromHeader(ex);
-        WebUser user = session != null ? plugin.getTicketManager().getUserBySession(session) : null;
-        if (user == null || (!"admin".equals(user.role) && !"tester".equals(user.role))) {
-            sendError(ex, 403, "Sin permisos"); return;
-        }
-
-        Map<String, String> body = parseBody(ex);
-        String ticketId = body.get("ticketId");
-        String tester = body.get("tester");
-
-        if (ticketId == null || tester == null) {
-            sendError(ex, 400, "ticketId y tester requeridos"); return;
-        }
-
-        boolean success = plugin.getTicketManager().assignTester(ticketId, tester);
-        if (!success) {
-            sendError(ex, 404, "Ticket no encontrado"); return;
-        }
-        sendJson(ex, "{\"success\":true}");
     }
 
     // ── Name/UUID helpers ─────────────────────────────────────────────────
@@ -819,5 +314,505 @@ public class TierApiServer {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "");
+    }
+
+    // ═══ AUTH HANDLERS ═════════════════════════════════════════════════════
+
+    private void handleRegister(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String username = extractJson(body, "username");
+        String ip = getClientIP(ex);
+
+        var tm = plugin.getTicketManager();
+        if (tm == null) { sendError(ex, 500, "Sistema no disponible"); return; }
+
+        var result = tm.initiateRegistration(username, ip);
+        sendJson(ex, "{\"success\":" + result.success() + 
+                     ",\"code\":" + (result.code() != null ? "\"" + result.code() + "\"" : "null") +
+                     ",\"message\":\"" + esc(result.message()) + "\"}");
+    }
+
+    private void handleLogin(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String username = extractJson(body, "username");
+        String ip = getClientIP(ex);
+
+        var tm = plugin.getTicketManager();
+        if (tm == null) { sendError(ex, 500, "Sistema no disponible"); return; }
+
+        var result = tm.login(username, ip);
+        if (result.success()) {
+            var user = tm.getUser(username);
+            String role = tm.getRole(username);
+            sendJson(ex, "{\"success\":true,\"token\":\"" + result.token() + "\"" +
+                        ",\"username\":\"" + esc(user.username) + "\"" +
+                        ",\"uuid\":\"" + user.uuid + "\"" +
+                        ",\"role\":\"" + role + "\"" +
+                        ",\"message\":\"" + esc(result.message()) + "\"}");
+        } else {
+            sendJson(ex, "{\"success\":false,\"message\":\"" + esc(result.message()) + "\"}");
+        }
+    }
+
+    private void handleLogout(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        String token = getAuthToken(ex);
+        if (token != null) {
+            plugin.getTicketManager().logout(token);
+        }
+        sendJson(ex, "{\"success\":true}");
+    }
+
+    private void handleSession(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        String token = getAuthToken(ex);
+        var tm = plugin.getTicketManager();
+        if (tm == null) { sendError(ex, 500, "Sistema no disponible"); return; }
+
+        String username = tm.validateSession(token);
+        if (username == null) {
+            sendJson(ex, "{\"valid\":false}");
+            return;
+        }
+
+        var user = tm.getUser(username);
+        String role = tm.getRole(username);
+        sendJson(ex, "{\"valid\":true,\"username\":\"" + esc(user.username) + "\"" +
+                    ",\"uuid\":\"" + user.uuid + "\"" +
+                    ",\"role\":\"" + role + "\"}");
+    }
+
+    // ═══ TICKET HANDLERS ═══════════════════════════════════════════════════
+
+    private void handleTicketCreate(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String kit = extractJson(body, "kit");
+        String tier = extractJson(body, "tier");
+        String slot = extractJson(body, "slot");
+        String notes = extractJson(body, "notes");
+        String ip = getClientIP(ex);
+
+        var result = tm.createTicket(username, kit, tier, slot, notes, ip);
+        sendJson(ex, "{\"success\":" + result.success() + 
+                    ",\"ticketId\":" + (result.ticketId() != null ? "\"" + result.ticketId() + "\"" : "null") +
+                    ",\"message\":\"" + esc(result.message()) + "\"}");
+    }
+
+    private void handleTicketList(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+
+        String statusFilter = getQueryParam(ex, "status");
+        List<com.pvprooms.managers.TicketManager.Ticket> tickets;
+
+        if (tm.isStaff(username)) {
+            tickets = tm.getAllTickets(statusFilter);
+        } else {
+            tickets = tm.getUserTickets(username);
+        }
+
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (var ticket : tickets) {
+            if (!first) sb.append(",");
+            sb.append(ticketToJson(ticket, false));
+            first = false;
+        }
+        sb.append("]");
+        sendJson(ex, sb.toString());
+    }
+
+    private void handleTicketView(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+
+        String ticketId = getQueryParam(ex, "id");
+        var ticket = tm.getTicket(ticketId);
+        if (ticket == null) { sendError(ex, 404, "Ticket no encontrado"); return; }
+
+        // Check access
+        if (!ticket.username.equalsIgnoreCase(username) && !tm.isStaff(username)) {
+            sendError(ex, 403, "Sin acceso a este ticket");
+            return;
+        }
+
+        sendJson(ex, ticketToJson(ticket, true));
+    }
+
+    private void handleTicketMessage(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String ticketId = extractJson(body, "ticketId");
+        String message = extractJson(body, "message");
+
+        var ticket = tm.getTicket(ticketId);
+        if (ticket == null) { sendError(ex, 404, "Ticket no encontrado"); return; }
+
+        if (!ticket.username.equalsIgnoreCase(username) && !tm.isStaff(username)) {
+            sendError(ex, 403, "Sin acceso");
+            return;
+        }
+
+        boolean success = tm.addMessage(ticketId, username, message);
+        sendJson(ex, "{\"success\":" + success + "}");
+    }
+
+    private void handleTicketClaim(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+        if (!tm.isStaff(username)) { sendError(ex, 403, "Solo staff"); return; }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String ticketId = extractJson(body, "ticketId");
+
+        boolean success = tm.claimTicket(ticketId, username);
+        sendJson(ex, "{\"success\":" + success + "}");
+    }
+
+    private void handleTicketStatus(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+        if (!tm.isStaff(username)) { sendError(ex, 403, "Solo staff"); return; }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String ticketId = extractJson(body, "ticketId");
+        String status = extractJson(body, "status");
+
+        boolean success = tm.updateTicketStatus(ticketId, 
+            com.pvprooms.managers.TicketManager.TicketStatus.valueOf(status.toUpperCase()), username);
+        sendJson(ex, "{\"success\":" + success + "}");
+    }
+
+    private void handleTicketSchedule(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+        if (!tm.isStaff(username)) { sendError(ex, 403, "Solo staff"); return; }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String ticketId = extractJson(body, "ticketId");
+        String dateTime = extractJson(body, "dateTime");
+
+        boolean success = tm.scheduleTest(ticketId, dateTime, username);
+        sendJson(ex, "{\"success\":" + success + "}");
+    }
+
+    private void handleTicketResult(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null) { sendError(ex, 401, "Sesión inválida"); return; }
+        if (!tm.isStaff(username)) { sendError(ex, 403, "Solo staff"); return; }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String ticketId = extractJson(body, "ticketId");
+        boolean passed = "true".equalsIgnoreCase(extractJson(body, "passed"));
+        String newTier = extractJson(body, "newTier");
+
+        boolean success = tm.setTestResult(ticketId, passed, newTier, username);
+        sendJson(ex, "{\"success\":" + success + "}");
+    }
+
+    private void handleSlots(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        StringBuilder sb = new StringBuilder("[");
+        String[] slots = com.pvprooms.managers.TicketManager.AVAILABLE_SLOTS;
+        for (int i = 0; i < slots.length; i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"").append(esc(slots[i])).append("\"");
+        }
+        sb.append("]");
+        sendJson(ex, sb.toString());
+    }
+
+    // ═══ HELPER METHODS ════════════════════════════════════════════════════
+
+    private String ticketToJson(com.pvprooms.managers.TicketManager.Ticket t, boolean includeMessages) {
+        StringBuilder sb = new StringBuilder("{");
+        sb.append("\"id\":\"").append(esc(t.id)).append("\"");
+        sb.append(",\"username\":\"").append(esc(t.username)).append("\"");
+        sb.append(",\"kit\":\"").append(esc(t.kit)).append("\"");
+        sb.append(",\"requestedTier\":\"").append(esc(t.requestedTier)).append("\"");
+        sb.append(",\"preferredSlot\":\"").append(esc(t.preferredSlot)).append("\"");
+        sb.append(",\"notes\":\"").append(esc(t.notes)).append("\"");
+        sb.append(",\"createdAt\":").append(t.createdAt);
+        sb.append(",\"status\":\"").append(t.status.name()).append("\"");
+        sb.append(",\"statusDisplay\":\"").append(esc(t.status.displayName)).append("\"");
+        sb.append(",\"statusColor\":\"").append(esc(t.status.color)).append("\"");
+        sb.append(",\"assignedTester\":").append(t.assignedTester != null ? "\"" + esc(t.assignedTester) + "\"" : "null");
+        sb.append(",\"scheduledTime\":").append(t.scheduledTime != null ? "\"" + esc(t.scheduledTime) + "\"" : "null");
+        sb.append(",\"resultTier\":").append(t.resultTier != null ? "\"" + esc(t.resultTier) + "\"" : "null");
+
+        if (includeMessages) {
+            sb.append(",\"messages\":[");
+            boolean first = true;
+            for (var msg : t.messages) {
+                if (!first) sb.append(",");
+                sb.append("{\"sender\":\"").append(esc(msg.sender)).append("\"");
+                sb.append(",\"timestamp\":").append(msg.timestamp);
+                sb.append(",\"message\":\"").append(esc(msg.message)).append("\"}");
+                first = false;
+            }
+            sb.append("]");
+        }
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    private String getAuthToken(HttpExchange ex) {
+        String auth = ex.getRequestHeaders().getFirst("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return auth.substring(7);
+        }
+        return getQueryParam(ex, "token");
+    }
+
+    private String getClientIP(HttpExchange ex) {
+        String xff = ex.getRequestHeaders().getFirst("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return ex.getRemoteAddress().getAddress().getHostAddress();
+    }
+
+    private String getQueryParam(HttpExchange ex, String key) {
+        String query = ex.getRequestURI().getQuery();
+        if (query == null) return null;
+        for (String param : query.split("&")) {
+            String[] kv = param.split("=", 2);
+            if (kv.length == 2 && kv[0].equals(key)) {
+                return java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+            }
+        }
+        return null;
+    }
+
+    // ═══ ADMIN HANDLERS ═════════════════════════════════════════════════════
+
+    private void handleAdminUsers(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null || !tm.isAdmin(username)) {
+            sendError(ex, 403, "Acceso denegado. Solo administradores.");
+            return;
+        }
+
+        // Get all registered users
+        var users = tm.getAllUsers();
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (var user : users) {
+            if (!first) sb.append(",");
+            String role = tm.getRole(user.username);
+            sb.append("{\"username\":\"").append(esc(user.username)).append("\"");
+            sb.append(",\"uuid\":\"").append(user.uuid).append("\"");
+            sb.append(",\"role\":\"").append(role).append("\"");
+            sb.append(",\"registeredAt\":").append(user.registeredAt);
+            sb.append(",\"lastIp\":\"").append(esc(user.registeredIp)).append("\"}");
+            first = false;
+        }
+        sb.append("]");
+        sendJson(ex, sb.toString());
+    }
+
+    private void handleAdminLogs(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String username = tm.validateSession(token);
+        if (username == null || !tm.isAdmin(username)) {
+            sendError(ex, 403, "Acceso denegado. Solo administradores.");
+            return;
+        }
+
+        // Get recent activity logs
+        var logs = tm.getActivityLogs(50);
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (var log : logs) {
+            if (!first) sb.append(",");
+            sb.append("{\"timestamp\":").append(log.timestamp);
+            sb.append(",\"type\":\"").append(esc(log.type)).append("\"");
+            sb.append(",\"username\":\"").append(esc(log.username)).append("\"");
+            sb.append(",\"details\":\"").append(esc(log.details)).append("\"}");
+            first = false;
+        }
+        sb.append("]");
+        sendJson(ex, sb.toString());
+    }
+
+    private void handleAdminUserAction(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendError(ex, 405, "POST required");
+            return;
+        }
+
+        var tm = plugin.getTicketManager();
+        String token = getAuthToken(ex);
+        String adminUser = tm.validateSession(token);
+        if (adminUser == null || !tm.isAdmin(adminUser)) {
+            sendError(ex, 403, "Acceso denegado. Solo administradores.");
+            return;
+        }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String targetUser = extractJson(body, "username");
+        String action = extractJson(body, "action");
+
+        if (targetUser == null || targetUser.isBlank()) {
+            sendError(ex, 400, "Usuario requerido");
+            return;
+        }
+
+        boolean success = false;
+        String message = "";
+
+        switch (action.toLowerCase()) {
+            case "delete" -> {
+                success = tm.deleteUser(targetUser);
+                message = success ? "Usuario eliminado" : "Usuario no encontrado";
+                if (success) tm.addLog("USER_DELETE", adminUser, "Eliminó usuario: " + targetUser);
+            }
+            case "reset_sessions" -> {
+                tm.invalidateUserSessions(targetUser);
+                success = true;
+                message = "Sesiones invalidadas";
+                tm.addLog("SESSION_RESET", adminUser, "Invalidó sesiones de: " + targetUser);
+            }
+            case "set_tester" -> {
+                // Note: This would require dynamic role management - for now just log
+                tm.addLog("ROLE_CHANGE", adminUser, "Intentó cambiar rol de: " + targetUser);
+                message = "Los roles se configuran en el código. Contacta al desarrollador.";
+            }
+            default -> {
+                sendError(ex, 400, "Acción no válida: " + action);
+                return;
+            }
+        }
+
+        sendJson(ex, "{\"success\":" + success + ",\"message\":\"" + esc(message) + "\"}");
+    }
+
+    private String extractJson(String json, String key) {
+        // Simple JSON extraction (works for flat objects)
+        String pattern = "\"" + key + "\"\\s*:\\s*";
+        int idx = json.indexOf("\"" + key + "\"");
+        if (idx == -1) return "";
+        
+        int colonIdx = json.indexOf(":", idx);
+        if (colonIdx == -1) return "";
+        
+        int start = colonIdx + 1;
+        while (start < json.length() && Character.isWhitespace(json.charAt(start))) start++;
+        
+        if (start >= json.length()) return "";
+        
+        if (json.charAt(start) == '"') {
+            int end = start + 1;
+            while (end < json.length() && json.charAt(end) != '"') {
+                if (json.charAt(end) == '\\') end++;
+                end++;
+            }
+            return json.substring(start + 1, end).replace("\\\"", "\"").replace("\\n", "\n");
+        } else {
+            int end = start;
+            while (end < json.length() && json.charAt(end) != ',' && json.charAt(end) != '}') end++;
+            return json.substring(start, end).trim();
+        }
     }
 }

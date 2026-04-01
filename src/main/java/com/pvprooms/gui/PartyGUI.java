@@ -572,12 +572,28 @@ public class PartyGUI implements Listener {
 
         player.closeInventory();
 
-        // Get arena
-        String arenaName = selectedArena.getOrDefault(leaderUUID, "Aleatoria");
+        // Get arena - PRIORITY: kit's connected arena > manual selection > random
         var arenaManager = plugin.getArenaManager();
-        var arena = arenaName.equals("Aleatoria") ? 
-            arenaManager.getRandomArena() : 
-            arenaManager.getArena(arenaName);
+        String connectedArena = plugin.getKitManager().getConnectedArena(kitName);
+        com.pvprooms.model.ArenaTemplate arena = null;
+        
+        // First try kit's connected arena
+        if (connectedArena != null && !connectedArena.trim().isEmpty()) {
+            arena = arenaManager.getArena(connectedArena.trim());
+            if (arena != null && arena.isFullyConfigured()) {
+                player.sendMessage(plugin.prefix() + "§aUsando arena configurada para §e" + kitName + "§a: §b" + connectedArena);
+            } else {
+                arena = null; // Not valid, fall through
+            }
+        }
+        
+        // If no connected arena, use manual selection or random
+        if (arena == null) {
+            String arenaName = selectedArena.getOrDefault(leaderUUID, "Aleatoria");
+            arena = arenaName.equals("Aleatoria") ? 
+                arenaManager.getRandomArena() : 
+                arenaManager.getArena(arenaName);
+        }
         
         if (arena == null) {
             player.sendMessage(plugin.prefix() + "§cNo hay arenas disponibles.");
@@ -585,22 +601,24 @@ public class PartyGUI implements Listener {
         }
 
         // Start match based on mode
+        final com.pvprooms.model.ArenaTemplate finalArena = arena;
         switch (mode) {
             case "1v1" -> {
                 // Start 1v1 duel between the two party members
+                // Use startDuel which already handles connected arena internally
                 plugin.getDuelManager().startDuel(participants.get(0).getUniqueId(), participants.get(1).getUniqueId(), kitName);
             }
             case "2v2" -> {
                 // For now, 2v2 uses FFA (teams not implemented yet)
                 // TODO: Implement team-based matches
-                plugin.getDuelManager().startFFAMatch(participants, kitName, arena);
+                plugin.getDuelManager().startFFAMatch(participants, kitName, finalArena);
                 for (Player p : participants) {
                     p.sendMessage(plugin.prefix() + "§e2v2 en desarrollo - jugando como FFA por ahora.");
                 }
             }
             default -> {
                 // FFA mode
-                plugin.getDuelManager().startFFAMatch(participants, kitName, arena);
+                plugin.getDuelManager().startFFAMatch(participants, kitName, finalArena);
             }
         }
         

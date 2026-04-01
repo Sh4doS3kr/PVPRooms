@@ -25,6 +25,8 @@ public class Duel {
     private final String kitName;
     private final String instanceWorldName;
     private final ArenaTemplate arenaTemplate;
+    /** Actual current world name — may differ from instanceWorldName after pool swaps. */
+    private String currentWorldName;
 
     private State state = State.COUNTDOWN;
     private UUID winner;
@@ -49,6 +51,7 @@ public class Duel {
         this.player2           = player2;
         this.kitName           = kitName;
         this.instanceWorldName = instanceWorldName;
+        this.currentWorldName  = instanceWorldName;
         this.arenaTemplate     = template;
         this.startTimeMillis   = System.currentTimeMillis();
     }
@@ -86,6 +89,9 @@ public class Duel {
     public UUID getPlayer2()          { return player2; }
     public String getKitName()        { return kitName; }
     public String getInstanceWorldName() { return instanceWorldName; }
+    /** Returns the current world name (may differ after pool swaps). */
+    public String getCurrentWorldName()  { return currentWorldName; }
+    public void   setCurrentWorldName(String name) { this.currentWorldName = name; }
     public ArenaTemplate getArenaTemplate() { return arenaTemplate; }
 
     public State getState()           { return state; }

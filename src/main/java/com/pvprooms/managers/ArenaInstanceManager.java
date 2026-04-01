@@ -28,6 +28,23 @@ public class ArenaInstanceManager {
         this.plugin = plugin;
     }
 
+    /**
+     * Disables auto-save on all currently-loaded template worlds.
+     * Should be called once at startup after arenas are loaded.
+     * Template worlds are read-only — Minecraft must never auto-save them.
+     */
+    public void disableAutoSaveOnTemplates() {
+        for (ArenaTemplate t : plugin.getArenaManager().getAllArenas()) {
+            String name = (t.getWorldName() != null && !t.getWorldName().isBlank())
+                    ? t.getWorldName() : t.getName();
+            World w = Bukkit.getWorld(name);
+            if (w != null) {
+                w.setAutoSave(false);
+                plugin.getLogger().info("[PvPRooms] AutoSave desactivado en plantilla: " + name);
+            }
+        }
+    }
+
     // ── World creation ─────────────────────────────────────────────────────
 
     /**
@@ -54,14 +71,6 @@ public class ArenaInstanceManager {
                     + sourceDir.getAbsolutePath()
                     + " — copia la carpeta '‎" + worldFolderName + "' a la raíz del servidor.");
             return null;
-        }
-
-        // ── Guardar el mundo fuente si está cargado ────────────────────────
-        // Esto garantiza que los chunks en memoria se escriban al disco
-        // antes de copiar, incluso con múltiples partidas en curso.
-        World sourceWorld = Bukkit.getWorld(worldFolderName);
-        if (sourceWorld != null) {
-            sourceWorld.save();
         }
 
         // ── Destino único por partida: pvp_match_<matchId> ────────────────
@@ -104,6 +113,83 @@ public class ArenaInstanceManager {
         }
 
         return instance;
+    }
+
+    // ── World reset (for multi-round matches) ────────────────────────────────
+
+    /**
+     * Resets an instance world by unloading it, re-copying from template, and reloading.
+     * Used between rounds in Tier matches to restore all blocks, explosions, etc.
+     *
+     * @param worldName Name of the instance world to reset.
+     * @param template  The arena template to copy from.
+     * @param callback  Runnable to execute after the world is reloaded (on main thread).
+     */
+    public void resetInstance(String worldName, ArenaTemplate template, Runnable callback) {
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            plugin.getLogger().warning("[PvPRooms] Cannot reset non-existent world: " + worldName);
+            if (callback != null) Bukkit.getScheduler().runTask(plugin, callback);
+            return;
+        }
+
+        // Remove all dropped items from the arena before reset
+        world.getEntitiesByClass(org.bukkit.entity.Item.class).forEach(org.bukkit.entity.Entity::remove);
+
+        // Teleport players to a safe location temporarily (they'll be repositioned after reset)
+        Location tempLoc = plugin.getLobbySpawn();
+        for (var player : world.getPlayers()) {
+            player.teleport(tempLoc);
+        }
+
+        // Unload the world without saving (discard all changes)
+        Bukkit.unloadWorld(world, false);
+
+        // Get source and destination paths
+        String worldFolderName = (template.getWorldName() != null && !template.getWorldName().isBlank())
+                ? template.getWorldName() : template.getName();
+        File sourceDir = new File(Bukkit.getWorldContainer(), worldFolderName);
+        try { sourceDir = sourceDir.getCanonicalFile(); }
+        catch (IOException e) { sourceDir = sourceDir.getAbsoluteFile(); }
+
+        File destDir = new File(Bukkit.getWorldContainer(), worldName);
+
+        final File finalSourceDir = sourceDir;
+
+        // Delete and re-copy asynchronously, then reload on main thread
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            // Delete old instance folder
+            deleteDirectory(destDir);
+
+            // Re-copy from template
+            try {
+                copyDirectory(finalSourceDir.toPath(), destDir.toPath());
+                new File(destDir, "session.lock").delete();
+                new File(destDir, "uid.dat").delete();
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "[PvPRooms] Error resetting arena " + worldName, e);
+            }
+
+            // Reload world on main thread
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                WorldCreator creator = new WorldCreator(worldName);
+                creator.generator(new VoidChunkGenerator());
+                creator.generateStructures(false);
+                World reloaded = Bukkit.createWorld(creator);
+
+                if (reloaded != null) {
+                    reloaded.setAutoSave(false);
+                    reloaded.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+                    reloaded.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+                    reloaded.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+                    reloaded.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+                    reloaded.setTime(6000L);
+                    plugin.getLogger().info("[PvPRooms] Arena reset: " + worldName);
+                }
+
+                if (callback != null) callback.run();
+            });
+        });
     }
 
     // ── World destruction ──────────────────────────────────────────────────

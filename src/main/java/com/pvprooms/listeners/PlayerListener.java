@@ -27,11 +27,14 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerAdvancementDoneEvent;
+import org.bukkit.event.player.PlayerPortalEvent;
+import org.bukkit.event.world.PortalCreateEvent;
 
 import java.util.UUID;
 
@@ -58,6 +61,10 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        
+        // Ensure player is registered in EloManager (initializes if not exists)
+        plugin.getEloManager().ensureRegistered(player.getUniqueId(), player.getName());
+        
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             plugin.getScoreboardManager().showLobbyScoreboard(player);
             // Give lobby items if in lobby world
@@ -223,6 +230,30 @@ public class PlayerListener implements Listener {
         }
     }
 
+    // ── Projectile / item block during countdown ──────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onProjectileLaunch(ProjectileLaunchEvent event) {
+        if (!(event.getEntity().getShooter() instanceof Player player)) return;
+        UUID uuid = player.getUniqueId();
+
+        // Block during regular duel countdown
+        Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
+        if (duel != null && duel.getState() == Duel.State.COUNTDOWN) {
+            event.setCancelled(true);
+            player.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "\u00a7c\u00a7l¡Espera al inicio!"));
+            return;
+        }
+
+        // Block during bot duel countdown
+        if (plugin.getBotManager().isInBotCountdown(uuid)) {
+            event.setCancelled(true);
+            player.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "\u00a7c\u00a7l¡Espera al inicio!"));
+        }
+    }
+
     // ── Food level ─────────────────────────────────────────────────────────
 
     @EventHandler
@@ -314,8 +345,12 @@ public class PlayerListener implements Listener {
                 event.setCancelled(true);
                 return;
             }
-            // Comprobar permiso de la arena
+            // Comprobar permiso de la arena (check duel first, then FFA)
             ArenaTemplate template = duel != null ? duel.getArenaTemplate() : null;
+            if (template == null) {
+                // Check if it's a FFA match
+                template = plugin.getDuelManager().getFFATemplateByWorldName(blockWorld);
+            }
             if (template == null || !template.isAllowBlockBreak()) {
                 event.setCancelled(true);
             }
@@ -353,6 +388,10 @@ public class PlayerListener implements Listener {
             if (duel != null) {
                 template = duel.getArenaTemplate();
             } else {
+                // Check FFA matches
+                template = plugin.getDuelManager().getFFATemplateByWorldName(blockWorld);
+            }
+            if (template == null) {
                 // Check bot duels
                 var botDuel = plugin.getBotManager().getBotDuel(player.getUniqueId());
                 if (botDuel != null && botDuel.instanceWorldName.equals(blockWorld)) {
@@ -420,8 +459,15 @@ public class PlayerListener implements Listener {
         if (worldName.equals(lobbyWorld)) { blockList.clear(); return; }
         String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
         if (!worldName.startsWith(instancePrefix)) return;
+        
+        // Check duel first, then FFA
         Duel duel = plugin.getDuelManager().getDuelByWorldName(worldName);
         ArenaTemplate template = duel != null ? duel.getArenaTemplate() : null;
+        if (template == null) {
+            // Check FFA matches
+            template = plugin.getDuelManager().getFFATemplateByWorldName(worldName);
+        }
+        
         // If explosions not allowed, prevent block damage (entity damage still applies)
         if (template == null || !template.isAllowExplosions()) {
             blockList.clear();
@@ -503,6 +549,27 @@ public class PlayerListener implements Listener {
             }
         }
         return null;
+    }
+
+    // ── Block Nether and End travel ───────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerPortal(PlayerPortalEvent event) {
+        World.Environment env = event.getTo() != null ? event.getTo().getWorld().getEnvironment() : null;
+        if (env == World.Environment.NETHER || env == World.Environment.THE_END) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage(plugin.prefix() + "§cNo puedes viajar al Nether ni al End.");
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPortalCreate(PortalCreateEvent event) {
+        // Block portal creation entirely
+        if (event.getReason() == PortalCreateEvent.CreateReason.FIRE || 
+            event.getReason() == PortalCreateEvent.CreateReason.NETHER_PAIR ||
+            event.getReason() == PortalCreateEvent.CreateReason.END_PLATFORM) {
+            event.setCancelled(true);
+        }
     }
 
 }

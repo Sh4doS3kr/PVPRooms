@@ -3,345 +3,809 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Moon Tiers — Panel de Administración</title>
+<title>Moon Tiers — Panel de Staff</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
 <style>
-.page-container { min-height: 100vh; padding-top: 80px; }
+/* ═══ ADMIN PAGE STYLES ══════════════════════════════════════════════════ */
+.admin-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  min-height: calc(100vh - 58px);
+}
 
 .page-header {
-  position: fixed; top: 0; left: 0; right: 0; height: 60px;
-  background: rgba(10,10,15,.95); backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 2rem; z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.header-left { display: flex; align-items: center; gap: 1rem; }
-
-.header-logo {
-  display: flex; align-items: center; gap: .5rem;
-  font-family: 'Geist Mono', monospace; font-size: 1rem;
-  font-weight: 700; color: var(--text); text-decoration: none;
-}
-.header-logo img { width: 24px; height: 24px; image-rendering: pixelated; }
-.header-logo .dot { color: var(--accent2); }
-
-.header-nav { display: flex; align-items: center; gap: .5rem; }
-
-.header-link {
-  color: var(--muted); font-size: .85rem; font-weight: 500;
-  padding: .5rem .8rem; border-radius: 8px; transition: all .2s ease;
-  text-decoration: none;
-}
-.header-link:hover { color: var(--text); background: rgba(255,255,255,.05); }
-.header-link.active { color: var(--accent2); }
-
-.user-pill {
-  display: flex; align-items: center; gap: .6rem;
-  background: rgba(255,255,255,.05); padding: .4rem .8rem .4rem .4rem;
-  border-radius: 20px; cursor: pointer;
-}
-.user-pill img { width: 28px; height: 28px; border-radius: 50%; image-rendering: pixelated; }
-.user-pill span { font-size: .85rem; font-weight: 500; }
-
-.main-content { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-
-.page-title-row {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+.page-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
 }
 
-.page-title { font-size: 1.8rem; font-weight: 700; }
-.page-title .icon { margin-right: .5rem; }
-
-.role-badge {
-  font-size: .75rem; font-weight: 600; padding: .4rem .8rem;
-  border-radius: 20px; text-transform: uppercase;
-}
-.role-badge.admin { background: rgba(239,68,68,.15); color: #f87171; }
-.role-badge.tester { background: rgba(59,130,246,.15); color: #60a5fa; }
-
-.tabs {
-  display: flex; gap: .3rem; margin-bottom: 1.5rem;
-  background: rgba(255,255,255,.03); padding: 4px; border-radius: 12px;
-  width: fit-content;
+.page-title svg {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
 }
 
-.tab {
-  padding: .6rem 1.2rem; font-size: .85rem; font-weight: 500;
-  border-radius: 10px; cursor: pointer; transition: all .2s ease;
-  color: var(--muted); border: none; background: transparent;
-}
-.tab.active { background: var(--accent); color: white; }
-.tab:not(.active):hover { color: var(--text); background: rgba(255,255,255,.05); }
-
-.panel { display: none; }
-.panel.active { display: block; }
-
-.section-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem;
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: rgba(255,255,255,.05);
+  padding: .5rem 1rem .5rem .5rem;
+  border-radius: 50px;
+  border: 1px solid var(--border);
 }
 
-.section-header {
-  padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  image-rendering: pixelated;
 }
 
-.section-title { font-size: 1rem; font-weight: 600; }
+.user-name { font-weight: 600; }
+.user-role { font-size: .75rem; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
 
-.section-badge {
-  background: var(--accent); color: white;
-  font-size: .7rem; font-weight: 600; padding: .25rem .6rem; border-radius: 20px;
+.btn-logout {
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.2);
+  color: #fca5a5;
+  padding: .4rem .75rem;
+  border-radius: 6px;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .2s;
 }
 
-.section-body { padding: 1.5rem; }
-
-/* Tables */
-.data-table { width: 100%; border-collapse: collapse; }
-
-.data-table th {
-  text-align: left; font-size: .75rem; font-weight: 600;
-  color: var(--muted); text-transform: uppercase; padding: .8rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.data-table td {
-  padding: .8rem 1rem; border-bottom: 1px solid var(--border);
-  font-size: .9rem;
-}
-
-.data-table tr:last-child td { border-bottom: none; }
-.data-table tr:hover td { background: rgba(255,255,255,.02); }
-
-.user-cell {
-  display: flex; align-items: center; gap: .6rem;
-}
-.user-cell img { width: 28px; height: 28px; border-radius: 6px; image-rendering: pixelated; }
-.user-cell span { font-weight: 500; }
-
-.role-select {
-  background: rgba(255,255,255,.05); border: 1px solid var(--border2);
-  border-radius: 6px; padding: .4rem .6rem; font-family: inherit;
-  font-size: .8rem; color: var(--text); cursor: pointer;
-}
-
-.status-badge {
-  font-size: .7rem; font-weight: 600; padding: .2rem .5rem;
-  border-radius: 6px; text-transform: uppercase;
-}
-.status-badge.pending { background: rgba(234,179,8,.15); color: #fbbf24; }
-.status-badge.scheduled { background: rgba(59,130,246,.15); color: #60a5fa; }
-.status-badge.in_progress { background: rgba(168,85,247,.15); color: #c084fc; }
-.status-badge.completed { background: rgba(34,197,94,.15); color: #4ade80; }
-
-.action-btn-sm {
-  background: var(--accent); border: none; border-radius: 6px;
-  padding: .4rem .8rem; font-family: inherit; font-size: .8rem;
-  font-weight: 500; color: white; cursor: pointer; transition: all .15s ease;
-}
-.action-btn-sm:hover { background: var(--accent2); }
-
-/* Set Tier Form */
-.set-tier-form {
-  display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;
-}
-
-.form-group { display: flex; flex-direction: column; gap: .4rem; }
-.form-group label { font-size: .75rem; color: var(--muted); }
-
-.form-input, .form-select {
-  background: rgba(255,255,255,.05); border: 1px solid var(--border2);
-  border-radius: 8px; padding: .6rem .8rem; font-family: inherit;
-  font-size: .9rem; color: var(--text); outline: none;
-}
-.form-input:focus, .form-select:focus { border-color: var(--accent); }
-
-.submit-btn {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  border: none; border-radius: 8px; padding: .6rem 1.5rem;
-  font-family: inherit; font-size: .9rem; font-weight: 600;
-  color: white; cursor: pointer; transition: all .2s ease;
-}
-.submit-btn:hover { transform: translateY(-1px); }
-
-.alert {
-  padding: .8rem 1rem; border-radius: 8px; font-size: .85rem;
-  margin-bottom: 1rem; display: none;
-}
-.alert.show { display: block; }
-.alert.success { background: rgba(34,197,94,.1); color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
-.alert.error { background: rgba(239,68,68,.1); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+.btn-logout:hover { background: rgba(239,68,68,.2); }
 
 /* Stats Cards */
 .stats-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem; margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
 .stat-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 1.2rem;
+  background: linear-gradient(135deg, rgba(15,17,23,.9) 0%, rgba(20,22,30,.95) 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
 }
 
-.stat-value { font-size: 2rem; font-weight: 700; color: var(--text); }
-.stat-label { font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
 
+.stat-card.open::before { background: #f59e0b; }
+.stat-card.progress::before { background: #3b82f6; }
+.stat-card.scheduled::before { background: #8b5cf6; }
+.stat-card.completed::before { background: #22c55e; }
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+}
+
+.stat-label {
+  font-size: .85rem;
+  color: var(--sub);
+  margin-top: .25rem;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: .6rem 1.25rem;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--sub);
+  font-family: inherit;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.filter-btn:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Ticket List */
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.ticket-row {
+  background: linear-gradient(135deg, rgba(15,17,23,.9) 0%, rgba(20,22,30,.95) 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 1.25rem;
+  cursor: pointer;
+  transition: all .2s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.ticket-row:hover {
+  border-color: var(--accent);
+  transform: translateX(4px);
+}
+
+.ticket-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.ticket-info { min-width: 0; }
+
+.ticket-id {
+  font-family: 'Geist Mono', monospace;
+  font-size: .75rem;
+  color: var(--muted);
+}
+
+.ticket-user {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.ticket-user img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  image-rendering: pixelated;
+}
+
+.ticket-meta {
+  font-size: .8rem;
+  color: var(--sub);
+}
+
+.ticket-badge {
+  padding: .3rem .75rem;
+  border-radius: 6px;
+  font-size: .75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ticket-tier {
+  font-family: 'Geist Mono', monospace;
+  font-weight: 600;
+  color: var(--accent2);
+}
+
+.ticket-time {
+  font-size: .8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,.85);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-overlay.show { display: flex; }
+
+.modal {
+  background: linear-gradient(135deg, #0f1117 0%, #141620 100%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: .5rem;
+  border-radius: 8px;
+  transition: all .2s;
+}
+
+.modal-close:hover {
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+}
+
+.modal-close svg { width: 20px; height: 20px; }
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Ticket Details */
+.ticket-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-item {
+  background: rgba(255,255,255,.03);
+  padding: .75rem 1rem;
+  border-radius: 8px;
+}
+
+.detail-label {
+  font-size: .7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: .2rem;
+}
+
+.detail-value { font-weight: 500; }
+
+/* Actions */
+.admin-actions {
+  display: flex;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(99,76,255,.05);
+  border: 1px solid rgba(99,76,255,.15);
+  border-radius: 12px;
+}
+
+.action-btn {
+  padding: .6rem 1rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: .85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.action-btn svg { width: 16px; height: 16px; }
+
+.btn-claim {
+  background: var(--accent);
+  border: none;
+  color: white;
+}
+
+.btn-claim:hover { background: var(--accent2); }
+
+.btn-schedule {
+  background: rgba(139,92,246,.2);
+  border: 1px solid rgba(139,92,246,.3);
+  color: #c4b5fd;
+}
+
+.btn-schedule:hover { background: rgba(139,92,246,.3); }
+
+.btn-status {
+  background: rgba(59,130,246,.2);
+  border: 1px solid rgba(59,130,246,.3);
+  color: #93c5fd;
+}
+
+.btn-status:hover { background: rgba(59,130,246,.3); }
+
+.btn-approve {
+  background: rgba(34,197,94,.2);
+  border: 1px solid rgba(34,197,94,.3);
+  color: #86efac;
+}
+
+.btn-approve:hover { background: rgba(34,197,94,.3); }
+
+.btn-reject {
+  background: rgba(239,68,68,.2);
+  border: 1px solid rgba(239,68,68,.3);
+  color: #fca5a5;
+}
+
+.btn-reject:hover { background: rgba(239,68,68,.3); }
+
+/* Chat */
+.chat-section h3 {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.chat-container {
+  background: rgba(0,0,0,.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.chat-messages {
+  height: 250px;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+
+.chat-message {
+  max-width: 80%;
+  padding: .6rem 1rem;
+  border-radius: 10px;
+  font-size: .85rem;
+}
+
+.chat-message.user {
+  background: rgba(99,76,255,.2);
+  border: 1px solid rgba(99,76,255,.3);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-message.staff {
+  background: var(--accent);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message.system {
+  background: rgba(255,255,255,.05);
+  align-self: center;
+  font-size: .75rem;
+  color: var(--sub);
+}
+
+.chat-sender {
+  font-size: .7rem;
+  font-weight: 600;
+  margin-bottom: .2rem;
+  opacity: .8;
+}
+
+.chat-time {
+  font-size: .65rem;
+  opacity: .6;
+  margin-top: .2rem;
+}
+
+.chat-input-wrap {
+  display: flex;
+  gap: .5rem;
+  padding: .75rem;
+  border-top: 1px solid var(--border);
+}
+
+.chat-input {
+  flex: 1;
+  padding: .6rem .9rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: .85rem;
+}
+
+.chat-input:focus { outline: none; border-color: var(--accent); }
+
+.chat-send {
+  padding: .6rem 1rem;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+.chat-send svg { width: 16px; height: 16px; }
+
+/* Schedule Dropdown */
+.schedule-form {
+  display: none;
+  padding: 1rem;
+  background: rgba(139,92,246,.05);
+  border: 1px solid rgba(139,92,246,.15);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.schedule-form.show { display: block; }
+
+.schedule-form input {
+  padding: .6rem .9rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  margin-right: .5rem;
+}
+
+.schedule-form button {
+  padding: .6rem 1rem;
+  background: #8b5cf6;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+/* Result Form */
+.result-form {
+  display: none;
+  padding: 1rem;
+  background: rgba(34,197,94,.05);
+  border: 1px solid rgba(34,197,94,.15);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.result-form.show { display: block; }
+
+.result-form select, .result-form input {
+  padding: .6rem .9rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  margin-right: .5rem;
+}
+
+.result-form select option { background: #1a1d2e; }
+
+.result-form button {
+  padding: .6rem 1rem;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  margin-right: .5rem;
+}
+
+.btn-pass { background: #22c55e; }
+.btn-fail { background: #ef4444; }
+
+/* Empty State */
 .empty-state {
-  text-align: center; padding: 3rem; color: var(--muted);
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted);
 }
 
-.admin-only { display: none; }
-body.role-admin .admin-only { display: block; }
-body.role-admin .admin-only-flex { display: flex; }
+.empty-state svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  opacity: .5;
+}
 
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Main Tabs */
+.main-tabs {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: .5rem;
+}
+
+.main-tab {
+  padding: .6rem 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--sub);
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition: all .2s;
+}
+
+.main-tab:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.main-tab.active { color: var(--accent); background: rgba(99,76,255,.1); border-bottom: 2px solid var(--accent); }
+
+.tab-content { display: block; }
+
+/* Responsive */
 @media (max-width: 768px) {
-  .data-table { display: block; overflow-x: auto; }
-  .set-tier-form { flex-direction: column; }
-  .form-group { width: 100%; }
+  .ticket-row { grid-template-columns: auto 1fr auto; }
+  .ticket-tier, .ticket-time { display: none; }
+  .ticket-details-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>
 </head>
 <body>
 
-<header class="page-header">
-  <div class="header-left">
-    <a href="/" class="header-logo">
-      <img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt=""/>
-      Moon<span class="dot">·</span>Tiers
-    </a>
-    <nav class="header-nav">
-      <a href="/" class="header-link">Clasificación</a>
-      <a href="/tickets.html" class="header-link">Tickets</a>
-      <a href="/admin.html" class="header-link active">Panel</a>
-    </nav>
-  </div>
-  <div class="user-pill" onclick="window.location.href='/tickets.html'">
-    <img id="userAvatar" src="" alt=""/>
-    <span id="userName">...</span>
-  </div>
+<!-- HEADER -->
+<header>
+  <nav>
+    <div class="nav-logo-wrap">
+      <a class="nav-logo" href="/">
+        <img class="nav-logo-img" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt=""/>
+        Moon<span class="nav-dot">·</span>Tiers
+      </a>
+    </div>
+    <ul class="nav-links">
+      <li><a class="nav-a" href="/">Clasificación</a></li>
+      <li><a class="nav-a" href="/admin.html" style="color:var(--accent)">Panel Staff</a></li>
+    </ul>
+    <div class="nav-search-wrap">
+      <div class="user-badge">
+        <img class="user-avatar" id="userAvatar" src="" alt=""/>
+        <div>
+          <div class="user-name" id="userName">...</div>
+          <div class="user-role" id="userRole">Staff</div>
+        </div>
+        <button class="btn-logout" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </nav>
 </header>
 
-<div class="page-container">
-  <div class="main-content">
-    <div class="page-title-row">
-      <h1 class="page-title"><span class="icon">⚙️</span>Panel de Control</h1>
-      <span class="role-badge" id="roleBadge">cargando</span>
+<div class="admin-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Panel de Staff
+    </h1>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card open">
+      <div class="stat-value" id="statOpen">0</div>
+      <div class="stat-label">Tickets Abiertos</div>
+    </div>
+    <div class="stat-card progress">
+      <div class="stat-value" id="statProgress">0</div>
+      <div class="stat-label">En Progreso</div>
+    </div>
+    <div class="stat-card scheduled">
+      <div class="stat-value" id="statScheduled">0</div>
+      <div class="stat-label">Programados</div>
+    </div>
+    <div class="stat-card completed">
+      <div class="stat-value" id="statCompleted">0</div>
+      <div class="stat-label">Completados</div>
+    </div>
+  </div>
+
+  <!-- Main Tabs (Admin only sees Users/Logs) -->
+  <div class="main-tabs" id="mainTabs">
+    <button class="main-tab active" data-tab="tickets">🎫 Tickets</button>
+    <button class="main-tab admin-only" data-tab="users" style="display:none">👥 Usuarios</button>
+    <button class="main-tab admin-only" data-tab="logs" style="display:none">📋 Logs</button>
+  </div>
+
+  <!-- TICKETS TAB -->
+  <div class="tab-content active" id="tabTickets">
+    <!-- Filters -->
+    <div class="filters">
+      <button class="filter-btn active" data-filter="">Todos</button>
+      <button class="filter-btn" data-filter="OPEN">Abiertos</button>
+      <button class="filter-btn" data-filter="IN_PROGRESS">En Progreso</button>
+      <button class="filter-btn" data-filter="SCHEDULED">Programados</button>
+      <button class="filter-btn" data-filter="TESTING">En Test</button>
+      <button class="filter-btn" data-filter="COMPLETED">Completados</button>
+      <button class="filter-btn" data-filter="CLOSED">Cerrados</button>
     </div>
 
-    <div class="alert" id="alertBox"></div>
-
-    <div class="tabs">
-      <button class="tab active" data-panel="tickets">📋 Tickets</button>
-      <button class="tab admin-only" data-panel="users">👥 Usuarios</button>
-      <button class="tab admin-only" data-panel="tiers">🏆 Gestionar Tiers</button>
-    </div>
-
-    <!-- Tickets Panel -->
-    <div class="panel active" id="panel-tickets">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="statPending">0</div>
-          <div class="stat-label">Pendientes</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="statScheduled">0</div>
-          <div class="stat-label">Programados</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="statCompleted">0</div>
-          <div class="stat-label">Completados</div>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <div class="section-header">
-          <span class="section-title">Todos los Tickets</span>
-          <span class="section-badge" id="ticketCount">0</span>
-        </div>
-        <div class="section-body" style="padding:0;overflow-x:auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Usuario</th>
-                <th>Kit</th>
-                <th>Tier</th>
-                <th>Estado</th>
-                <th>Tester</th>
-                <th>Fecha</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="ticketsTable"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Users Panel (Admin Only) -->
-    <div class="panel" id="panel-users">
-      <div class="section-card">
-        <div class="section-header">
-          <span class="section-title">Usuarios Registrados</span>
-          <span class="section-badge" id="userCount">0</span>
-        </div>
-        <div class="section-body" style="padding:0;overflow-x:auto">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Rol</th>
-                <th>Verificado</th>
-                <th>Registrado</th>
-                <th>Cambiar Rol</th>
-              </tr>
-            </thead>
-            <tbody id="usersTable"></tbody>
-          </table>
-        </div>
+    <!-- Ticket List -->
+    <div class="ticket-list" id="ticketList">
+      <div class="empty-state">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <p>No hay tickets</p>
       </div>
     </div>
+  </div>
 
-    <!-- Set Tier Panel (Admin Only) -->
-    <div class="panel" id="panel-tiers">
-      <div class="section-card">
-        <div class="section-header">
-          <span class="section-title">Establecer Tier Manualmente</span>
-        </div>
-        <div class="section-body">
-          <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.5rem">
-            Usa esta función para establecer directamente el tier de un jugador sin necesidad de test.
-          </p>
-          <form class="set-tier-form" id="setTierForm">
-            <div class="form-group">
-              <label>Nombre de usuario</label>
-              <input type="text" class="form-input" id="tierUsername" placeholder="Nombre exacto" required/>
-            </div>
-            <div class="form-group">
-              <label>Kit</label>
-              <select class="form-select" id="tierKit" required>
-                <option value="">Seleccionar...</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Tier</label>
-              <select class="form-select" id="tierLevel" required>
-                <option value="HT1">HT1 - High Tier 1</option>
-                <option value="HT2">HT2 - High Tier 2</option>
-                <option value="HT3">HT3 - High Tier 3</option>
-                <option value="LT5">LT5 - Low Tier 5</option>
-                <option value="LT4">LT4 - Low Tier 4</option>
-                <option value="LT3">LT3 - Low Tier 3</option>
-                <option value="LT2">LT2 - Low Tier 2</option>
-                <option value="LT1">LT1 - Low Tier 1</option>
-              </select>
-            </div>
-            <button type="submit" class="submit-btn">Establecer Tier</button>
-          </form>
+  <!-- USERS TAB (Admin only) -->
+  <div class="tab-content" id="tabUsers" style="display:none">
+    <div class="section-header" style="margin-bottom:1.5rem">
+      <h2 style="font-size:1.3rem;margin-bottom:.5rem">👥 Usuarios Registrados</h2>
+      <p style="color:var(--sub);font-size:.9rem">Gestiona las cuentas de usuarios de la web</p>
+    </div>
+    <div class="users-table-wrap" style="overflow-x:auto">
+      <table class="users-table" style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:.75rem;color:var(--sub);font-size:.8rem">Usuario</th>
+            <th style="text-align:left;padding:.75rem;color:var(--sub);font-size:.8rem">Rol</th>
+            <th style="text-align:left;padding:.75rem;color:var(--sub);font-size:.8rem">Registrado</th>
+            <th style="text-align:left;padding:.75rem;color:var(--sub);font-size:.8rem">Última IP</th>
+            <th style="text-align:center;padding:.75rem;color:var(--sub);font-size:.8rem">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LOGS TAB (Admin only) -->
+  <div class="tab-content" id="tabLogs" style="display:none">
+    <div class="section-header" style="margin-bottom:1.5rem">
+      <h2 style="font-size:1.3rem;margin-bottom:.5rem">📋 Registro de Actividad</h2>
+      <p style="color:var(--sub);font-size:.9rem">Últimas acciones en el sistema</p>
+    </div>
+    <div class="logs-list" id="logsList">
+      <div class="empty-state">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <p>No hay logs</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKET MODAL -->
+<div class="modal-overlay" id="ticketModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+        <span id="modalTitle">Ticket</span>
+      </div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="ticket-details-grid" id="ticketDetails"></div>
+
+      <!-- Admin Actions -->
+      <div class="admin-actions" id="adminActions">
+        <button class="action-btn btn-claim" id="btnClaim" onclick="claimTicket()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Asignarme
+        </button>
+        <button class="action-btn btn-schedule" onclick="toggleSchedule()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Programar
+        </button>
+        <button class="action-btn btn-status" onclick="setStatus('TESTING')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Iniciar Test
+        </button>
+        <button class="action-btn btn-approve" onclick="toggleResult()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Resultado
+        </button>
+        <button class="action-btn btn-reject" onclick="setStatus('CLOSED')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Cerrar
+        </button>
+      </div>
+
+      <!-- Schedule Form -->
+      <div class="schedule-form" id="scheduleForm">
+        <label style="font-size:.85rem;color:var(--sub);margin-right:.5rem;">Fecha y hora:</label>
+        <input type="datetime-local" id="scheduleDateTime"/>
+        <button onclick="submitSchedule()">Confirmar</button>
+      </div>
+
+      <!-- Result Form -->
+      <div class="result-form" id="resultForm">
+        <label style="font-size:.85rem;color:var(--sub);margin-right:.5rem;">Nuevo Tier:</label>
+        <select id="resultTier">
+          <option value="HT5">HT5</option>
+          <option value="HT4">HT4</option>
+          <option value="HT3">HT3</option>
+          <option value="HT2">HT2</option>
+          <option value="HT1">HT1</option>
+          <option value="LT5">LT5</option>
+          <option value="LT4">LT4</option>
+          <option value="LT3">LT3</option>
+          <option value="LT2">LT2</option>
+          <option value="LT1">LT1</option>
+        </select>
+        <button class="btn-pass" onclick="submitResult(true)">✓ Aprobado</button>
+        <button class="btn-fail" onclick="submitResult(false)">✗ No Aprobado</button>
+      </div>
+
+      <!-- Chat -->
+      <div class="chat-section">
+        <h3>💬 Chat con Usuario</h3>
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages"></div>
+          <div class="chat-input-wrap">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Responder al usuario..."/>
+            <button class="chat-send" onclick="sendMessage()">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -351,187 +815,393 @@ body.role-admin .admin-only-flex { display: flex; }
 <script>
 const API_BASE = '';
 let currentUser = null;
+let currentTicket = null;
+let allTickets = [];
 
+// Check auth
 async function checkAuth() {
-  const session = localStorage.getItem('session');
-  if (!session) { window.location.href = '/login.html'; return; }
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return;
+  }
 
   try {
-    const res = await fetch(API_BASE + '/api/auth/me', {
-      headers: { 'Authorization': 'Bearer ' + session }
+    const res = await fetch(API_BASE + '/api/auth/session', {
+      headers: { 'Authorization': 'Bearer ' + token }
     });
     const data = await res.json();
-    if (data.error || (data.role !== 'admin' && data.role !== 'tester')) {
-      window.location.href = '/tickets.html';
+    
+    if (!data.valid || data.role === 'user') {
+      if (data.role === 'user') {
+        window.location.href = '/tickets.html';
+      } else {
+        localStorage.removeItem('auth_token');
+        window.location.href = '/login.html';
+      }
       return;
     }
+
     currentUser = data;
-    document.body.classList.add('role-' + data.role);
     document.getElementById('userName').textContent = data.username;
-    document.getElementById('userAvatar').src = `https://mc-heads.net/avatar/${data.username}/28`;
+    document.getElementById('userRole').textContent = data.role === 'admin' ? 'Administrador' : 'Tester';
+    document.getElementById('userAvatar').src = 'https://mc-heads.net/avatar/' + data.uuid + '/36';
     
-    const badge = document.getElementById('roleBadge');
-    badge.textContent = data.role;
-    badge.className = 'role-badge ' + data.role;
+    // Show admin-only tabs if admin
+    if (data.role === 'admin') {
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+    }
     
-    loadKits();
     loadTickets();
-    if (data.role === 'admin') loadUsers();
   } catch (err) {
-    window.location.href = '/login.html';
+    console.error(err);
   }
 }
 
-// Tabs
-document.querySelectorAll('.tab').forEach(tab => {
+// Tab switching
+document.querySelectorAll('.main-tab').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+    
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    const tabName = tab.dataset.tab;
+    if (tabName === 'tickets') {
+      document.getElementById('tabTickets').style.display = '';
+    } else if (tabName === 'users') {
+      document.getElementById('tabUsers').style.display = '';
+      loadUsers();
+    } else if (tabName === 'logs') {
+      document.getElementById('tabLogs').style.display = '';
+      loadLogs();
+    }
   });
 });
 
-async function loadKits() {
-  try {
-    const res = await fetch(API_BASE + '/api/kits');
-    const kits = await res.json();
-    const select = document.getElementById('tierKit');
-    kits.forEach(k => {
-      const opt = document.createElement('option');
-      opt.value = k;
-      opt.textContent = k;
-      select.appendChild(opt);
-    });
-  } catch (err) {}
-}
-
-async function loadTickets() {
-  try {
-    const res = await fetch(API_BASE + '/api/tickets/list', {
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('session') }
-    });
-    const tickets = await res.json();
-    
-    document.getElementById('ticketCount').textContent = tickets.length;
-    document.getElementById('statPending').textContent = tickets.filter(t => t.status === 'pending').length;
-    document.getElementById('statScheduled').textContent = tickets.filter(t => t.status === 'scheduled').length;
-    document.getElementById('statCompleted').textContent = tickets.filter(t => t.status === 'completed').length;
-    
-    const tbody = document.getElementById('ticketsTable');
-    if (tickets.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No hay tickets</td></tr>';
-      return;
-    }
-    
-    const statusText = { pending: 'Pendiente', scheduled: 'Agendado', in_progress: 'En Progreso', completed: 'Completado' };
-    tbody.innerHTML = tickets.map(t => `
-      <tr>
-        <td><code style="font-size:.75rem">${t.id}</code></td>
-        <td>
-          <div class="user-cell">
-            <img src="https://mc-heads.net/avatar/${t.username}/28" alt=""/>
-            <span>${t.username}</span>
-          </div>
-        </td>
-        <td>${t.kit}</td>
-        <td style="color:var(--accent2)">${t.targetTier}</td>
-        <td><span class="status-badge ${t.status}">${statusText[t.status] || t.status}</span></td>
-        <td>${t.assignedTester || '-'}</td>
-        <td style="font-size:.8rem;color:var(--muted)">${new Date(t.createdAt).toLocaleDateString('es-ES')}</td>
-        <td><button class="action-btn-sm" onclick="window.location.href='/ticket.html?id=${t.id}'">Ver</button></td>
-      </tr>
-    `).join('');
-  } catch (err) {}
-}
-
+// Load users (admin only)
 async function loadUsers() {
+  const token = localStorage.getItem('auth_token');
   try {
     const res = await fetch(API_BASE + '/api/admin/users', {
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('session') }
+      headers: { 'Authorization': 'Bearer ' + token }
     });
     const users = await res.json();
     
-    document.getElementById('userCount').textContent = users.length;
-    
-    const tbody = document.getElementById('usersTable');
-    tbody.innerHTML = users.map(u => `
-      <tr>
-        <td>
-          <div class="user-cell">
-            <img src="https://mc-heads.net/avatar/${u.username}/28" alt=""/>
-            <span>${u.username}</span>
-          </div>
-        </td>
-        <td><span class="role-badge ${u.role}">${u.role}</span></td>
-        <td>${u.verified ? '✓ Sí' : '✗ No'}</td>
-        <td style="font-size:.8rem;color:var(--muted)">${new Date(u.createdAt).toLocaleDateString('es-ES')}</td>
-        <td>
-          <select class="role-select" onchange="changeRole('${u.username}', this.value)">
-            <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuario</option>
-            <option value="tester" ${u.role === 'tester' ? 'selected' : ''}>Tester</option>
-            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
-          </select>
-        </td>
-      </tr>
-    `).join('');
-  } catch (err) {}
-}
-
-async function changeRole(username, role) {
-  try {
-    const res = await fetch(API_BASE + '/api/admin/set-role', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('session')
-      },
-      body: JSON.stringify({ username, role })
-    });
-    if (res.ok) {
-      showAlert('Rol actualizado', 'success');
+    const tbody = document.getElementById('usersTableBody');
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">No hay usuarios</td></tr>';
+      return;
     }
+    
+    tbody.innerHTML = users.map(u => {
+      const date = new Date(u.registeredAt).toLocaleDateString('es-ES');
+      const roleColor = u.role === 'admin' ? '#f59e0b' : u.role === 'tester' ? '#8b5cf6' : '#6b7280';
+      return `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:.75rem;display:flex;align-items:center;gap:.5rem">
+            <img src="https://mc-heads.net/avatar/${u.uuid}/24" style="width:24px;height:24px;border-radius:4px;image-rendering:pixelated"/>
+            ${u.username}
+          </td>
+          <td style="padding:.75rem"><span style="color:${roleColor};font-weight:500">${u.role.toUpperCase()}</span></td>
+          <td style="padding:.75rem;color:var(--sub)">${date}</td>
+          <td style="padding:.75rem;font-family:'Geist Mono',monospace;font-size:.8rem;color:var(--muted)">${u.lastIp}</td>
+          <td style="padding:.75rem;text-align:center">
+            <button onclick="resetSessions('${u.username}')" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:#93c5fd;padding:.3rem .6rem;border-radius:4px;font-size:.75rem;cursor:pointer;margin-right:.25rem" title="Cerrar sesiones">🔄</button>
+            <button onclick="deleteUser('${u.username}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;padding:.3rem .6rem;border-radius:4px;font-size:.75rem;cursor:pointer" title="Eliminar">🗑️</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   } catch (err) {
-    showAlert('Error al cambiar rol', 'error');
+    console.error(err);
   }
 }
 
-document.getElementById('setTierForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const username = document.getElementById('tierUsername').value.trim();
-  const kit = document.getElementById('tierKit').value;
-  const tier = document.getElementById('tierLevel').value;
-
+// Load logs (admin only)
+async function loadLogs() {
+  const token = localStorage.getItem('auth_token');
   try {
-    const res = await fetch(API_BASE + '/api/admin/set-tier', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('session')
-      },
-      body: JSON.stringify({ username, kit, tier })
+    const res = await fetch(API_BASE + '/api/admin/logs', {
+      headers: { 'Authorization': 'Bearer ' + token }
     });
+    const logs = await res.json();
     
-    const data = await res.json();
-    if (data.error) {
-      showAlert(data.error, 'error');
-    } else {
-      showAlert(`Tier de ${username} en ${kit} establecido a ${tier}`, 'success');
-      document.getElementById('setTierForm').reset();
+    const list = document.getElementById('logsList');
+    if (logs.length === 0) {
+      list.innerHTML = '<div class="empty-state"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><p>No hay logs</p></div>';
+      return;
     }
+    
+    const typeColors = {
+      'LOGIN': '#22c55e', 'VERIFY': '#3b82f6', 'LOGOUT': '#6b7280',
+      'USER_DELETE': '#ef4444', 'SESSION_RESET': '#f59e0b', 'ROLE_CHANGE': '#8b5cf6'
+    };
+    
+    list.innerHTML = logs.map(log => {
+      const date = new Date(log.timestamp).toLocaleString('es-ES', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const color = typeColors[log.type] || '#6b7280';
+      return `
+        <div style="background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:1rem">
+          <span style="background:${color}22;color:${color};padding:.2rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600">${log.type}</span>
+          <span style="font-weight:500">${log.username}</span>
+          <span style="color:var(--sub);flex:1">${log.details}</span>
+          <span style="color:var(--muted);font-size:.8rem">${date}</span>
+        </div>
+      `;
+    }).join('');
   } catch (err) {
-    showAlert('Error de conexión', 'error');
+    console.error(err);
   }
+}
+
+// Admin actions
+async function resetSessions(username) {
+  if (!confirm('¿Cerrar todas las sesiones de ' + username + '?')) return;
+  const token = localStorage.getItem('auth_token');
+  try {
+    await fetch(API_BASE + '/api/admin/user', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, action: 'reset_sessions' })
+    });
+    loadUsers();
+    loadLogs();
+  } catch (err) { console.error(err); }
+}
+
+async function deleteUser(username) {
+  if (!confirm('¿ELIMINAR la cuenta de ' + username + '? Esta acción no se puede deshacer.')) return;
+  const token = localStorage.getItem('auth_token');
+  try {
+    await fetch(API_BASE + '/api/admin/user', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, action: 'delete' })
+    });
+    loadUsers();
+    loadLogs();
+  } catch (err) { console.error(err); }
+}
+
+function logout() {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  window.location.href = '/login.html';
+}
+
+// Filters
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTickets(btn.dataset.filter);
+  });
 });
 
-function showAlert(msg, type) {
-  const box = document.getElementById('alertBox');
-  box.textContent = msg;
-  box.className = 'alert show ' + type;
-  setTimeout(() => box.classList.remove('show'), 4000);
+// Load tickets
+async function loadTickets() {
+  const token = localStorage.getItem('auth_token');
+  
+  try {
+    const res = await fetch(API_BASE + '/api/tickets/list', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    allTickets = await res.json();
+    
+    // Update stats
+    document.getElementById('statOpen').textContent = allTickets.filter(t => t.status === 'OPEN').length;
+    document.getElementById('statProgress').textContent = allTickets.filter(t => t.status === 'IN_PROGRESS').length;
+    document.getElementById('statScheduled').textContent = allTickets.filter(t => t.status === 'SCHEDULED' || t.status === 'TESTING').length;
+    document.getElementById('statCompleted').textContent = allTickets.filter(t => t.status === 'COMPLETED').length;
+    
+    renderTickets('');
+  } catch (err) {
+    console.error(err);
+  }
 }
 
+function renderTickets(filter) {
+  const list = document.getElementById('ticketList');
+  let tickets = allTickets;
+  
+  if (filter) {
+    tickets = allTickets.filter(t => t.status === filter);
+  }
+  
+  if (tickets.length === 0) {
+    list.innerHTML = '<div class="empty-state"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>No hay tickets</p></div>';
+    return;
+  }
+  
+  list.innerHTML = tickets.map(t => {
+    const date = new Date(t.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return `
+      <a class="ticket-row" href="/ticket-view.html?id=${t.id}">
+        <div class="ticket-status" style="background:${t.statusColor}"></div>
+        <div class="ticket-info">
+          <div class="ticket-id">${t.id}</div>
+          <div class="ticket-user">
+            <img src="https://mc-heads.net/avatar/${t.username}/20" alt=""/>
+            ${t.username}
+          </div>
+          <div class="ticket-meta">${t.kit} • ${t.preferredSlot}${t.assignedTester ? ' • Tester: ' + t.assignedTester : ''}</div>
+        </div>
+        <div class="ticket-tier">${t.requestedTier}</div>
+        <span class="ticket-badge" style="background:${t.statusColor}22;color:${t.statusColor}">${t.statusDisplay}</span>
+        <div class="ticket-time">${date}</div>
+      </a>
+    `;
+  }).join('');
+}
+
+// Open ticket
+async function openTicket(ticketId) {
+  const token = localStorage.getItem('auth_token');
+  
+  try {
+    const res = await fetch(API_BASE + '/api/tickets/view?id=' + ticketId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    currentTicket = await res.json();
+    
+    document.getElementById('modalTitle').textContent = currentTicket.id + ' — ' + currentTicket.username;
+    document.getElementById('ticketDetails').innerHTML = `
+      <div class="detail-item"><div class="detail-label">Usuario</div><div class="detail-value">${currentTicket.username}</div></div>
+      <div class="detail-item"><div class="detail-label">Kit</div><div class="detail-value">${currentTicket.kit}</div></div>
+      <div class="detail-item"><div class="detail-label">Tier Solicitado</div><div class="detail-value">${currentTicket.requestedTier}</div></div>
+      <div class="detail-item"><div class="detail-label">Horario Preferido</div><div class="detail-value">${currentTicket.preferredSlot}</div></div>
+      <div class="detail-item"><div class="detail-label">Estado</div><div class="detail-value" style="color:${currentTicket.statusColor}">${currentTicket.statusDisplay}</div></div>
+      <div class="detail-item"><div class="detail-label">Tester</div><div class="detail-value">${currentTicket.assignedTester || 'Sin asignar'}</div></div>
+      ${currentTicket.scheduledTime ? '<div class="detail-item"><div class="detail-label">Programado</div><div class="detail-value">' + currentTicket.scheduledTime + '</div></div>' : ''}
+      ${currentTicket.notes ? '<div class="detail-item" style="grid-column:1/-1"><div class="detail-label">Notas</div><div class="detail-value">' + currentTicket.notes + '</div></div>' : ''}
+      ${currentTicket.resultTier ? '<div class="detail-item" style="grid-column:1/-1"><div class="detail-label">Resultado</div><div class="detail-value" style="color:#22c55e">✓ ' + currentTicket.resultTier + '</div></div>' : ''}
+    `;
+    
+    // Update claim button
+    const claimBtn = document.getElementById('btnClaim');
+    if (currentTicket.assignedTester) {
+      claimBtn.textContent = 'Asignado: ' + currentTicket.assignedTester;
+      claimBtn.disabled = true;
+    } else {
+      claimBtn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Asignarme';
+      claimBtn.disabled = false;
+    }
+    
+    // Load chat
+    const chatDiv = document.getElementById('chatMessages');
+    chatDiv.innerHTML = currentTicket.messages.map(m => {
+      const time = new Date(m.timestamp).toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+      if (m.sender === 'system') {
+        return '<div class="chat-message system">' + m.message + '<div class="chat-time">' + time + '</div></div>';
+      }
+      const isStaff = m.sender.toLowerCase() === currentUser.username.toLowerCase();
+      return '<div class="chat-message ' + (isStaff ? 'staff' : 'user') + '"><div class="chat-sender">' + m.sender + '</div>' + m.message + '<div class="chat-time">' + time + '</div></div>';
+    }).join('');
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+    
+    // Hide forms
+    document.getElementById('scheduleForm').classList.remove('show');
+    document.getElementById('resultForm').classList.remove('show');
+    
+    document.getElementById('ticketModal').classList.add('show');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function closeModal() {
+  document.getElementById('ticketModal').classList.remove('show');
+  currentTicket = null;
+}
+
+// Actions
+async function claimTicket() {
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id })
+  });
+  loadTickets();
+  openTicket(currentTicket.id);
+}
+
+async function setStatus(status) {
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id, status })
+  });
+  loadTickets();
+  openTicket(currentTicket.id);
+}
+
+function toggleSchedule() {
+  document.getElementById('scheduleForm').classList.toggle('show');
+  document.getElementById('resultForm').classList.remove('show');
+}
+
+function toggleResult() {
+  document.getElementById('resultForm').classList.toggle('show');
+  document.getElementById('scheduleForm').classList.remove('show');
+  document.getElementById('resultTier').value = currentTicket.requestedTier;
+}
+
+async function submitSchedule() {
+  const dateTime = document.getElementById('scheduleDateTime').value;
+  if (!dateTime) return;
+  
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id, dateTime })
+  });
+  loadTickets();
+  openTicket(currentTicket.id);
+}
+
+async function submitResult(passed) {
+  const newTier = document.getElementById('resultTier').value;
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id, passed, newTier })
+  });
+  loadTickets();
+  openTicket(currentTicket.id);
+}
+
+// Chat
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message || !currentTicket) return;
+  
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id, message })
+  });
+  input.value = '';
+  openTicket(currentTicket.id);
+}
+
+document.getElementById('chatInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+// Close on overlay
+document.getElementById('ticketModal').addEventListener('click', (e) => {
+  if (e.target.id === 'ticketModal') closeModal();
+});
+
+// Init
 checkAuth();
 </script>
+
 </body>
 </html>

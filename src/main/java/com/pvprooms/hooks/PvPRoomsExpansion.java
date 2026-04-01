@@ -55,7 +55,9 @@ public class PvPRoomsExpansion extends PlaceholderExpansion {
 
     @Override
     public boolean persist() {
-        return true;
+        // false = unregistered when plugin disables/reloads so we never hold
+        // a stale plugin reference that would NPE and show the literal placeholder.
+        return false;
     }
 
     @Override
@@ -63,33 +65,47 @@ public class PvPRoomsExpansion extends PlaceholderExpansion {
         if (offlinePlayer == null) return "";
         UUID uuid = offlinePlayer.getUniqueId();
 
+        try {
+            return resolve(uuid, params);
+        } catch (Exception e) {
+            // Never return null from a matched placeholder — null causes PAPI to show the literal text.
+            plugin.getLogger().warning("[PAPI] Error resolving %pvprooms_" + params + "%: " + e.getMessage());
+            return "";
+        }
+    }
+
+    private @Nullable String resolve(UUID uuid, String params) {
+        if (plugin.getTierManager() == null) return "";
+
         // Tier placeholders
         if (params.equalsIgnoreCase("tier")) {
             Tier tier = plugin.getTierManager().getBestTier(uuid);
-            return tier.displayName;
+            return tier != null ? tier.displayName : "?";
         }
         if (params.equalsIgnoreCase("tier_formatted")) {
             Tier tier = plugin.getTierManager().getBestTier(uuid);
-            return tier.colour + tier.displayName;
+            return tier != null ? tier.colour + tier.displayName : "§7?";
         }
         if (params.equalsIgnoreCase("tier_color")) {
             Tier tier = plugin.getTierManager().getBestTier(uuid);
-            return tier.colour;
+            return tier != null ? tier.colour : "§7";
         }
         if (params.equalsIgnoreCase("tier_bracket")) {
             Tier tier = plugin.getTierManager().getBestTier(uuid);
-            if (tier == Tier.UNRANKED) {
+            if (tier == null || tier == Tier.UNRANKED) {
                 return "§8[§7?§8]";
             }
             return "§8[" + tier.colour + tier.displayName + "§8]";
         }
-        
+
         // Kit-specific tier: tier_<kit>
-        if (params.startsWith("tier_") && !params.equals("tier_formatted") && 
-            !params.equals("tier_color") && !params.equals("tier_bracket")) {
+        if (params.startsWith("tier_")
+                && !params.equalsIgnoreCase("tier_formatted")
+                && !params.equalsIgnoreCase("tier_color")
+                && !params.equalsIgnoreCase("tier_bracket")) {
             String kit = params.substring(5);
             Tier tier = plugin.getTierManager().getTier(uuid, kit);
-            return tier.displayName;
+            return tier != null ? tier.displayName : "?";
         }
 
         // ELO
@@ -127,8 +143,9 @@ public class PvPRoomsExpansion extends PlaceholderExpansion {
             return String.valueOf(plugin.getStatsManager().getStats(uuid).deaths());
         }
         if (params.equalsIgnoreCase("kdr") || params.equalsIgnoreCase("kd")) {
-            double kdr = plugin.getStatsManager().getStats(uuid).getKDR();
-            return String.format("%.2f", kdr);
+            var stats = plugin.getStatsManager().getStats(uuid);
+            if (!stats.hasKDR()) return "\u2014";
+            return String.format("%.2f", stats.getKDR());
         }
         if (params.equalsIgnoreCase("winrate")) {
             var stats = plugin.getStatsManager().getStats(uuid);

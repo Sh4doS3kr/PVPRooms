@@ -7,8 +7,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 /**
- * Command for verifying web account registration.
- * Usage: /verify <9-digit-code>
+ * Command to verify web account registration.
+ * Usage: /verificar <9-digit-code>
  */
 public class VerifyCommand implements CommandExecutor {
 
@@ -19,33 +19,40 @@ public class VerifyCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage("§cEste comando solo puede ser usado por jugadores.");
             return true;
         }
 
         if (args.length != 1) {
-            player.sendMessage(plugin.prefix() + "§cUso: /verify <código>");
-            player.sendMessage(plugin.prefix() + "§7Obtén tu código en la página web al registrarte.");
+            player.sendMessage(plugin.prefix() + "§cUso: /verificar <código>");
+            player.sendMessage(plugin.prefix() + "§7El código de 9 dígitos lo obtienes en la web al registrarte.");
             return true;
         }
 
-        String code = args[0];
+        String code = args[0].trim();
         
         // Validate code format (9 digits)
         if (!code.matches("\\d{9}")) {
-            player.sendMessage(plugin.prefix() + "§cCódigo inválido. Debe ser de 9 dígitos.");
+            player.sendMessage(plugin.prefix() + "§cEl código debe ser de 9 dígitos numéricos.");
             return true;
         }
 
-        boolean success = plugin.getTicketManager().verifyCode(player, code);
-        
-        if (!success) {
-            player.sendMessage(plugin.prefix() + "§cCódigo incorrecto o ya usado.");
-            player.sendMessage(plugin.prefix() + "§7Asegúrate de usar tu nombre exacto al registrarte.");
+        var ticketManager = plugin.getTicketManager();
+        if (ticketManager == null) {
+            player.sendMessage(plugin.prefix() + "§cSistema no disponible.");
+            return true;
         }
-        // Success message is sent by the TicketManager
+
+        boolean verified = ticketManager.verifyCode(player, code);
+        
+        if (!verified) {
+            player.sendMessage(plugin.prefix() + "§cCódigo inválido o expirado.");
+            player.sendMessage(plugin.prefix() + "§7Los códigos expiran después de 10 minutos.");
+            player.sendMessage(plugin.prefix() + "§7Asegúrate de usar el mismo nombre que registraste en la web.");
+        }
+        // Success message is sent by TicketManager
 
         return true;
     }

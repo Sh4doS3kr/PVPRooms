@@ -28,10 +28,20 @@ public class BotManager {
     private final Map<UUID, BotDuel> activeBotDuels = new HashMap<>();
     private final Map<UUID, NPC> playerBots = new HashMap<>();
     private boolean citizensEnabled = false;
+    private AdaptiveAI adaptiveAI;
 
     public BotManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
+        this.adaptiveAI = new AdaptiveAI(plugin);
         checkCitizens();
+    }
+    
+    public AdaptiveAI getAdaptiveAI() {
+        return adaptiveAI;
+    }
+    
+    public void saveAdaptiveData() {
+        if (adaptiveAI != null) adaptiveAI.save();
     }
 
     private void checkCitizens() {
@@ -177,6 +187,9 @@ public class BotManager {
             NPCRegistry registry = CitizensAPI.getNPCRegistry();
             String botName = getBotName(difficulty);
             NPC bot = registry.createNPC(EntityType.PLAYER, botName);
+            
+            // Spawn at a temporary safe location first, then teleport to exact position
+            // This prevents Citizens from adjusting Y to "highest safe block"
             bot.spawn(botSpawn);
             
             // Store bot reference
@@ -185,6 +198,17 @@ public class BotManager {
             
             // Give bot the kit equipment
             equipBot(bot, kitName);
+            
+            // Force teleport to exact spawn position AFTER Citizens finishes spawn logic
+            // Using a 2-tick delay ensures the entity is fully initialized
+            final Location exactSpawn = botSpawn.clone();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (bot.isSpawned() && bot.getEntity() != null) {
+                    bot.getEntity().teleport(exactSpawn);
+                    plugin.getLogger().info("[BotDuel] Bot force-teleported to exact spawn: " + 
+                        exactSpawn.getBlockX() + "," + exactSpawn.getBlockY() + "," + exactSpawn.getBlockZ());
+                }
+            }, 2L);
             
             // Prepare player
             player.getInventory().clear();
@@ -203,13 +227,13 @@ public class BotManager {
             player.sendMessage(plugin.prefix() + "§6⚔ Práctica vs Bot " + difficulty.displayName);
             player.sendMessage(plugin.prefix() + "§7Kit: §e" + kitName + " §7| §cNo afecta ELO/Tier");
 
-            startCountdown(player, bot, botDuel);
+            startCountdown(player, bot, botDuel, playerSpawn, botSpawn);
         }, 40L); // 2 second delay for proper chunk loading
 
         return true;
     }
 
-    private void startCountdown(Player player, NPC bot, BotDuel botDuel) {
+    private void startCountdown(Player player, NPC bot, BotDuel botDuel, Location playerSpawn, Location botSpawn) {
         new BukkitRunnable() {
             int count = 3;
 
@@ -235,23 +259,32 @@ public class BotManager {
                     // Mark duel as active
                     botDuel.active = true;
                     
-                    // Open arena wall (like in regular duels)
+                    // Open arena walls
                     World instanceWorld = Bukkit.getWorld(botDuel.instanceWorldName);
-                    plugin.getLogger().info("[BotDuel] Opening walls - Template: " + botDuel.template.getName() + 
-                            ", World: " + botDuel.instanceWorldName + ", WorldExists: " + (instanceWorld != null));
                     if (instanceWorld != null) {
-                        plugin.getWallManager().animateOpen(
-                                botDuel.template.getName(), instanceWorld);
-                    } else {
-                        plugin.getLogger().warning("[BotDuel] Instance world is NULL! Cannot open walls.");
+                        String arenaName = botDuel.template.getName();
+                        if (plugin.getWallManager().hasWalls(arenaName)) {
+                            plugin.getWallManager().animateOpen(arenaName, instanceWorld);
+                        } else {
+                            // No WallManager config – force-clear barrier/glass blocks
+                            // between the two spawn points so player and bot aren't trapped
+                            forceClearWalls(instanceWorld, playerSpawn, botSpawn);
+                        }
                     }
                     
                     // Show bot duel scoreboard
                     showBotDuelScoreboard(player, botDuel);
                     
-                    // Start bot AI
-                    BotCombatAI ai = new BotCombatAI(plugin, bot, player, 
-                            botDuel.difficulty, botDuel.kitName);
+                    // Start bot AI (with adaptive parameters if ADAPTIVE mode)
+                    BotCombatAI ai;
+                    if (botDuel.difficulty == BotDifficulty.ADAPTIVE) {
+                        // Use learned player profile
+                        AdaptiveAI.BotParameters params = adaptiveAI.toBotParameters(player.getUniqueId());
+                        ai = new BotCombatAI(plugin, bot, player, botDuel.difficulty, botDuel.kitName, params);
+                        adaptiveAI.startLearningSession(player);
+                    } else {
+                        ai = new BotCombatAI(plugin, bot, player, botDuel.difficulty, botDuel.kitName, null);
+                    }
                     botDuel.setAI(ai);
                     ai.start();
                     
@@ -264,6 +297,53 @@ public class BotManager {
         }.runTaskTimer(plugin, 0L, 20L);
     }
 
+    /**
+     * Fallback for arenas with no WallManager config.
+     * Scans the bounding box around both spawns and removes any solid
+     * wall-type blocks (barriers, glass variants, iron bars, chain, etc.)
+     * that could trap players or the bot.
+     */
+    private void forceClearWalls(World world, Location spawn1, Location spawn2) {
+        // Typical wall materials used in PvP arenas
+        Set<org.bukkit.Material> wallMaterials = Set.of(
+            org.bukkit.Material.BARRIER,
+            org.bukkit.Material.GLASS,
+            org.bukkit.Material.GLASS_PANE,
+            org.bukkit.Material.IRON_BARS,
+            org.bukkit.Material.WHITE_STAINED_GLASS,
+            org.bukkit.Material.WHITE_STAINED_GLASS_PANE,
+            org.bukkit.Material.GRAY_STAINED_GLASS,
+            org.bukkit.Material.GRAY_STAINED_GLASS_PANE,
+            org.bukkit.Material.BLACK_STAINED_GLASS,
+            org.bukkit.Material.BLACK_STAINED_GLASS_PANE,
+            org.bukkit.Material.LIGHT_BLUE_STAINED_GLASS,
+            org.bukkit.Material.LIGHT_BLUE_STAINED_GLASS_PANE
+        );
+
+        int minX = Math.min(spawn1.getBlockX(), spawn2.getBlockX()) - 8;
+        int maxX = Math.max(spawn1.getBlockX(), spawn2.getBlockX()) + 8;
+        int minY = Math.min(spawn1.getBlockY(), spawn2.getBlockY()) - 1;
+        int maxY = Math.max(spawn1.getBlockY(), spawn2.getBlockY()) + 6;
+        int minZ = Math.min(spawn1.getBlockZ(), spawn2.getBlockZ()) - 8;
+        int maxZ = Math.max(spawn1.getBlockZ(), spawn2.getBlockZ()) + 8;
+
+        int cleared = 0;
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    org.bukkit.block.Block block = world.getBlockAt(x, y, z);
+                    if (wallMaterials.contains(block.getType())) {
+                        block.setType(org.bukkit.Material.AIR, false);
+                        cleared++;
+                    }
+                }
+            }
+        }
+        if (cleared > 0) {
+            plugin.getLogger().info("[BotDuel] Cleared " + cleared + " wall block(s) in arena (no WallManager config).");
+        }
+    }
+
     private String getBotName(BotDifficulty difficulty) {
         // NO color codes - they cause death message errors in Paper
         return switch (difficulty) {
@@ -271,6 +351,7 @@ public class BotManager {
             case MEDIUM -> "Bot_Medio";
             case HARD -> "Bot_Dificil";
             case HACKER -> "Bot_Hacker";
+            case ADAPTIVE -> "Bot_Adaptivo";
         };
     }
 
@@ -405,10 +486,38 @@ public class BotManager {
     }
 
     /**
+     * Returns true if the player is in a bot duel that hasn't started yet (countdown phase).
+     */
+    public boolean isInBotCountdown(UUID uuid) {
+        BotDuel duel = activeBotDuels.get(uuid);
+        return duel != null && !duel.active;
+    }
+
+    /**
      * Get the bot NPC for a player's bot duel.
      */
     public NPC getPlayerBot(UUID uuid) {
         return playerBots.get(uuid);
+    }
+
+    /**
+     * Get all currently active bot NPCs (for filtering broadcast messages).
+     */
+    public Collection<NPC> getAllActiveBots() {
+        return playerBots.values();
+    }
+
+    /**
+     * Find a bot duel by the bot NPC.
+     */
+    public BotDuel getBotDuelByBot(NPC bot) {
+        if (bot == null) return null;
+        for (Map.Entry<UUID, NPC> entry : playerBots.entrySet()) {
+            if (entry.getValue().getId() == bot.getId()) {
+                return activeBotDuels.get(entry.getKey());
+            }
+        }
+        return null;
     }
 
     /** Players who disconnected during a bot duel */

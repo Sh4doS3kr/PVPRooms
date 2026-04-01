@@ -1,6 +1,7 @@
 package com.pvprooms.listeners;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.model.Tier;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -13,10 +14,13 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
 import java.lang.reflect.Method;
+import java.util.UUID;
 
 /**
  * Chat manager that formats all chat messages.
- * Format: [LuckPerms prefix] username >> message
+ * Format: [Tier] [LuckPerms prefix] username >> message
+ * 
+ * Placeholder for tier: %pvptiers_tier% or use getTierPrefix(player)
  */
 public class ChatListener implements Listener {
 
@@ -38,17 +42,23 @@ public class ChatListener implements Listener {
         Player player = event.getPlayer();
         Component message = event.message();
 
+        // Get tier prefix (e.g., §c[HT5])
+        String tierPrefix = getTierPrefix(player.getUniqueId());
+        
         // Get LuckPerms prefix
-        String prefix = getLuckPermsPrefix(player);
+        String lpPrefix = getLuckPermsPrefix(player);
 
         // Build the formatted message
-        // Format: [prefix] (space) username >> message
+        // Format: [Tier] [LuckPerms prefix] username >> message
         Component formatted = Component.empty();
 
-        // Add prefix if exists (with colors from LuckPerms, supports hex)
-        if (prefix != null && !prefix.isEmpty()) {
-            formatted = formatted.append(LEGACY.deserialize(prefix));
-            // Add 1 space between prefix and username
+        // Add tier prefix first (e.g., [HT5] with tier color)
+        formatted = formatted.append(LEGACY.deserialize(tierPrefix));
+        formatted = formatted.append(Component.text(" "));
+
+        // Add LuckPerms prefix if exists
+        if (lpPrefix != null && !lpPrefix.isEmpty()) {
+            formatted = formatted.append(LEGACY.deserialize(lpPrefix));
             formatted = formatted.append(Component.text(" "));
         }
 
@@ -77,6 +87,38 @@ public class ChatListener implements Listener {
 
         // Also log to console
         Bukkit.getConsoleSender().sendMessage(formatted);
+    }
+    
+    /**
+     * Gets the tier prefix for a player.
+     * Format: [TIER] with tier color (e.g., §c[HT5], §a[LT3])
+     * 
+     * Use this as placeholder: %pvptiers_tier%
+     */
+    public String getTierPrefix(UUID uuid) {
+        Tier tier = plugin.getTierManager().getBestTier(uuid);
+        if (tier == null || tier == Tier.UNRANKED) {
+            return "§7[?]";
+        }
+        return tier.colour + "[" + tier.displayName + "]";
+    }
+    
+    /**
+     * Gets the full tier display string for external use.
+     * Returns: "HT5" or "LT3" etc.
+     */
+    public static String getTierDisplay(PvPRoomsPro plugin, UUID uuid) {
+        Tier tier = plugin.getTierManager().getBestTier(uuid);
+        return tier != null ? tier.displayName : "?";
+    }
+    
+    /**
+     * Gets the tier color code for external use.
+     * Returns: "§c" for HT, "§a" for LT, etc.
+     */
+    public static String getTierColor(PvPRoomsPro plugin, UUID uuid) {
+        Tier tier = plugin.getTierManager().getBestTier(uuid);
+        return tier != null ? tier.colour : "§7";
     }
 
     /**

@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Moon Tiers — Ver Ticket</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+/* ═══ TICKET VIEW PAGE ═══════════════════════════════════════════════════ */
+.ticket-page {
+  min-height: calc(100vh - 58px);
+  background: linear-gradient(180deg, rgba(99,76,255,.03) 0%, transparent 40%);
+}
+
+.ticket-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* Back Link */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--sub);
+  font-size: .9rem;
+  margin-bottom: 1.5rem;
+  transition: all .2s;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--accent);
+  transform: translateX(-4px);
+}
+
+.back-link svg { width: 18px; height: 18px; }
+
+/* Ticket Header */
+.ticket-header {
+  background: linear-gradient(135deg, rgba(15,17,23,.95) 0%, rgba(20,22,30,.98) 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.ticket-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--status-color, var(--accent));
+}
+
+.ticket-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ticket-header-left {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.ticket-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 2px solid var(--border2);
+  image-rendering: pixelated;
+}
+
+.ticket-main-info h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: .2rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.ticket-id-badge {
+  font-family: 'Geist Mono', monospace;
+  font-size: .65rem;
+  font-weight: 500;
+  background: rgba(99,76,255,.15);
+  color: var(--accent2);
+  padding: .15rem .4rem;
+  border-radius: 4px;
+  letter-spacing: .3px;
+}
+
+.ticket-subject {
+  color: var(--sub);
+  font-size: .85rem;
+}
+
+.ticket-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .5rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .4rem .85rem;
+  border-radius: 50px;
+  font-size: .75rem;
+  font-weight: 600;
+  background: var(--status-bg, rgba(99,76,255,.15));
+  color: var(--status-color, var(--accent));
+  border: 1px solid var(--status-border, rgba(99,76,255,.25));
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-status 2s infinite;
+}
+
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .5; transform: scale(.8); }
+}
+
+.ticket-date {
+  font-size: .7rem;
+  color: var(--muted);
+}
+
+/* Details Grid */
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .6rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.detail-card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .6rem .75rem;
+  transition: all .2s;
+}
+
+.detail-card:hover {
+  background: rgba(255,255,255,.04);
+  border-color: var(--border2);
+}
+
+.detail-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(99,76,255,.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .4rem;
+}
+
+.detail-icon svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
+}
+
+.detail-icon img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+}
+
+.detail-label {
+  font-size: .6rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: .15rem;
+}
+
+.detail-value {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.detail-value.tier {
+  color: var(--accent2);
+  font-family: 'Geist Mono', monospace;
+}
+
+/* Chat Section */
+.chat-section {
+  background: linear-gradient(135deg, rgba(15,17,23,.95) 0%, rgba(20,22,30,.98) 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: .6rem .85rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-header h2 {
+  font-size: .85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.chat-header h2 svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+
+.msg-count {
+  font-size: .75rem;
+  color: var(--muted);
+  background: rgba(255,255,255,.05);
+  padding: .3rem .7rem;
+  border-radius: 50px;
+}
+
+/* Messages */
+.chat-messages {
+  padding: .75rem;
+  min-height: 150px;
+  max-height: 350px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.message {
+  display: flex;
+  gap: .5rem;
+  max-width: 85%;
+}
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user { align-self: flex-start; }
+.message.staff { align-self: flex-end; flex-direction: row-reverse; }
+.message.system { 
+  align-self: center; 
+  max-width: 100%;
+}
+
+.msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.msg-content {
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .5rem .75rem;
+}
+
+.message.user .msg-content {
+  border-bottom-left-radius: 4px;
+  background: rgba(99,76,255,.08);
+  border-color: rgba(99,76,255,.2);
+}
+
+.message.staff .msg-content {
+  border-bottom-right-radius: 4px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border: none;
+  color: white;
+}
+
+.message.system .msg-content {
+  background: rgba(34,197,94,.08);
+  border-color: rgba(34,197,94,.2);
+  text-align: center;
+  font-size: .75rem;
+  color: #86efac;
+}
+
+.msg-sender {
+  font-size: .7rem;
+  font-weight: 600;
+  margin-bottom: .2rem;
+  opacity: .85;
+}
+
+.msg-text {
+  font-size: .8rem;
+  line-height: 1.4;
+}
+
+.msg-time {
+  font-size: .6rem;
+  opacity: .5;
+  margin-top: .3rem;
+  text-align: right;
+}
+
+/* Chat Input */
+.chat-input-section {
+  padding: .6rem .85rem .85rem;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,.2);
+}
+
+.chat-input-wrap {
+  display: flex;
+  gap: .5rem;
+  align-items: flex-end;
+}
+
+.chat-input {
+  flex: 1;
+  padding: .6rem .85rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: .85rem;
+  resize: none;
+  min-height: 38px;
+  max-height: 100px;
+  transition: all .2s;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255,255,255,.08);
+  box-shadow: 0 0 0 3px rgba(99,76,255,.1);
+}
+
+.chat-input::placeholder { color: var(--muted); }
+
+.send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+
+.send-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(99,76,255,.4);
+}
+
+.send-btn:active { transform: scale(.95); }
+
+.send-btn svg { width: 16px; height: 16px; }
+
+/* Closed Ticket Notice */
+.closed-notice {
+  padding: 1rem;
+  background: rgba(239,68,68,.08);
+  border-top: 1px solid rgba(239,68,68,.2);
+  text-align: center;
+}
+
+.closed-notice p {
+  color: #fca5a5;
+  font-size: .8rem;
+  margin-bottom: .5rem;
+}
+
+.closed-notice .closed-icon {
+  font-size: 1.5rem;
+  margin-bottom: .5rem;
+}
+
+.completed-notice {
+  padding: 1rem;
+  background: rgba(34,197,94,.08);
+  border-top: 1px solid rgba(34,197,94,.2);
+  text-align: center;
+}
+
+.completed-notice p {
+  color: #86efac;
+  font-size: .8rem;
+  margin-bottom: .5rem;
+}
+
+.completed-notice .completed-icon {
+  font-size: 1.5rem;
+  margin-bottom: .5rem;
+}
+
+/* Result Banner */
+.result-banner {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem 2rem;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.result-banner.approved {
+  background: linear-gradient(135deg, rgba(34,197,94,.1) 0%, rgba(34,197,94,.05) 100%);
+  border: 1px solid rgba(34,197,94,.25);
+}
+
+.result-banner.rejected {
+  background: linear-gradient(135deg, rgba(239,68,68,.1) 0%, rgba(239,68,68,.05) 100%);
+  border: 1px solid rgba(239,68,68,.25);
+}
+
+.result-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.result-banner.approved .result-icon { background: rgba(34,197,94,.2); }
+.result-banner.rejected .result-icon { background: rgba(239,68,68,.2); }
+
+.result-info h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: .25rem;
+}
+
+.result-banner.approved .result-info h3 { color: #86efac; }
+.result-banner.rejected .result-info h3 { color: #fca5a5; }
+
+.result-info p {
+  font-size: .85rem;
+  color: var(--sub);
+}
+
+.result-tier {
+  margin-left: auto;
+  font-family: 'Geist Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #86efac;
+  background: rgba(34,197,94,.15);
+  padding: .5rem 1.25rem;
+  border-radius: 10px;
+}
+
+/* Schedule Banner */
+.schedule-banner {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, rgba(139,92,246,.1) 0%, rgba(139,92,246,.05) 100%);
+  border: 1px solid rgba(139,92,246,.25);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.schedule-banner svg {
+  width: 24px;
+  height: 24px;
+  color: #c4b5fd;
+}
+
+.schedule-banner span {
+  color: #c4b5fd;
+  font-weight: 500;
+}
+
+.schedule-banner strong {
+  color: white;
+  font-family: 'Geist Mono', monospace;
+}
+
+/* Admin Actions */
+.admin-actions {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: .75rem 1rem;
+  background: linear-gradient(135deg, rgba(99,76,255,.08) 0%, rgba(99,76,255,.03) 100%);
+  border: 1px solid rgba(99,76,255,.2);
+  border-radius: 10px;
+}
+
+.action-btn {
+  padding: .5rem .9rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: .75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  text-decoration: none;
+}
+
+.action-btn svg { width: 14px; height: 14px; }
+
+.btn-claim {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border: none;
+  color: white;
+}
+.btn-claim:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99,76,255,.3); }
+
+.btn-schedule {
+  background: rgba(139,92,246,.15);
+  border: 1px solid rgba(139,92,246,.3);
+  color: #c4b5fd;
+}
+.btn-schedule:hover { background: rgba(139,92,246,.25); }
+
+.btn-status {
+  background: rgba(6,182,212,.15);
+  border: 1px solid rgba(6,182,212,.3);
+  color: #67e8f9;
+}
+.btn-status:hover { background: rgba(6,182,212,.25); }
+
+.btn-approve {
+  background: rgba(34,197,94,.15);
+  border: 1px solid rgba(34,197,94,.3);
+  color: #86efac;
+}
+.btn-approve:hover { background: rgba(34,197,94,.25); }
+
+.btn-reject {
+  background: rgba(239,68,68,.15);
+  border: 1px solid rgba(239,68,68,.3);
+  color: #fca5a5;
+}
+.btn-reject:hover { background: rgba(239,68,68,.25); }
+
+/* Forms */
+.action-form {
+  display: none;
+  padding: 1.25rem;
+  background: rgba(0,0,0,.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+.action-form.show { display: block; animation: fadeIn .2s ease; }
+
+.action-form label {
+  font-size: .85rem;
+  color: var(--sub);
+  margin-right: .75rem;
+}
+
+.action-form input, .action-form select {
+  padding: .6rem 1rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  margin-right: .75rem;
+}
+
+.action-form select option { background: #1a1d2e; }
+
+.action-form button {
+  padding: .6rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  margin-right: .5rem;
+}
+
+.btn-confirm { background: var(--accent); }
+.btn-pass { background: #22c55e; }
+.btn-fail { background: #ef4444; }
+
+/* Empty Chat */
+.empty-chat {
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted);
+}
+
+.empty-chat svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  opacity: .4;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  gap: 1rem;
+  color: var(--sub);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .ticket-header { padding: 1rem; }
+  .ticket-header-top { flex-direction: column; align-items: flex-start; }
+  .ticket-header-right { align-items: flex-start; margin-top: .5rem; }
+  .details-grid { grid-template-columns: 1fr 1fr; }
+  .message { max-width: 95%; }
+  .result-banner { flex-wrap: wrap; }
+  .result-tier { margin-left: 0; margin-top: .5rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <nav>
+    <div class="nav-logo-wrap">
+      <a class="nav-logo" href="/">
+        <img class="nav-logo-img" src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt=""/>
+        Moon<span class="nav-dot">·</span>Tiers
+      </a>
+    </div>
+    <ul class="nav-links">
+      <li><a class="nav-a" href="/">Clasificación</a></li>
+      <li><a class="nav-a" href="/tickets.html" style="color:var(--accent)">Mis Tickets</a></li>
+    </ul>
+    <div class="nav-search-wrap">
+      <a href="/tickets.html" class="auth-btn logged-in" id="authBtn">
+        <img id="userAvatar" src="" style="width:20px;height:20px;border-radius:4px;image-rendering:pixelated;">
+        <span id="userName">...</span>
+      </a>
+    </div>
+  </nav>
+</header>
+
+<div class="ticket-page">
+  <div class="ticket-container">
+    
+    <a href="/tickets.html" class="back-link" id="backLink">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      <span id="backText">Volver a Mis Tickets</span>
+    </a>
+
+    <div id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <span>Cargando ticket...</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API_BASE = '';
+let currentUser = null;
+let currentTicket = null;
+let refreshInterval = null;
+
+// Get ticket ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const ticketId = urlParams.get('id');
+
+// Format time in user's local timezone
+function formatLocalTime(timestamp) {
+  const date = new Date(timestamp);
+  return date.toLocaleString(undefined, { 
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+// Check auth
+async function checkAuth() {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return false;
+  }
+
+  try {
+    const res = await fetch(API_BASE + '/api/auth/session', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    
+    if (!data.valid) {
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login.html';
+      return false;
+    }
+
+    currentUser = data;
+    document.getElementById('userName').textContent = data.username;
+    document.getElementById('userAvatar').src = 'https://mc-heads.net/avatar/' + data.uuid + '/20';
+    
+    // Update back link for staff
+    if (data.role !== 'user') {
+      document.getElementById('backLink').href = '/admin.html';
+      document.getElementById('backText').textContent = 'Volver al Panel';
+    }
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
+
+// Load ticket
+async function loadTicket() {
+  if (!ticketId) {
+    window.location.href = '/tickets.html';
+    return;
+  }
+
+  const token = localStorage.getItem('auth_token');
+  
+  try {
+    const res = await fetch(API_BASE + '/api/tickets/view?id=' + ticketId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (!res.ok) {
+      document.getElementById('content').innerHTML = '<div class="loading"><span>Ticket no encontrado o sin permisos</span></div>';
+      return;
+    }
+    
+    currentTicket = await res.json();
+    renderTicket();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('content').innerHTML = '<div class="loading"><span>Error al cargar el ticket</span></div>';
+  }
+}
+
+function getStatusInfo(status) {
+  const statuses = {
+    'OPEN': { color: '#f59e0b', bg: 'rgba(245,158,11,.12)', border: 'rgba(245,158,11,.25)', text: 'Abierto' },
+    'IN_PROGRESS': { color: '#3b82f6', bg: 'rgba(59,130,246,.12)', border: 'rgba(59,130,246,.25)', text: 'En Progreso' },
+    'SCHEDULED': { color: '#8b5cf6', bg: 'rgba(139,92,246,.12)', border: 'rgba(139,92,246,.25)', text: 'Programado' },
+    'TESTING': { color: '#06b6d4', bg: 'rgba(6,182,212,.12)', border: 'rgba(6,182,212,.25)', text: 'En Test' },
+    'COMPLETED': { color: '#22c55e', bg: 'rgba(34,197,94,.12)', border: 'rgba(34,197,94,.25)', text: 'Completado' },
+    'CLOSED': { color: '#ef4444', bg: 'rgba(239,68,68,.12)', border: 'rgba(239,68,68,.25)', text: 'Cerrado' }
+  };
+  return statuses[status] || statuses['OPEN'];
+}
+
+function renderTicket() {
+  const t = currentTicket;
+  const status = getStatusInfo(t.status);
+  const date = new Date(t.createdAt).toLocaleDateString('es-ES', { 
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+  });
+
+  let resultHtml = '';
+  if (t.status === 'COMPLETED' && t.resultTier) {
+    resultHtml = `
+      <div class="result-banner approved">
+        <div class="result-icon">🏆</div>
+        <div class="result-info">
+          <h3>¡Test Aprobado!</h3>
+          <p>Has conseguido tu nuevo tier. ¡Felicidades!</p>
+        </div>
+        <div class="result-tier">${t.resultTier}</div>
+      </div>
+    `;
+  } else if (t.status === 'CLOSED') {
+    resultHtml = `
+      <div class="result-banner rejected">
+        <div class="result-icon">📋</div>
+        <div class="result-info">
+          <h3>Ticket Cerrado</h3>
+          <p>Este ticket ha sido cerrado. Puedes crear uno nuevo cuando estés listo.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  let scheduleHtml = '';
+  // Don't show schedule banner if ticket is completed or closed
+  if (t.scheduledTime && t.status !== 'COMPLETED' && t.status !== 'CLOSED') {
+    scheduleHtml = `
+      <div class="schedule-banner">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>Test programado para <strong>${t.scheduledTime}</strong></span>
+      </div>
+    `;
+  }
+
+  const messagesHtml = t.messages.length > 0 
+    ? t.messages.map(m => {
+        const time = formatLocalTime(m.timestamp);
+        
+        if (m.sender === 'system') {
+          return `
+            <div class="message system">
+              <div class="msg-content">
+                <div class="msg-text">${m.message}</div>
+                <div class="msg-time">${time}</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        const isUser = m.sender.toLowerCase() === t.username.toLowerCase();
+        return `
+          <div class="message ${isUser ? 'user' : 'staff'}">
+            <img class="msg-avatar" src="https://mc-heads.net/avatar/${m.sender}/28" alt="${m.sender}">
+            <div class="msg-content">
+              <div class="msg-sender">${m.sender}</div>
+              <div class="msg-text">${m.message}</div>
+              <div class="msg-time">${time}</div>
+            </div>
+          </div>
+        `;
+      }).join('')
+    : `
+      <div class="empty-chat">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <p>No hay mensajes aún. ¡Inicia la conversación!</p>
+      </div>
+    `;
+
+  // Admin actions HTML - hide when completed or closed
+  let adminHtml = '';
+  if (currentUser.role !== 'user' && t.status !== 'COMPLETED' && t.status !== 'CLOSED') {
+    adminHtml = `
+      <div class="admin-actions">
+        <button class="action-btn btn-claim" id="btnClaim" onclick="claimTicket()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          ${t.assignedTester ? 'Asignado: ' + t.assignedTester : 'Asignarme'}
+        </button>
+        <button class="action-btn btn-schedule" onclick="toggleForm('schedule')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Programar
+        </button>
+        <button class="action-btn btn-status" onclick="setStatus('TESTING')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
+          Iniciar Test
+        </button>
+        <button class="action-btn btn-approve" onclick="toggleForm('result')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Resultado
+        </button>
+        <button class="action-btn btn-reject" onclick="setStatus('CLOSED')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Cerrar
+        </button>
+      </div>
+      
+      <div class="action-form" id="scheduleForm">
+        <label>Fecha y hora:</label>
+        <input type="datetime-local" id="scheduleDateTime"/>
+        <button class="btn-confirm" onclick="submitSchedule()">Confirmar</button>
+      </div>
+      
+      <div class="action-form" id="resultForm">
+        <label>Nuevo Tier:</label>
+        <select id="resultTier">
+          <option value="HT5">HT5</option>
+          <option value="HT4">HT4</option>
+          <option value="HT3">HT3</option>
+          <option value="HT2">HT2</option>
+          <option value="HT1">HT1</option>
+          <option value="LT5">LT5</option>
+          <option value="LT4">LT4</option>
+          <option value="LT3">LT3</option>
+          <option value="LT2">LT2</option>
+          <option value="LT1">LT1</option>
+        </select>
+        <button class="btn-pass" onclick="submitResult(true)">✓ Aprobado</button>
+        <button class="btn-fail" onclick="submitResult(false)">✗ No Aprobado</button>
+      </div>
+    `;
+  }
+
+  document.getElementById('content').innerHTML = `
+    ${resultHtml}
+    ${scheduleHtml}
+    ${adminHtml}
+    
+    <div class="ticket-header" style="--status-color: ${status.color}">
+      <div class="ticket-header-top">
+        <div class="ticket-header-left">
+          <img class="ticket-avatar" src="https://mc-heads.net/avatar/${t.username}/44" alt="${t.username}">
+          <div class="ticket-main-info">
+            <h1>
+              ${t.username}
+              <span class="ticket-id-badge">${t.id}</span>
+            </h1>
+            <p class="ticket-subject">Test para ${t.requestedTier} en ${t.kit}</p>
+          </div>
+        </div>
+        <div class="ticket-header-right">
+          <div class="status-badge" style="--status-bg: ${status.bg}; --status-color: ${status.color}; --status-border: ${status.border}">
+            <span class="status-dot"></span>
+            ${status.text}
+          </div>
+          <div class="ticket-date">Creado el ${date}</div>
+        </div>
+      </div>
+      
+      <div class="details-grid">
+        <div class="detail-card">
+          <div class="detail-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div class="detail-label">Kit</div>
+          <div class="detail-value">${t.kit}</div>
+        </div>
+        <div class="detail-card">
+          <div class="detail-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+          </div>
+          <div class="detail-label">Tier Solicitado</div>
+          <div class="detail-value tier">${t.requestedTier}</div>
+        </div>
+        <div class="detail-card">
+          <div class="detail-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div class="detail-label">Horario Preferido</div>
+          <div class="detail-value">${t.preferredSlot}</div>
+        </div>
+        <div class="detail-card">
+          <div class="detail-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </div>
+          <div class="detail-label">Tester Asignado</div>
+          <div class="detail-value">${t.assignedTester || 'Pendiente'}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="chat-section">
+      <div class="chat-header">
+        <h2>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          Conversación
+        </h2>
+        <span class="msg-count">${t.messages.length} mensajes</span>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        ${messagesHtml}
+      </div>
+      ${getInputSection(t.status)}
+    </div>
+  `;
+
+  // Scroll chat to bottom
+  const chatDiv = document.getElementById('chatMessages');
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+
+  // Auto-resize textarea (only if exists)
+  const textarea = document.getElementById('chatInput');
+  if (textarea) {
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    });
+    
+    textarea.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+}
+
+function getInputSection(status) {
+  if (status === 'CLOSED') {
+    return `
+      <div class="closed-notice">
+        <div class="closed-icon">🔒</div>
+        <p><strong>Ticket cerrado</strong></p>
+        <p>Este ticket ha sido cerrado. No se pueden enviar más mensajes.</p>
+      </div>
+    `;
+  }
+  if (status === 'COMPLETED') {
+    return `
+      <div class="completed-notice">
+        <div class="completed-icon">✅</div>
+        <p><strong>¡Test completado!</strong></p>
+        <p>Felicidades, tu tier ha sido actualizado.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="chat-input-section">
+      <div class="chat-input-wrap">
+        <textarea class="chat-input" id="chatInput" placeholder="Escribe tu mensaje..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendMessage()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message || !currentTicket) return;
+  
+  const token = localStorage.getItem('auth_token');
+  
+  try {
+    await fetch(API_BASE + '/api/tickets/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ ticketId: currentTicket.id, message })
+    });
+    input.value = '';
+    input.style.height = 'auto';
+    loadTicket();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Admin Actions
+function toggleForm(form) {
+  document.querySelectorAll('.action-form').forEach(f => f.classList.remove('show'));
+  const el = document.getElementById(form + 'Form');
+  if (el) el.classList.toggle('show');
+  if (form === 'result' && currentTicket) {
+    document.getElementById('resultTier').value = currentTicket.requestedTier;
+  }
+}
+
+async function claimTicket() {
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id })
+  });
+  loadTicket();
+}
+
+async function setStatus(status) {
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id, status })
+  });
+  loadTicket();
+}
+
+async function submitSchedule() {
+  const dateTime = document.getElementById('scheduleDateTime').value;
+  if (!dateTime) return;
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id, dateTime })
+  });
+  loadTicket();
+}
+
+async function submitResult(passed) {
+  const newTier = document.getElementById('resultTier').value;
+  const token = localStorage.getItem('auth_token');
+  await fetch(API_BASE + '/api/tickets/result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ticketId: currentTicket.id, passed, newTier })
+  });
+  loadTicket();
+}
+
+// Init
+async function init() {
+  const authed = await checkAuth();
+  if (authed) {
+    loadTicket();
+    // Auto-refresh chat every 3 seconds
+    refreshInterval = setInterval(() => {
+      if (currentTicket && currentTicket.status !== 'CLOSED' && currentTicket.status !== 'COMPLETED') {
+        refreshChat();
+      }
+    }, 3000);
+  }
+}
+
+// Refresh only chat messages (lightweight)
+async function refreshChat() {
+  const token = localStorage.getItem('auth_token');
+  try {
+    const res = await fetch(API_BASE + '/api/tickets/view?id=' + ticketId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    // Only update if message count changed
+    if (data.messages.length !== currentTicket.messages.length) {
+      currentTicket = data;
+      updateChatMessages();
+    }
+  } catch (err) { /* silent */ }
+}
+
+// Update only chat messages without full re-render
+function updateChatMessages() {
+  const t = currentTicket;
+  const chatDiv = document.getElementById('chatMessages');
+  if (!chatDiv) return;
+  
+  const messagesHtml = t.messages.length > 0 
+    ? t.messages.map(m => {
+        const time = formatLocalTime(m.timestamp);
+        
+        if (m.sender === 'system') {
+          return `
+            <div class="message system">
+              <div class="msg-content">
+                <div class="msg-text">${m.message}</div>
+                <div class="msg-time">${time}</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        const isUser = m.sender.toLowerCase() === t.username.toLowerCase();
+        return `
+          <div class="message ${isUser ? 'user' : 'staff'}">
+            <img class="msg-avatar" src="https://mc-heads.net/avatar/${m.sender}/28" alt="${m.sender}">
+            <div class="msg-content">
+              <div class="msg-sender">${m.sender}</div>
+              <div class="msg-text">${m.message}</div>
+              <div class="msg-time">${time}</div>
+            </div>
+          </div>
+        `;
+      }).join('')
+    : `
+      <div class="empty-chat">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <p>No hay mensajes aún</p>
+      </div>
+    `;
+  
+  chatDiv.innerHTML = messagesHtml;
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+  
+  // Update message count
+  const countEl = document.querySelector('.msg-count');
+  if (countEl) countEl.textContent = t.messages.length + ' mensajes';
+}
+
+// Cleanup on page leave
+window.addEventListener('beforeunload', () => {
+  if (refreshInterval) clearInterval(refreshInterval);
+});
+
+init();
+</script>
+
+</body>
+</html>

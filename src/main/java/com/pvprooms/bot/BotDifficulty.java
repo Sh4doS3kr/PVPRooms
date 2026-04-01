@@ -10,10 +10,11 @@ public enum BotDifficulty {
     // Minecraft attack cooldown: 500ms (10 ticks)
     // Professional players hit ~70% of attacks
     
-    EASY("§aFácil", 500, 0.35, 0.3, 10, 50),      // Beginner player
-    MEDIUM("§eMedio", 350, 0.50, 0.45, 8, 40),    // Average player
-    HARD("§cDifícil", 280, 0.62, 0.55, 6, 30),    // Skilled player (human-like)
-    HACKER("§4§lHACKER", 80, 0.92, 0.85, 2, 10);  // Inhuman (for challenge)
+    EASY("§aFácil", 600, 0.70, 0.25, 4, 50),        // Beginner - slower but still attacks
+    MEDIUM("§eMedio", 500, 0.80, 0.35, 3, 40),     // Average player - consistent attacks
+    HARD("§cDifícil", 400, 0.90, 0.45, 2, 30),     // Skilled player - fast and accurate
+    HACKER("§4§lHACKER", 250, 0.95, 0.60, 1, 20),  // Pro level - very aggressive
+    ADAPTIVE("§d§lAdaptivo", 450, 0.85, 0.40, 3, 35); // Learns from player
 
     public final String displayName;
     public final int reactionTimeMs;      // How fast bot reacts (humans: 200-300ms)

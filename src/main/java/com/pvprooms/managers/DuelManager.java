@@ -39,6 +39,9 @@ public class DuelManager {
 
     /** Players frozen during countdown (only arenas without walls) */
     private final Set<UUID> frozenPlayers = ConcurrentHashMap.newKeySet();
+    
+    /** Tracks ELO wins for trim key rewards (every 2 wins = 1 key) */
+    private final Map<UUID, Integer> eloWinsForKey = new ConcurrentHashMap<>();
 
     public DuelManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -80,16 +83,22 @@ public class DuelManager {
             return;
         }
 
-        // ID único de partida (UUID corto para el nombre del mundo)
-        String matchId = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
-        String instanceWorldName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchId;
+        // Try to borrow a pre-created pool world (fast, no HDD copy needed)
+        World instanceWorld = plugin.getWorldPoolManager().borrowWorld(template);
+        String instanceWorldName;
 
-        // Clonar mundo plantilla — cada pareja obtiene su propia copia
-        World instanceWorld = plugin.getArenaInstanceManager().createInstance(template, matchId);
-        if (instanceWorld == null) {
-            p1.sendMessage(plugin.prefix() + "§cError al crear la instancia de arena. Contacta a un admin.");
-            p2.sendMessage(plugin.prefix() + "§cError al crear la instancia de arena. Contacta a un admin.");
-            return;
+        if (instanceWorld != null) {
+            instanceWorldName = instanceWorld.getName();
+        } else {
+            // Pool empty — fall back to on-demand copy
+            String matchId = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+            instanceWorldName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchId;
+            instanceWorld = plugin.getArenaInstanceManager().createInstance(template, matchId);
+            if (instanceWorld == null) {
+                p1.sendMessage(plugin.prefix() + "§cError al crear la instancia de arena. Contacta a un admin.");
+                p2.sendMessage(plugin.prefix() + "§cError al crear la instancia de arena. Contacta a un admin.");
+                return;
+            }
         }
 
         Duel duel = new Duel(uuid1, uuid2, kitName, instanceWorldName, template);
@@ -273,6 +282,9 @@ public class DuelManager {
                 int[] changes = plugin.getEloManager().processResult(
                         winnerUUID, winnerName, loserUUID, loserName);
                 announceResult(p1, p2, winnerUUID, loserUUID, duel.getKitName(), changes[0], changes[1]);
+                
+                // Give trim key every 2 ELO wins
+                giveTrimKeyReward(winner, winnerUUID);
             }
         }
 
@@ -302,12 +314,16 @@ public class DuelManager {
         if (p1 != null) plugin.getScoreboardManager().restoreLobbyScoreboard(p1);
         if (p2 != null) plugin.getScoreboardManager().restoreLobbyScoreboard(p2);
 
-        // Destroy arena instance (delayed 1 tick to let teleports process)
-        String worldName = duel.getInstanceWorldName();
+        // Destroy or return the arena world to the pool
+        String worldName = duel.getCurrentWorldName();
         new BukkitRunnable() {
             @Override
             public void run() {
-                plugin.getArenaInstanceManager().destroyInstance(worldName);
+                if (plugin.getWorldPoolManager().isPoolWorld(worldName)) {
+                    plugin.getWorldPoolManager().returnWorld(worldName, duel.getArenaTemplate());
+                } else {
+                    plugin.getArenaInstanceManager().destroyInstance(worldName);
+                }
             }
         }.runTaskLater(plugin, 5L);
     }
@@ -344,7 +360,7 @@ public class DuelManager {
 
         // Round result chat message
         String roundMsg = plugin.prefix()
-                + "§e⚔ Ronda " + round + ": §6§l" + winnerName
+                + "§e⚔ §6§l" + winnerName
                 + " §egana! §8[§a" + w1 + "§7-§c" + w2 + "§8]";
         if (p1 != null) p1.sendMessage(roundMsg);
         if (p2 != null) p2.sendMessage(roundMsg);
@@ -362,7 +378,7 @@ public class DuelManager {
             Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
             Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
             String topLine = "§a" + fw1 + " §8▶ §c" + fw2;
-            String subLine = "§f" + winnerName + " §7gana la ronda";
+            String subLine = "§f" + winnerName + " §7gana";
             if (rp1 != null) sendTitle(rp1, topLine, subLine, 80);
             if (rp2 != null) sendTitle(rp2, topLine, subLine, 80);
         }, 4L); // 4 ticks ≈ 0.2s
@@ -384,29 +400,65 @@ public class DuelManager {
             duel.setDurationTask(-1);
         }
 
-        World world = Bukkit.getWorld(duel.getInstanceWorldName());
-        if (world != null) plugin.getWallManager().animateClose(duel.getArenaTemplate().getName(), world);
+        String oldWorldName = duel.getCurrentWorldName();
+        World oldWorld = Bukkit.getWorld(oldWorldName);
+        if (oldWorld != null) plugin.getWallManager().animateClose(duel.getArenaTemplate().getName(), oldWorld);
 
-        // Prepare and start next countdown after title has had time to display
+        // Prepare state for next round
         duel.setState(Duel.State.COUNTDOWN);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+
+        // ── Try pool swap (instant — no HDD copy during the round) ──────────
+        World freshWorld = plugin.getWorldPoolManager().borrowWorld(duel.getArenaTemplate());
+        if (freshWorld != null) {
+            // Got a clean pool world immediately
+            String freshWorldName = freshWorld.getName();
+            duel.setCurrentWorldName(freshWorldName);
+
+            // Return the dirty world to pool for async reset
+            plugin.getWorldPoolManager().returnWorld(oldWorldName, duel.getArenaTemplate());
+
+            // Start next round right away
             Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
             Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
-            World w    = Bukkit.getWorld(duel.getInstanceWorldName());
-            if (rp1 == null || rp2 == null || w == null) {
+            if (rp1 == null || rp2 == null) {
                 UUID winner = rp1 != null ? duel.getPlayer1() : (rp2 != null ? duel.getPlayer2() : null);
                 endDuel(duel, winner, "disconnect");
                 return;
             }
             preparePlayer(rp1);
             preparePlayer(rp2);
-            rp1.teleport(duel.getArenaTemplate().getSpawn1(w));
-            rp2.teleport(duel.getArenaTemplate().getSpawn2(w));
+            rp1.teleport(duel.getArenaTemplate().getSpawn1(freshWorld));
+            rp2.teleport(duel.getArenaTemplate().getSpawn2(freshWorld));
             plugin.getKitManager().applyKit(rp1, duel.getKitName());
             plugin.getKitManager().applyKit(rp2, duel.getKitName());
             duel.setStartTimeMillis(System.currentTimeMillis());
-            startCountdown(duel, w);
-        }, 20L); // 1s delay lets score title display before next countdown
+            startCountdown(duel, freshWorld);
+            return;
+        }
+
+        // ── Fallback: reset current world in-place (pool empty) ─────────────
+        plugin.getArenaInstanceManager().resetInstance(
+                oldWorldName,
+                duel.getArenaTemplate(),
+                () -> {
+                    Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
+                    Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
+                    World w    = Bukkit.getWorld(duel.getCurrentWorldName());
+                    if (rp1 == null || rp2 == null || w == null) {
+                        UUID winner = rp1 != null ? duel.getPlayer1() : (rp2 != null ? duel.getPlayer2() : null);
+                        endDuel(duel, winner, "disconnect");
+                        return;
+                    }
+                    preparePlayer(rp1);
+                    preparePlayer(rp2);
+                    rp1.teleport(duel.getArenaTemplate().getSpawn1(w));
+                    rp2.teleport(duel.getArenaTemplate().getSpawn2(w));
+                    plugin.getKitManager().applyKit(rp1, duel.getKitName());
+                    plugin.getKitManager().applyKit(rp2, duel.getKitName());
+                    duel.setStartTimeMillis(System.currentTimeMillis());
+                    startCountdown(duel, w);
+                }
+        );
     }
 
     /** Ends a duel by looking up the duel from a player UUID. */
@@ -607,7 +659,7 @@ public class DuelManager {
 
     public Duel getDuelByWorldName(String worldName) {
         for (Duel duel : activeDuels.values()) {
-            if (duel.getInstanceWorldName().equals(worldName)) return duel;
+            if (duel.getCurrentWorldName().equals(worldName)) return duel;
         }
         return null;
     }
@@ -639,6 +691,8 @@ public class DuelManager {
     private final Map<UUID, String> ffaWorlds = new ConcurrentHashMap<>();
     /** FFA match ID -> kit name */
     private final Map<UUID, String> ffaKits = new ConcurrentHashMap<>();
+    /** FFA match ID -> arena template (for block/explosion permissions) */
+    private final Map<UUID, ArenaTemplate> ffaTemplates = new ConcurrentHashMap<>();
     
     /**
      * Starts a FFA match with multiple players.
@@ -668,6 +722,7 @@ public class DuelManager {
         ffaMatches.put(matchId, participantUUIDs);
         ffaWorlds.put(matchId, instanceWorldName);
         ffaKits.put(matchId, kitName);
+        ffaTemplates.put(matchId, arena);
         
         // Prepare and teleport all players
         Location spawn1 = arena.getSpawn1(instanceWorld);
@@ -804,6 +859,7 @@ public class DuelManager {
         Set<UUID> participants = ffaMatches.remove(matchId);
         String worldName = ffaWorlds.remove(matchId);
         String kitName = ffaKits.remove(matchId);
+        ffaTemplates.remove(matchId);
         
         if (participants != null) {
             for (UUID uuid : participants) {
@@ -843,6 +899,16 @@ public class DuelManager {
     /** Get FFA match ID for a player */
     public UUID getFFAMatchId(UUID uuid) {
         return playerFFAMap.get(uuid);
+    }
+    
+    /** Get ArenaTemplate for a FFA match by world name */
+    public ArenaTemplate getFFATemplateByWorldName(String worldName) {
+        for (Map.Entry<UUID, String> entry : ffaWorlds.entrySet()) {
+            if (entry.getValue().equals(worldName)) {
+                return ffaTemplates.get(entry.getKey());
+            }
+        }
+        return null;
     }
 
     // ── Inner class: Player snapshot ───────────────────────────────────────
@@ -884,6 +950,43 @@ public class DuelManager {
                 player.addPotionEffect(e);
             }
             player.updateInventory();
+        }
+    }
+    
+    // ── Trim Key Rewards ───────────────────────────────────────────────────
+    
+    /**
+     * Gives a trim key every 2 ELO wins.
+     * Tracks wins per player and rewards when threshold is reached.
+     */
+    private void giveTrimKeyReward(Player winner, UUID winnerUUID) {
+        if (winner == null) return;
+        
+        // Increment win counter
+        int wins = eloWinsForKey.getOrDefault(winnerUUID, 0) + 1;
+        eloWinsForKey.put(winnerUUID, wins);
+        
+        // Check if player has reached 2 wins
+        if (wins >= 2) {
+            // Reset counter
+            eloWinsForKey.put(winnerUUID, 0);
+            
+            // Give trim key
+            ItemStack key = com.pvprooms.model.TrimCrate.createKey();
+            
+            // Try to add to inventory, drop if full
+            if (winner.getInventory().firstEmpty() != -1) {
+                winner.getInventory().addItem(key);
+            } else {
+                winner.getWorld().dropItemNaturally(winner.getLocation(), key);
+            }
+            
+            // Notify player
+            winner.sendMessage(plugin.prefix() + "§a§l¡RECOMPENSA! §eHas ganado una §6Llave de Crate de Trims §epor 2 victorias en ELO!");
+            winner.playSound(winner.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
+        } else {
+            // Notify progress
+            winner.sendMessage(plugin.prefix() + "§7Progreso llave de trim: §e" + wins + "§7/§a2 §7victorias");
         }
     }
 }

@@ -68,6 +68,27 @@ public class KitGUI {
         player.openInventory(inv);
     }
 
+    /** Opens for /duel challenge kit selection with callback. */
+    public void openDuelChallengeKitSelection(Player player, java.util.function.Consumer<String> onKitSelected) {
+        Collection<Kit> kits = plugin.getKitManager().getAllKits();
+        if (kits.isEmpty()) {
+            player.sendMessage(plugin.prefix() + "§cNo hay kits disponibles.");
+            return;
+        }
+        int size = calculateSize(kits.size());
+        String title = ChatColor.translateAlternateColorCodes('&', "&8Elige kit para el reto");
+        Inventory inv = Bukkit.createInventory(new DuelChallengeKitHolder(onKitSelected), size, title);
+        int slot = 0;
+        for (Kit kit : kits) {
+            if (slot >= size) break;
+            inv.setItem(slot, buildDuelKitItem(kit));
+            slot++;
+        }
+        ItemStack filler = buildFiller();
+        for (int i = slot; i < size; i++) inv.setItem(i, filler);
+        player.openInventory(inv);
+    }
+
     private void openInternal(Player player, boolean tierMode) {
         Collection<Kit> kits = plugin.getKitManager().getAllKits();
         if (kits.isEmpty()) {

@@ -75,3 +75,11 @@ cooldowns:
   queue: 3
   # Cooldown in seconds between spectate uses
   spectate: 2
+
+discord:
+  # Enable Discord bot integration
+  enabled: true
+  # Discord bot token (get from Discord Developer Portal)
+  token: ""
+  # Guild ID where slash commands will be registered (instant instead of 1h delay)
+  guild-id: "1474155518942646394"

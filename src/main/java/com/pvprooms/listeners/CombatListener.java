@@ -13,8 +13,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerAnimationType;
 
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Handles combat events during duels.
@@ -28,9 +32,53 @@ import java.util.UUID;
 public class CombatListener implements Listener {
 
     private final PvPRoomsPro plugin;
+    
+    /** Tracks pending swings - if a swing doesn't result in a hit within 50ms, it's a miss */
+    private final Map<UUID, Long> pendingSwings = new ConcurrentHashMap<>();
 
     public CombatListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+    
+    // ── Swing tracking for accuracy ─────────────────────────────────────────
+    
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerSwing(PlayerAnimationEvent event) {
+        if (event.getAnimationType() != PlayerAnimationType.ARM_SWING) return;
+        
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        
+        // Only track swings during duels
+        if (!plugin.getDuelManager().isInDuel(uuid) && 
+            !plugin.getDuelManager().isInFFA(uuid) &&
+            (plugin.getBotManager() == null || !plugin.getBotManager().isInBotDuel(uuid))) {
+            return;
+        }
+        
+        // Record this swing as pending
+        long now = System.currentTimeMillis();
+        Long lastSwing = pendingSwings.put(uuid, now);
+        
+        // Check if previous swing was a miss (no hit recorded within 100ms)
+        if (lastSwing != null && now - lastSwing > 100) {
+            plugin.getStatsManager().recordMiss(uuid, player.getName());
+        }
+        
+        // Schedule check for this swing
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            Long swingTime = pendingSwings.get(uuid);
+            if (swingTime != null && swingTime == now) {
+                // This swing didn't result in a hit - record as miss
+                pendingSwings.remove(uuid);
+                plugin.getStatsManager().recordMiss(uuid, player.getName());
+            }
+        }, 2L); // 2 ticks = 100ms
+    }
+    
+    /** Called when a hit is recorded to clear the pending swing */
+    private void clearPendingSwing(UUID uuid) {
+        pendingSwings.remove(uuid);
     }
 
     // ── PvP damage control ─────────────────────────────────────────────────
@@ -130,6 +178,12 @@ public class CombatListener implements Listener {
             }
         }
 
+        // Record hit for accuracy tracking and clear pending swing
+        if (attacker != null) {
+            clearPendingSwing(attacker.getUniqueId());
+            plugin.getStatsManager().recordHit(attacker.getUniqueId(), attacker.getName());
+        }
+        
         // Damage is valid — update scoreboard for both players after 1 tick
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             Player p1 = plugin.getServer().getPlayer(victimDuel.getPlayer1());

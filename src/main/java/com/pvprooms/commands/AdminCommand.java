@@ -183,7 +183,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(plugin.prefix() + "§d§l⚡ TIERS ÉLITE (LT2+)");
             sender.sendMessage("§7Los tiers §cLT2, HT2, LT1, HT1 §7son de élite.");
             sender.sendMessage("§7Requieren verificación via ticket en:");
-            sender.sendMessage("§b§n discord.mlmc.lat");
+            sender.sendMessage("§b§n tiers.mlmc.lat/tickets.html");
             return;
         }
 
@@ -503,7 +503,20 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
 
     private void handleReload(CommandSender sender) {
         plugin.reloadConfig();
-        sender.sendMessage(plugin.prefix() + "§aconfig.yml recargado correctamente.");
+        
+        // Reload ALL data from files
+        plugin.getEloManager().loadElo();
+        plugin.getTierManager().load();
+        plugin.getStatsManager().load();
+        
+        int eloCount = plugin.getEloManager().getEloMap().size();
+        int tierCount = plugin.getTierManager().getPlayerCount();
+        
+        sender.sendMessage(plugin.prefix() + "§a¡Datos recargados!");
+        sender.sendMessage(plugin.prefix() + "§7- config.yml");
+        sender.sendMessage(plugin.prefix() + "§7- elo.yml §8(§e" + eloCount + "§8 jugadores)");
+        sender.sendMessage(plugin.prefix() + "§7- tiers.yml §8(§e" + tierCount + "§8 jugadores)");
+        sender.sendMessage(plugin.prefix() + "§7- stats.yml");
     }
 
     // ── Info ──────────────────────────────────────────────────────────────

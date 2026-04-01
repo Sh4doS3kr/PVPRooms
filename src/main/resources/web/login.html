@@ -15,18 +15,27 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: radial-gradient(ellipse at 50% 0%, rgba(99,76,255,.08) 0%, transparent 50%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(99,76,255,.08) 0%, transparent 60%);
 }
 
 .auth-card {
-  background: linear-gradient(145deg, rgba(15,17,23,.95), rgba(26,29,46,.9));
+  background: linear-gradient(135deg, rgba(15,17,23,.95) 0%, rgba(20,22,30,.98) 100%);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 2.5rem;
+  border-radius: 24px;
+  padding: 3rem;
   width: 100%;
-  max-width: 420px;
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,.5);
-  backdrop-filter: blur(20px);
+  max-width: 440px;
+  box-shadow: 0 25px 80px rgba(0,0,0,.5), 0 0 100px rgba(99,76,255,.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), #ec4899);
 }
 
 .auth-logo {
@@ -34,535 +43,413 @@
   align-items: center;
   justify-content: center;
   gap: .6rem;
-  margin-bottom: 2rem;
+  margin-bottom: .5rem;
+  font-family: 'Geist Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 800;
 }
 
 .auth-logo img {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   image-rendering: pixelated;
-}
-
-.auth-logo span {
-  font-family: 'Geist Mono', monospace;
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--text);
-}
-
-.auth-logo .dot { color: var(--accent2); }
-
-.auth-title {
-  text-align: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: .5rem;
-  color: var(--text);
 }
 
 .auth-subtitle {
   text-align: center;
-  color: var(--muted);
-  font-size: .9rem;
+  color: var(--sub);
   margin-bottom: 2rem;
+  font-size: .9rem;
 }
 
-.auth-tabs {
-  display: flex;
-  gap: .5rem;
-  margin-bottom: 1.5rem;
-  background: rgba(255,255,255,.03);
-  padding: 4px;
-  border-radius: 12px;
+/* Steps */
+.step { display: none; animation: fadeIn .3s ease; }
+.step.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.auth-tab {
-  flex: 1;
-  padding: .7rem 1rem;
-  text-align: center;
-  font-size: .85rem;
-  font-weight: 600;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all .2s ease;
-  color: var(--muted);
-  border: none;
-  background: transparent;
-}
-
-.auth-tab.active {
-  background: var(--accent);
-  color: white;
-  box-shadow: 0 4px 12px rgba(99,76,255,.3);
-}
-
-.auth-tab:not(.active):hover {
-  color: var(--text);
-  background: rgba(255,255,255,.05);
-}
-
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: .4rem;
-}
+.form-group { margin-bottom: 1.5rem; }
 
 .form-label {
-  font-size: .8rem;
-  font-weight: 500;
+  display: block;
   color: var(--sub);
+  font-size: .85rem;
+  font-weight: 500;
+  margin-bottom: .5rem;
 }
 
 .form-input {
-  background: rgba(255,255,255,.05);
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: rgba(255,255,255,.04);
   border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: .85rem 1rem;
-  font-family: inherit;
-  font-size: .95rem;
+  border-radius: 12px;
   color: var(--text);
-  outline: none;
+  font-family: inherit;
+  font-size: 1rem;
   transition: all .2s ease;
 }
 
 .form-input:focus {
+  outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(99,76,255,.15);
 }
 
-.form-input::placeholder {
+.form-input::placeholder { color: var(--muted); }
+
+.form-hint {
+  margin-top: .5rem;
+  font-size: .8rem;
   color: var(--muted);
 }
 
-.auth-btn {
+.btn-primary {
+  width: 100%;
+  padding: 1rem 1.5rem;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
   border: none;
-  border-radius: 10px;
-  padding: 1rem;
-  font-family: inherit;
-  font-size: .95rem;
-  font-weight: 600;
+  border-radius: 12px;
   color: white;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  margin-top: .5rem;
   transition: all .2s ease;
-  box-shadow: 0 4px 15px rgba(99,76,255,.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
 }
 
-.auth-btn:hover {
+.btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99,76,255,.4);
+  box-shadow: 0 10px 30px rgba(99,76,255,.3);
 }
 
-.auth-btn:active {
-  transform: translateY(0);
-}
-
-.auth-btn:disabled {
+.btn-primary:disabled {
   opacity: .6;
   cursor: not-allowed;
   transform: none;
 }
 
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 1.5rem 0;
-  color: var(--muted);
-  font-size: .8rem;
-}
+.btn-primary svg { width: 18px; height: 18px; }
 
-.auth-divider::before,
-.auth-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.verification-box {
-  background: rgba(99,76,255,.1);
-  border: 1px solid rgba(99,76,255,.3);
+.btn-secondary {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border2);
   border-radius: 12px;
-  padding: 1.2rem;
-  margin-top: 1rem;
-  display: none;
-}
-
-.verification-box.show { display: block; }
-
-.verification-code {
-  font-family: 'Geist Mono', monospace;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--accent2);
-  text-align: center;
-  letter-spacing: 3px;
-  margin: .8rem 0;
-  user-select: all;
-}
-
-.verification-text {
-  font-size: .85rem;
-  color: var(--sub);
-  text-align: center;
-  line-height: 1.5;
-}
-
-.verification-text code {
-  background: rgba(255,255,255,.1);
-  padding: .2rem .5rem;
-  border-radius: 4px;
-  font-family: 'Geist Mono', monospace;
   color: var(--text);
-}
-
-.auth-error {
-  background: rgba(239,68,68,.1);
-  border: 1px solid rgba(239,68,68,.3);
-  border-radius: 10px;
-  padding: .8rem 1rem;
-  color: #f87171;
-  font-size: .85rem;
-  display: none;
-}
-
-.auth-error.show { display: block; }
-
-.auth-success {
-  background: rgba(34,197,94,.1);
-  border: 1px solid rgba(34,197,94,.3);
-  border-radius: 10px;
-  padding: .8rem 1rem;
-  color: #4ade80;
-  font-size: .85rem;
-  display: none;
-}
-
-.auth-success.show { display: block; }
-
-.auth-link {
-  text-align: center;
-  margin-top: 1.5rem;
-  color: var(--muted);
-  font-size: .85rem;
-}
-
-.auth-link a {
-  color: var(--accent2);
-  text-decoration: none;
+  font-family: inherit;
+  font-size: 1rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: .75rem;
 }
 
-.auth-link a:hover { text-decoration: underline; }
-
-.steps-list {
-  margin: 1rem 0;
-  padding-left: 0;
-  list-style: none;
-  counter-reset: step;
+.btn-secondary:hover {
+  background: rgba(255,255,255,.08);
+  border-color: var(--accent);
 }
 
-.steps-list li {
-  position: relative;
-  padding-left: 2rem;
-  margin-bottom: .8rem;
-  font-size: .85rem;
-  color: var(--sub);
-  line-height: 1.5;
-  counter-increment: step;
+/* Code Box */
+.code-box {
+  background: linear-gradient(135deg, rgba(34,197,94,.08) 0%, rgba(34,197,94,.03) 100%);
+  border: 1px solid rgba(34,197,94,.25);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
 }
 
-.steps-list li::before {
-  content: counter(step);
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1.4rem;
-  height: 1.4rem;
-  background: var(--accent);
-  border-radius: 50%;
+.code-title {
+  color: #86efac;
+  font-weight: 600;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: .7rem;
+  gap: .5rem;
+  font-size: 1.1rem;
+}
+
+.code-title svg { width: 22px; height: 22px; }
+
+.code-display {
+  font-family: 'Geist Mono', monospace;
+  font-size: 1.5rem;
   font-weight: 700;
   color: white;
+  background: rgba(0,0,0,.3);
+  padding: .75rem 1.25rem;
+  border-radius: 10px;
+  letter-spacing: 3px;
+  margin-bottom: 1rem;
+  display: inline-block;
 }
 
-.back-link {
-  position: fixed;
-  top: 1.5rem;
-  left: 1.5rem;
+.code-instructions {
+  font-size: .9rem;
+  color: var(--sub);
+  line-height: 1.7;
+}
+
+.code-instructions code {
+  background: rgba(251,191,36,.15);
+  color: #fbbf24;
+  padding: .3rem .6rem;
+  border-radius: 6px;
+  font-family: 'Geist Mono', monospace;
+  font-size: .95rem;
+}
+
+.code-timer {
+  margin-top: 1rem;
+  font-size: .8rem;
+  color: var(--muted);
+}
+
+.code-timer strong { color: #f59e0b; }
+
+/* Alert */
+.alert {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: .9rem;
+  display: none;
+  align-items: center;
+  gap: .75rem;
+}
+
+.alert.show { display: flex; animation: fadeIn .3s ease; }
+
+.alert-error {
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.25);
+  color: #fca5a5;
+}
+
+.alert-success {
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.25);
+  color: #86efac;
+}
+
+.alert svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* Back Link */
+.auth-back {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: .5rem;
+  margin-top: 2rem;
   color: var(--muted);
-  font-size: .85rem;
+  font-size: .9rem;
   text-decoration: none;
-  padding: .5rem .8rem;
-  border-radius: 8px;
-  transition: all .2s ease;
+  transition: color .2s;
 }
 
-.back-link:hover {
-  color: var(--text);
-  background: rgba(255,255,255,.05);
+.auth-back:hover { color: var(--text); }
+.auth-back svg { width: 16px; height: 16px; }
+
+/* Spinner */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
 }
 
-.back-link svg {
-  width: 16px;
-  height: 16px;
-}
-
-@media (max-width: 480px) {
-  .auth-card { padding: 1.5rem; }
-  .back-link { top: 1rem; left: 1rem; }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-
-<a href="/" class="back-link">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path d="M19 12H5M12 19l-7-7 7-7"/>
-  </svg>
-  Volver
-</a>
 
 <div class="auth-container">
   <div class="auth-card">
     <div class="auth-logo">
       <img src="https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/item/nether_star.png" alt=""/>
-      <span>Moon<span class="dot">·</span>Tiers</span>
+      Moon<span style="color:var(--accent2)">·</span>Tiers
     </div>
+    <p class="auth-subtitle">Sistema de Tickets para Tiers</p>
 
-    <h1 class="auth-title">Bienvenido</h1>
-    <p class="auth-subtitle">Accede para gestionar tus tickets de tier</p>
-
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="login">Iniciar Sesión</button>
-      <button class="auth-tab" data-tab="register">Registrarse</button>
-    </div>
-
-    <div class="auth-error" id="authError"></div>
-    <div class="auth-success" id="authSuccess"></div>
-
-    <!-- Login Form -->
-    <form class="auth-form" id="loginForm">
+    <!-- STEP 1: Enter Username -->
+    <div class="step active" id="step1">
+      <div id="alert1" class="alert"></div>
+      
       <div class="form-group">
         <label class="form-label">Nombre de Minecraft</label>
-        <input type="text" class="form-input" id="loginUsername" placeholder="Tu nick exacto en MC" required minlength="3" maxlength="16"/>
+        <input type="text" class="form-input" id="username" placeholder="Tu nombre exacto en el servidor" autocomplete="username"/>
+        <p class="form-hint">Debes haber jugado al menos una vez en el servidor.</p>
       </div>
-      <button type="submit" class="auth-btn" id="loginBtn">Iniciar Sesión</button>
-      
-      <div class="verification-box" id="loginVerify">
-        <p class="verification-text">Entra al servidor y escribe:</p>
-        <div class="verification-code" id="loginCode"></div>
-        <p class="verification-text">Comando: <code>/verify CÓDIGO</code></p>
-      </div>
-    </form>
 
-    <!-- Register Form -->
-    <form class="auth-form" id="registerForm" style="display:none">
-      <div class="form-group">
-        <label class="form-label">Nombre de Minecraft</label>
-        <input type="text" class="form-input" id="regUsername" placeholder="Tu nick exacto en MC" required minlength="3" maxlength="16"/>
-      </div>
-      
-      <button type="submit" class="auth-btn" id="regBtn">Crear Cuenta</button>
-      
-      <div class="verification-box" id="regVerify">
-        <p class="verification-text" style="font-weight:600;color:var(--text)">¡Cuenta creada!</p>
-        <p class="verification-text">Ahora verifica tu cuenta:</p>
-        <ol class="steps-list">
-          <li>Entra al servidor de Minecraft</li>
-          <li>Escribe el comando con tu código</li>
-          <li>Vuelve aquí e inicia sesión</li>
-        </ol>
-        <div class="verification-code" id="regCode"></div>
-        <p class="verification-text">Comando: <code>/verify CÓDIGO</code></p>
-      </div>
-    </form>
-
-    <div class="auth-link">
-      ¿Necesitas ayuda? <a href="https://discord.gg/moonpvp" target="_blank">Discord</a>
+      <button class="btn-primary" id="btnGetCode" onclick="getCode()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+        Obtener Código de Verificación
+      </button>
     </div>
+
+    <!-- STEP 2: Show Code -->
+    <div class="step" id="step2">
+      <div id="alert2" class="alert"></div>
+      
+      <div class="code-box">
+        <div class="code-title">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          Tu Código de Verificación
+        </div>
+        <div class="code-display" id="codeDisplay">000000000</div>
+        <div class="code-instructions">
+          Abre <strong>Minecraft</strong> y escribe:<br>
+          <code>/verificar <span id="codeCmd">000000000</span></code>
+        </div>
+        <div class="code-timer">El código expira en <strong>10 minutos</strong></div>
+      </div>
+
+      <button class="btn-primary" id="btnVerified" onclick="checkVerified()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Ya verifiqué, entrar
+      </button>
+      
+      <button class="btn-secondary" onclick="goBack()">
+        ← Volver a introducir nombre
+      </button>
+    </div>
+
+    <a href="/" class="auth-back">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      Volver a clasificaciones
+    </a>
   </div>
 </div>
 
 <script>
 const API_BASE = '';
+let currentUsername = '';
+let currentCode = '';
 
-// Tab switching
-document.querySelectorAll('.auth-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    
-    const isLogin = tab.dataset.tab === 'login';
-    document.getElementById('loginForm').style.display = isLogin ? 'flex' : 'none';
-    document.getElementById('registerForm').style.display = isLogin ? 'none' : 'flex';
-    hideMessages();
-  });
-});
-
-function showError(msg) {
-  const el = document.getElementById('authError');
-  el.textContent = msg;
-  el.classList.add('show');
-  document.getElementById('authSuccess').classList.remove('show');
+function showAlert(num, type, msg) {
+  const alert = document.getElementById('alert' + num);
+  alert.className = 'alert show alert-' + type;
+  alert.innerHTML = type === 'error'
+    ? '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' + msg
+    : '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' + msg;
 }
 
-function showSuccess(msg) {
-  const el = document.getElementById('authSuccess');
-  el.textContent = msg;
-  el.classList.add('show');
-  document.getElementById('authError').classList.remove('show');
+function hideAlerts() {
+  document.querySelectorAll('.alert').forEach(a => a.classList.remove('show'));
 }
 
-function hideMessages() {
-  document.getElementById('authError').classList.remove('show');
-  document.getElementById('authSuccess').classList.remove('show');
+function showStep(num) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + num).classList.add('active');
+  hideAlerts();
 }
 
-// Login
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const username = document.getElementById('loginUsername').value.trim();
-  const btn = document.getElementById('loginBtn');
-  
-  btn.disabled = true;
-  btn.textContent = 'Verificando...';
-  hideMessages();
-  
-  try {
-    const res = await fetch(API_BASE + '/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
-    });
-    
-    const data = await res.json();
-    
-    if (data.error) {
-      showError(data.error);
-      btn.disabled = false;
-      btn.textContent = 'Iniciar Sesión';
-      return;
-    }
-    
-    if (data.needsVerify) {
-      document.getElementById('loginCode').textContent = data.code;
-      document.getElementById('loginVerify').classList.add('show');
-      showSuccess('Debes verificar que estás online');
-      btn.textContent = 'Esperando verificación...';
-      
-      // Poll for verification
-      pollLogin(username);
-      return;
-    }
-    
-    if (data.session) {
-      localStorage.setItem('session', data.session);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      showSuccess('¡Sesión iniciada!');
-      setTimeout(() => window.location.href = '/tickets.html', 500);
-    }
-  } catch (err) {
-    showError('Error de conexión');
-    btn.disabled = false;
-    btn.textContent = 'Iniciar Sesión';
+function goBack() {
+  showStep(1);
+}
+
+async function getCode() {
+  const username = document.getElementById('username').value.trim();
+  if (!username) {
+    showAlert(1, 'error', 'Introduce tu nombre de Minecraft');
+    return;
   }
-});
 
-async function pollLogin(username) {
-  const btn = document.getElementById('loginBtn');
-  
-  for (let i = 0; i < 60; i++) {
-    await new Promise(r => setTimeout(r, 2000));
-    
-    try {
-      const res = await fetch(API_BASE + '/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
-      });
-      
-      const data = await res.json();
-      
-      if (data.session) {
-        localStorage.setItem('session', data.session);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        showSuccess('¡Verificado!');
-        setTimeout(() => window.location.href = '/tickets.html', 500);
-        return;
-      }
-    } catch (e) {}
-  }
-  
-  showError('Tiempo de espera agotado. Intenta de nuevo.');
-  btn.disabled = false;
-  btn.textContent = 'Iniciar Sesión';
-}
-
-// Register
-document.getElementById('registerForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const username = document.getElementById('regUsername').value.trim();
-  const btn = document.getElementById('regBtn');
-  
+  const btn = document.getElementById('btnGetCode');
   btn.disabled = true;
-  btn.textContent = 'Creando cuenta...';
-  hideMessages();
-  
+  btn.innerHTML = '<div class="spinner"></div> Generando...';
+
   try {
     const res = await fetch(API_BASE + '/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username })
     });
-    
     const data = await res.json();
-    
-    if (data.error) {
-      showError(data.error);
-      btn.disabled = false;
-      btn.textContent = 'Crear Cuenta';
-      return;
-    }
-    
-    if (data.code) {
-      document.getElementById('regCode').textContent = data.code;
-      document.getElementById('regVerify').classList.add('show');
-      showSuccess('¡Cuenta creada! Ahora verifica.');
-      btn.textContent = 'Cuenta creada ✓';
+
+    if (data.success && data.code) {
+      currentUsername = username;
+      currentCode = data.code;
+      document.getElementById('codeDisplay').textContent = data.code;
+      document.getElementById('codeCmd').textContent = data.code;
+      showStep(2);
+    } else {
+      showAlert(1, 'error', data.message || 'Error al generar código');
     }
   } catch (err) {
-    showError('Error de conexión');
-    btn.disabled = false;
-    btn.textContent = 'Crear Cuenta';
+    showAlert(1, 'error', 'Error de conexión');
   }
-});
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg> Obtener Código de Verificación';
+}
+
+async function checkVerified() {
+  const btn = document.getElementById('btnVerified');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Verificando...';
+
+  try {
+    const res = await fetch(API_BASE + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUsername })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user', JSON.stringify({
+        username: data.username,
+        uuid: data.uuid,
+        role: data.role
+      }));
+      showAlert(2, 'success', '¡Bienvenido ' + data.username + '!');
+      setTimeout(() => {
+        window.location.href = data.role === 'user' ? '/tickets.html' : '/admin.html';
+      }, 1000);
+    } else {
+      showAlert(2, 'error', data.message || 'Aún no has verificado. Usa /verificar ' + currentCode + ' en Minecraft.');
+    }
+  } catch (err) {
+    showAlert(2, 'error', 'Error de conexión');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Ya verifiqué, entrar';
+}
 
 // Check if already logged in
-const session = localStorage.getItem('session');
-if (session) {
-  fetch(API_BASE + '/api/auth/me', {
-    headers: { 'Authorization': 'Bearer ' + session }
-  }).then(r => r.json()).then(data => {
-    if (!data.error) {
-      window.location.href = '/tickets.html';
+const token = localStorage.getItem('auth_token');
+if (token) {
+  fetch(API_BASE + '/api/auth/session', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.valid) {
+      window.location.href = data.role === 'user' ? '/tickets.html' : '/admin.html';
     }
-  }).catch(() => {});
+  });
 }
+
+// Enter key support
+document.getElementById('username').addEventListener('keypress', e => {
+  if (e.key === 'Enter') getCode();
+});
 </script>
+
 </body>
 </html>

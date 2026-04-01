@@ -186,7 +186,7 @@ public class TierManager {
             if (winner != null) {
                 winner.sendMessage(plugin.prefix() + "§d§l⚡ ¡HAS ALCANZADO EL LÍMITE DE HT3!");
                 winner.sendMessage(plugin.prefix() + "§7Para subir a §cTiers Elite §7(LT2+), necesitas:");
-                winner.sendMessage("§7  • Abrir ticket en §b§ndiscord.mlmc.lat");
+                winner.sendMessage("§7  • Abrir ticket en §b§ntiers.mlmc.lat/tickets.html");
                 winner.sendMessage("§7  • Verificación por un admin");
             }
         }
@@ -329,16 +329,36 @@ public class TierManager {
     /** Top N jugadores por puntuación total. Incluye jugadores con ELO aunque no tengan tier points. */
     public List<PlayerRank> getTopPlayers(int limit) {
         // Combine players from both TierManager and EloManager
-        Set<UUID> allPlayers = new HashSet<>(pointsByKit.keySet());
+        // Use a Map to deduplicate by player name (handles UUID format differences)
+        Map<String, UUID> playersByName = new LinkedHashMap<>();
+        
+        // Add from TierManager
+        for (UUID uuid : pointsByKit.keySet()) {
+            String name = resolveName(uuid);
+            if (name != null && !name.isEmpty()) {
+                playersByName.putIfAbsent(name.toLowerCase(), uuid);
+            }
+        }
         
         // Add all players from EloManager (those who have played ELO matches)
         for (String uuidStr : plugin.getEloManager().getEloMap().keySet()) {
             try {
-                allPlayers.add(UUID.fromString(uuidStr));
+                // Normalize UUID format (add dashes if missing)
+                String normalized = uuidStr.toLowerCase();
+                if (!normalized.contains("-") && normalized.length() == 32) {
+                    normalized = normalized.substring(0, 8) + "-" + normalized.substring(8, 12) + "-" +
+                                 normalized.substring(12, 16) + "-" + normalized.substring(16, 20) + "-" +
+                                 normalized.substring(20);
+                }
+                UUID uuid = UUID.fromString(normalized);
+                String name = resolveName(uuid);
+                if (name != null && !name.isEmpty()) {
+                    playersByName.putIfAbsent(name.toLowerCase(), uuid);
+                }
             } catch (IllegalArgumentException ignored) {}
         }
         
-        return allPlayers.stream()
+        return playersByName.values().stream()
                 .map(uuid -> new PlayerRank(uuid, getTotalScore(uuid), null, -1, getElo(uuid)))
                 .sorted((a, b) -> {
                     // First by score (higher first), then by ELO (higher first)
@@ -348,6 +368,14 @@ public class TierManager {
                 })
                 .limit(limit)
                 .collect(Collectors.toList());
+    }
+    
+    /** Resolve player name from UUID. */
+    private String resolveName(UUID uuid) {
+        var online = plugin.getServer().getPlayer(uuid);
+        if (online != null) return online.getName();
+        var offline = plugin.getServer().getOfflinePlayer(uuid);
+        return offline.getName();
     }
 
     /** Top N jugadores para un kit específico, ordenados por puntos del kit. Desempata por ELO. */
@@ -377,6 +405,11 @@ public class TierManager {
     /** Todos los UUIDs con al menos un registro de tier. */
     public Set<UUID> getAllTrackedPlayers() {
         return Collections.unmodifiableSet(pointsByKit.keySet());
+    }
+    
+    /** Número de jugadores con datos de tier. */
+    public int getPlayerCount() {
+        return pointsByKit.size();
     }
 
     /** Resetea TODOS los datos de tiers de TODOS los jugadores. */

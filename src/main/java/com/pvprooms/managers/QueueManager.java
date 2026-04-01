@@ -78,6 +78,12 @@ public class QueueManager {
         UUID uuid = player.getUniqueId();
         if (playerKitMap.containsKey(uuid)) return false;
         if (plugin.getDuelManager().isInDuel(uuid)) return false;
+        
+        // Block queue if player is in a party
+        if (plugin.getPartyManager().isInParty(uuid)) {
+            player.sendMessage(plugin.prefix() + "§cNo puedes entrar en cola mientras estás en una party. Sal con §e/party leave§c.");
+            return false;
+        }
 
         long cooldownMs = plugin.getConfig().getLong("cooldowns.queue", 3) * 1000L;
         if (System.currentTimeMillis() - cooldowns.getOrDefault(uuid, 0L) < cooldownMs) return false;
@@ -94,6 +100,12 @@ public class QueueManager {
         UUID uuid = player.getUniqueId();
         if (playerKitMap.containsKey(uuid)) return false;
         if (plugin.getDuelManager().isInDuel(uuid)) return false;
+        
+        // Block queue if player is in a party
+        if (plugin.getPartyManager().isInParty(uuid)) {
+            player.sendMessage(plugin.prefix() + "§cNo puedes entrar en cola mientras estás en una party. Sal con §e/party leave§c.");
+            return false;
+        }
 
         long cooldownMs = plugin.getConfig().getLong("cooldowns.queue", 3) * 1000L;
         if (System.currentTimeMillis() - cooldowns.getOrDefault(uuid, 0L) < cooldownMs) return false;

@@ -66,11 +66,14 @@ public class EloManager {
             String name = eloConfig.getString(p + ".name", uuidStr);
             String country = eloConfig.getString(p + ".country", "");
             String officialRank = eloConfig.getString(p + ".officialRank", "");
-            eloMap.put(uuidStr, elo);
-            nameMap.put(uuidStr, name);
-            if (!country.isEmpty()) countryMap.put(uuidStr, country);
-            if (!officialRank.isEmpty()) officialRankMap.put(uuidStr, officialRank);
+            // Normalize UUID to lowercase for consistent lookups
+            String normalizedUuid = uuidStr.toLowerCase();
+            eloMap.put(normalizedUuid, elo);
+            nameMap.put(normalizedUuid, name);
+            if (!country.isEmpty()) countryMap.put(normalizedUuid, country);
+            if (!officialRank.isEmpty()) officialRankMap.put(normalizedUuid, officialRank);
         }
+        plugin.getLogger().info("[EloManager] " + eloMap.size() + " jugadores cargados.");
     }
 
     public void saveElo() {
@@ -101,15 +104,29 @@ public class EloManager {
      * Returns the ELO for a player UUID, initializing to the configured default if absent.
      */
     public int getElo(UUID uuid) {
-        String key = uuid.toString();
-        // Try with dashes first, then without (for backwards compatibility)
+        if (uuid == null) return plugin.getConfig().getInt("elo.starting-elo", 1000);
+        
+        String key = uuid.toString().toLowerCase();
+        
+        // Try exact match first (lowercase with dashes)
         if (eloMap.containsKey(key)) {
             return eloMap.get(key);
         }
+        
+        // Try without dashes (backwards compatibility)
         String keyNoDashes = key.replace("-", "");
         if (eloMap.containsKey(keyNoDashes)) {
             return eloMap.get(keyNoDashes);
         }
+        
+        // Brute force search - try all keys (handles any format mismatch)
+        for (Map.Entry<String, Integer> entry : eloMap.entrySet()) {
+            String storedKey = entry.getKey().toLowerCase().replace("-", "");
+            if (storedKey.equals(keyNoDashes)) {
+                return entry.getValue();
+            }
+        }
+        
         return plugin.getConfig().getInt("elo.starting-elo", 1000);
     }
 
@@ -117,8 +134,51 @@ public class EloManager {
      * Sets the ELO for a player.
      */
     public void setElo(UUID uuid, String playerName, int elo) {
-        eloMap.put(uuid.toString(), Math.max(0, elo));
-        nameMap.put(uuid.toString(), playerName);
+        String key = uuid.toString().toLowerCase();
+        eloMap.put(key, Math.max(0, elo));
+        nameMap.put(key, playerName);
+    }
+    
+    /**
+     * Ensures a player is registered in the ELO system.
+     * If they already exist (under any UUID format), keeps their current ELO.
+     * If they don't exist, initializes them with the default ELO.
+     */
+    public void ensureRegistered(UUID uuid, String playerName) {
+        int currentElo = getElo(uuid); // This searches all formats
+        String key = uuid.toString().toLowerCase();
+        
+        // If not found in exact format, register them
+        if (!eloMap.containsKey(key)) {
+            // Check if they exist under a different format
+            String keyNoDashes = key.replace("-", "");
+            boolean found = false;
+            for (String storedKey : eloMap.keySet()) {
+                if (storedKey.toLowerCase().replace("-", "").equals(keyNoDashes)) {
+                    // Migrate to normalized format
+                    int elo = eloMap.remove(storedKey);
+                    String name = nameMap.remove(storedKey);
+                    String country = countryMap.remove(storedKey);
+                    String rank = officialRankMap.remove(storedKey);
+                    
+                    eloMap.put(key, elo);
+                    nameMap.put(key, name != null ? name : playerName);
+                    if (country != null) countryMap.put(key, country);
+                    if (rank != null) officialRankMap.put(key, rank);
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                // New player - initialize with default ELO
+                eloMap.put(key, plugin.getConfig().getInt("elo.starting-elo", 1000));
+                nameMap.put(key, playerName);
+            }
+        } else {
+            // Update name in case it changed
+            nameMap.put(key, playerName);
+        }
     }
 
     /**

@@ -87,9 +87,10 @@
         <span class="srv-dot" id="srvDot"></span>
         <span id="srvStatus">Conectando…</span>
       </div>
-      <a href="/login.html" class="login-btn" id="loginBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span id="loginText">Iniciar sesión</span>
+      <!-- Auth Button -->
+      <a href="/login.html" class="auth-btn" id="authBtn">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+        <span id="authText">Iniciar sesión</span>
       </a>
     </div>
   </nav>
@@ -180,7 +181,7 @@
           <div class="rank-item rank-lt5"><span class="rank-name">LT5</span><span class="rank-desc">Novato</span></div>
         </div>
 
-        <h3 class="info-subtitle">� Sistema de Puntuación Compuesto</h3>
+        <h3 class="info-subtitle">Sistema de Puntuación</h3>
         <p class="info-desc">Tu tier se calcula usando una fórmula avanzada que combina múltiples métricas:</p>
         
         <div class="formula-grid">
@@ -242,7 +243,7 @@
             <div class="tier-req"><span class="req-tier lt1">LT1</span><span class="req-text">6500+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
             <div class="tier-req"><span class="req-tier ht1">HT1</span><span class="req-text">9000+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
           </div>
-          <p style="margin-top:0.75rem;font-size:0.85rem;color:#9ca3af;">⚠️ A partir de <strong style="color:#f97316">HT3</strong> se requiere verificación via ticket en <a href="https://discord.mlmc.lat" target="_blank" style="color:#60a5fa;">discord.mlmc.lat</a></p>
+          <p style="margin-top:0.75rem;font-size:0.85rem;color:#9ca3af;">⚠️ A partir de <strong style="color:#f97316">HT3</strong> se requiere verificación via ticket en <a href="/tickets.html" style="color:#60a5fa;">Sistema de Tickets</a></p>
         </div>
 
         <div class="info-box warning">
@@ -277,7 +278,7 @@
               
               <p class="verify-note" style="margin-top:1rem;"><strong>📋 Proceso de verificación via ticket:</strong></p>
               <ol class="verify-reqs" style="list-style:decimal;padding-left:1.5rem;">
-                <li>Abre un ticket en <a href="https://discord.mlmc.lat" target="_blank" style="color:#60a5fa;text-decoration:underline;">discord.mlmc.lat</a></li>
+                <li>Abre un ticket en el <a href="/tickets.html" style="color:#60a5fa;text-decoration:underline;">Sistema de Tickets</a></li>
                 <li>Se te asignará un <strong>Tester de tu nivel</strong> (HT3+)</li>
                 <li><strong>Debes GRABAR</strong> todo el test completo</li>
                 <li>El Tester te evaluará en partidas BO3/BO5</li>
@@ -326,6 +327,147 @@
     <div class="modal-kits-wrap">
       <div class="modal-kits-hd">⚔ Tiers por Kit</div>
       <div class="modal-kits" id="modalKits"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RULES MODAL -->
+<div class="rules-overlay" id="rulesOverlay">
+  <div class="rules-modal">
+    <div class="rules-header">
+      <div class="rules-header-icon">📋</div>
+      <div>
+        <h2 class="rules-title">Reglas del Tier Test</h2>
+        <p class="rules-subtitle">Debes leer y aceptar todas las reglas antes de abrir un ticket</p>
+      </div>
+      <button class="rules-close" id="rulesClose" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="rules-tabs">
+      <button class="rules-tab active" data-tab="normal">⚔️ Test Normal</button>
+      <button class="rules-tab" data-tab="high">👑 High Test</button>
+    </div>
+
+    <!-- Scroll content -->
+    <div class="rules-body" id="rulesBody">
+
+      <!-- TEST NORMAL -->
+      <div class="rules-section" id="tab-normal">
+        <div class="rules-warn-banner">
+          ⚠️ En caso de que no se cumplan las reglas se te dará un <strong>warn</strong>. Con <strong>5 warns</strong> se te quitará el acceso al tier test.
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">1</span> No Toxicidad</div>
+          <ul class="rules-list">
+            <li>No puedes faltar el respeto a los testers ni a los miembros del servidor.</li>
+            <li>Actitud negativa o insultos durante el test resultará en warn inmediato.</li>
+          </ul>
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">2</span> Usar el Kit Específico</div>
+          <ul class="rules-list">
+            <li>Esto aplica especialmente en <strong>Crystal PvP</strong>, ya que hay jugadores que ponen muchos totems o el mazo para tener ventaja.</li>
+            <li>Solo se permite usar el mazo si tu <strong>tester está de acuerdo</strong> en usarlo.</li>
+            <li>Usar un kit diferente al indicado sin permiso puede descalificarte.</li>
+          </ul>
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">3</span> No Runnear Excesivamente</div>
+          <ul class="rules-list">
+            <li>Si el tester ve que estás runneando demasiado puede <strong>descalificar tu testeo</strong> y darte el cooldown como castigo.</li>
+            <li>Jugar de forma evasiva constante no es representativo de tu nivel real.</li>
+          </ul>
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">4</span> Forma de Jugar</div>
+          <ul class="rules-list">
+            <li>Si el tester considera que tu forma de jugar es muy molesta o <strong>"rata"</strong>, podrá acabar tu test y darte Tier 5.</li>
+            <li>El tester tiene criterio sobre qué constituye juego antideportivo.</li>
+          </ul>
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">5</span> Abuso de Rango del Tester</div>
+          <ul class="rules-list">
+            <li>Si consideras que el tester te dio un mal tier o está <strong>abusando de su rango</strong>, puedes reportarlo en <strong>#❓ | tickets</strong>.</li>
+            <li>Los reportes serán revisados por la administración del servidor.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- HIGH TEST -->
+      <div class="rules-section hidden" id="tab-high">
+        <div class="rules-warn-banner rules-warn-gold">
+          👑 Las mismas reglas del <strong>Test Normal</strong> aplican aquí. Además se añaden las siguientes reglas exclusivas del High Test.
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">1</span> Kit Sin Modificaciones</div>
+          <ul class="rules-list">
+            <li>En el High Test <strong>no puedes usar tu kit modificado</strong>. Solo se puede usar el kit exactamente como lo indique el tester.</li>
+            <li>Si no cumples esta regla puedes ser <strong>descalificado del High Test</strong> automáticamente.</li>
+          </ul>
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">2</span> Tiempo Límite de Respuesta</div>
+          <ul class="rules-list">
+            <li>Una vez abierto el ticket para High Test, tienes <strong>1 día (24h)</strong> para contestar.</li>
+            <li>Si no respondes en ese tiempo, el ticket será <strong>cerrado automáticamente</strong>.</li>
+          </ul>
+        </div>
+
+        <div class="rules-rule">
+          <div class="rules-rule-title"><span class="rules-num">3</span> Formato del High Test</div>
+          <div class="rules-format-grid">
+            <div class="rules-format-row">
+              <span class="req-tier ht1">HT1</span>
+              <span class="rules-format-desc">Ganarle a 1 LT2, 2 HT2, 2 LT1 y 1 HT1.</span>
+            </div>
+            <div class="rules-format-row">
+              <span class="req-tier lt1">LT1</span>
+              <span class="rules-format-desc">Ganarle a 1 LT2, 2 HT2 y 2 LT1.</span>
+            </div>
+            <div class="rules-format-row">
+              <span class="req-tier ht2">HT2</span>
+              <span class="rules-format-desc">Ganarle a 1 LT2 y 2 HT2.</span>
+            </div>
+            <div class="rules-format-row">
+              <span class="req-tier lt2">LT2</span>
+              <span class="rules-format-desc">Ganarle a 2 HT3 y 2 LT2.</span>
+            </div>
+            <div class="rules-format-row">
+              <span class="req-tier ht3">HT3</span>
+              <span class="rules-format-desc">Pasar la evaluación y ganarle a un HT3.</span>
+            </div>
+            <div class="rules-format-row">
+              <span class="req-tier lt3" style="background:#ffd43b22;color:#ffd43b;border-color:#ffd43b44;">Eval</span>
+              <span class="rules-format-desc">Test de evaluación: LT5 → LT3.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end rules-body -->
+
+    <!-- Accept section -->
+    <div class="rules-footer" id="rulesFooter">
+      <div class="rules-scroll-hint" id="rulesScrollHint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        Desplázate para leer todas las reglas
+      </div>
+      <label class="rules-checkbox-wrap" id="rulesCheckWrap" style="display:none">
+        <input type="checkbox" id="rulesCheck"/>
+        <span>He leído y acepto todas las reglas del Tier Test</span>
+      </label>
+      <button class="rules-accept-btn" id="rulesAcceptBtn" disabled>🎫 Aceptar y Abrir Ticket</button>
     </div>
   </div>
 </div>
@@ -554,7 +696,7 @@ async function init(){
 
 async function fetchStats(){
   try{
-    const d = await(await fetch(`${API}/api/stats`)).json();
+    const d = await(await fetch(`${API}/api/stats`, { cache: 'no-store' })).json();
     document.getElementById('sOnline').textContent = d.online??'—';
     document.getElementById('sDuels').textContent  = d.duelos??'—';
     document.getElementById('sQueue').textContent  = d.en_cola??'—';
@@ -572,7 +714,7 @@ async function fetchStats(){
 
 async function fetchKits(){
   try{
-    const res = await fetch(`${API}/api/kits`);
+    const res = await fetch(`${API}/api/kits`, { cache: 'no-store' });
     if(res.ok){
       kits = await res.json();
       if(kits && kits.length > 0) buildTabs();
@@ -587,7 +729,7 @@ async function fetchTop(kit){
   document.getElementById('cardTitle').textContent = isAll?'Clasificación General': 'Clasificación '+cap(kit);
   try{
     const url = isAll?`${API}/api/top`:`${API}/api/top/${encodeURIComponent(kit)}`;
-    allPlayers = await(await fetch(url)).json();
+    allPlayers = await(await fetch(url, { cache: 'no-store' })).json();
     lastUpdMs = Date.now();
     document.getElementById('cardSub').textContent = allPlayers.length+' jugadores';
     renderTable(allPlayers);
@@ -629,6 +771,7 @@ function renderTable(players){
     const playerCC = (p.pais||p.countryCode||'').toLowerCase();
     const cc = playerCC || 'xx';
     const countryName = playerCC ? (COUNTRY_NAMES[playerCC]||playerCC.toUpperCase()) : '—';
+    const countryDisplay = countryName.length > 7 ? countryName.slice(0,7)+'…' : countryName;
     const pts = currentKit==='overall'?p.puntosTotales:(p.kits&&p.kits[currentKit]?p.kits[currentKit].puntos:0);
     const elo = p.elo??0;
     const eloC = eloColor(elo);
@@ -652,7 +795,7 @@ function renderTable(players){
           <span class="row-title" style="color:${titleC}">${esc(p.tituloSymbol||'◆')} ${esc(p.titulo)}</span>
         </div>
       </div>
-      <div class="col-country">`+(playerCC?flagImg(cc,18)+' <span class="country-nm">'+countryName+'</span>':'<span class="country-nm">—</span>')+`</div>
+      <div class="col-country">`+(playerCC?flagImg(cc,18)+' <span class="country-nm" title="'+countryName+'">'+countryDisplay+'</span>':'<span class="country-nm">—</span>')+`</div>
       <div class="col-tier">`+tierPill(bestTier)+`</div>
       <div class="col-elo"><span style="color:${eloC};font-weight:700">${elo.toLocaleString()}</span></div>
       <div class="col-kits">${badgesHtml}</div>
@@ -676,6 +819,7 @@ function openModal(nombre){
   document.getElementById('modalRegion').innerHTML=playerCC?flagImg(playerCC,15)+' <span>'+countryName+'</span>':'<span>—</span>';
   const wins=p.wins||0, losses=p.losses||0, kills=p.kills||0, deaths=p.deaths||0;
   const kdr=p.kdr||0, winrate=p.winrate||0, streak=p.streak||0, bestStreak=p.bestStreak||0;
+  const accuracy=p.accuracy||0, hits=p.hits||0, swings=p.swings||0;
   const ping=p.ping>=0?p.ping+'ms':'—';
   const onlineHtml=p.online?'<span class="status-online">● En línea</span>':'<span class="status-offline">● Offline</span>';
   
@@ -690,6 +834,7 @@ function openModal(nombre){
     <div class="mstat"><div class="mstat-v" style="color:#a855f7">${kills}</div><div class="mstat-l">Kills</div></div>
     <div class="mstat"><div class="mstat-v" style="color:#f97316">${deaths}</div><div class="mstat-l">Muertes</div></div>
     <div class="mstat"><div class="mstat-v" style="color:#06b6d4">${kdr.toFixed(2)}</div><div class="mstat-l">KDR</div></div>
+    <div class="mstat"><div class="mstat-v" style="color:#fbbf24">${accuracy.toFixed(1)}%</div><div class="mstat-l">Precisión</div></div>
     <div class="mstat"><div class="mstat-v" style="color:#eab308">${streak}</div><div class="mstat-l">Racha actual</div></div>
     <div class="mstat"><div class="mstat-v" style="color:#f59e0b">${bestStreak}</div><div class="mstat-l">Mejor racha</div></div>
     <div class="mstat"><div class="mstat-v">${ping}</div><div class="mstat-l">Ping</div></div>
@@ -765,6 +910,106 @@ if (!checkPrivacyAccepted()) {
   setupPrivacyListeners();
 }
 
+// ── Rules Modal ───────────────────────────────────────────────────────────
+(function(){
+  const overlay    = document.getElementById('rulesOverlay');
+  const body       = document.getElementById('rulesBody');
+  const hint       = document.getElementById('rulesScrollHint');
+  const checkWrap  = document.getElementById('rulesCheckWrap');
+  const check      = document.getElementById('rulesCheck');
+  const acceptBtn  = document.getElementById('rulesAcceptBtn');
+  const closeBtn   = document.getElementById('rulesClose');
+  const tabs       = document.querySelectorAll('.rules-tab');
+  let scrolledToBottom = false;
+
+  function checkIfScrollNeeded() {
+    if (body.scrollHeight <= body.clientHeight + 40) {
+      scrolledToBottom = true;
+      hint.style.display = 'none';
+      checkWrap.style.display = 'flex';
+    }
+  }
+
+  function openRules() {
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    scrolledToBottom = false;
+    hint.style.display = 'flex';
+    checkWrap.style.display = 'none';
+    check.checked = false;
+    acceptBtn.disabled = true;
+    body.scrollTop = 0;
+    // After render, check if content already fits (no scroll needed)
+    requestAnimationFrame(checkIfScrollNeeded);
+  }
+
+  function closeRules() {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Intercept all links to /tickets.html and anchor #tierInfo ticket links
+  document.addEventListener('click', function(e) {
+    const a = e.target.closest('a');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (href === '/tickets.html' || a.classList.contains('ticket-rules-trigger')) {
+      e.preventDefault();
+      openRules();
+    }
+  });
+
+  // Close on backdrop click
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeRules();
+  });
+  closeBtn.addEventListener('click', closeRules);
+
+  // Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeRules();
+  });
+
+  // Tabs
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      tabs.forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      document.querySelectorAll('.rules-section').forEach(function(s){ s.classList.add('hidden'); });
+      document.getElementById('tab-' + tab.dataset.tab).classList.remove('hidden');
+      // Reset scroll tracking on tab switch
+      scrolledToBottom = false;
+      hint.style.display = 'flex';
+      checkWrap.style.display = 'none';
+      check.checked = false;
+      acceptBtn.disabled = true;
+      body.scrollTop = 0;
+    });
+  });
+
+  // Scroll tracking — reveal checkbox when near bottom
+  body.addEventListener('scroll', function() {
+    if (scrolledToBottom) return;
+    const nearBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 40;
+    if (nearBottom) {
+      scrolledToBottom = true;
+      hint.style.display = 'none';
+      checkWrap.style.display = 'flex';
+    }
+  });
+
+  // Checkbox enables accept button
+  check.addEventListener('change', function() {
+    acceptBtn.disabled = !check.checked;
+  });
+
+  // Accept → go to tickets
+  acceptBtn.addEventListener('click', function() {
+    closeRules();
+    window.location.href = '/tickets.html';
+  });
+})();
+
 // ── Ping measurement ─────────────────────────────────────────────────────
 async function measurePing() {
   const pingEl = document.getElementById('sPing');
@@ -772,7 +1017,7 @@ async function measurePing() {
   
   try {
     const start = performance.now();
-    await fetch(API + '/stats', { method: 'HEAD', cache: 'no-store' });
+    await fetch(API + '/stats', { method: 'GET', cache: 'no-store' });
     const ping = Math.round(performance.now() - start);
     
     // Color based on ping value
@@ -804,22 +1049,28 @@ async function measurePing() {
 measurePing();
 setInterval(measurePing, 2000);
 
-// Check login status
-(function checkLogin() {
-  const session = localStorage.getItem('session');
-  const btn = document.getElementById('loginBtn');
-  const text = document.getElementById('loginText');
-  if (!session) return;
+// Check auth status and update button
+function checkAuthStatus() {
+  const token = localStorage.getItem('auth_token');
+  const authBtn = document.getElementById('authBtn');
+  const authText = document.getElementById('authText');
   
-  fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + session } })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) return;
-      btn.innerHTML = `<img src="https://mc-heads.net/avatar/${data.username}/22" alt=""/><span>${data.username}</span>`;
-      btn.href = '/tickets.html';
-    })
-    .catch(() => {});
-})();
+  if (!token) return;
+  
+  fetch(API + '/api/auth/session', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.valid) {
+      authBtn.href = data.role === 'user' ? '/tickets.html' : '/admin.html';
+      authBtn.innerHTML = '<img src="https://mc-heads.net/avatar/' + data.uuid + '/20" style="width:20px;height:20px;border-radius:4px;image-rendering:pixelated;"><span>' + data.username + '</span>';
+      authBtn.classList.add('logged-in');
+    }
+  })
+  .catch(() => {});
+}
+checkAuthStatus();
 
 init();
 </script>
@@ -830,8 +1081,6 @@ init();
 <!-- Monetag Vignette Banner -->
 <script>(function(s){s.dataset.zone='10807134',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 
-<!-- Monetag OnClick -->
-<script>(function(s){s.dataset.zone='10808102',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 
 </body>
 </html>

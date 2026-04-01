@@ -108,8 +108,13 @@ public class LobbyListener implements Listener {
 
         Entity rightClicked = event.getRightClicked();
 
-        // Shift + Right-click on player = party invite
+        // Shift + Right-click on player = party invite (exclude NPCs)
         if (rightClicked instanceof Player target && player.isSneaking()) {
+            // Skip NPCs (Citizens or any entity with metadata "NPC")
+            if (rightClicked.hasMetadata("NPC")) {
+                event.setCancelled(true);
+                return;
+            }
             event.setCancelled(true);
             plugin.getPartyManager().invitePlayer(player, target);
             return;

@@ -160,14 +160,15 @@ public class ScoreboardManager {
             tl(obj, s++, leg("&e⏱ &fTiempo: " + time), 13);
         }
 
-        // Kit & Round (BO3)
+        // Kit, Mode label (TIER / ELO) & Round
         tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), 12);
-        if (duel.isBo3()) {
+        if (duel.isRanked()) {
             int myW = duel.getWins(player.getUniqueId());
             int opW = duel.getWins(duel.getOpponent(player.getUniqueId()));
             int needed = duel.getWinsNeeded();
-            int rnd = Math.min(duel.getCurrentRound(), needed);
-            tl(obj, s++, leg("&6⚑ &fRonda &6" + rnd + "&8/" + needed + "  &a" + myW + " &8- &c" + opW), 11);
+            tl(obj, s++, leg("&b[TIER] &8• &6" + myW + "&8/&6" + needed + " &8- &evs &c" + opW), 11);
+        } else {
+            tl(obj, s++, leg("&a[ELO] &8• &6" + plugin.getEloManager().getElo(player.getUniqueId()) + " ELO"), 11);
         }
         
         tl(obj, s++, " ", 10);
@@ -206,7 +207,8 @@ public class ScoreboardManager {
 
         tl(obj, s++, " ", 2);
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 1);
-        tl(obj, s,   pingLine(player), 0);
+        tl(obj, s++, pingLine(player), 0);
+        tl(obj, s,   regionLine(), -1);
     }
 
     // ── Lobby scoreboard ───────────────────────────────────────────────────
@@ -264,6 +266,7 @@ public class ScoreboardManager {
             case MEDIUM -> "§e";
             case HARD -> "§c";
             case HACKER -> "§4§l";
+            case ADAPTIVE -> "§d§l";
         };
 
         // Get bot health
@@ -294,7 +297,8 @@ public class ScoreboardManager {
         tl(obj, s++, " ", 3);
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 2);
         tl(obj, s++, leg("  &c/pvpleave &8para salir"), 1);
-        tl(obj, s, pingLine(player), 0);
+        tl(obj, s++, pingLine(player), 0);
+        tl(obj, s,   regionLine(), -1);
     }
 
     // ── Clear ──────────────────────────────────────────────────────────────
@@ -383,17 +387,30 @@ public class ScoreboardManager {
         s.numberFormat(NumberFormat.blank());
     }
 
-    // ── Ping / region helper ───────────────────────────────────────────────
+    // ── Ping / region helpers ──────────────────────────────────────────────
 
     private String pingLine(Player player) {
-        String region = plugin.getServerRegion();
         int ping = player.getPing();
         String colour;
         if      (ping <  50)  colour = "§a";
         else if (ping < 100)  colour = "§e";
         else if (ping < 150)  colour = "§6";
         else                  colour = "§c";
-        return "§7(" + region + ") " + colour + ping + "ms";
+        return "§7Ping: " + colour + ping + "ms";
+    }
+
+    private String regionLine() {
+        String raw = plugin.getServerRegion();
+        String display = switch (raw.toLowerCase()) {
+            case "eu", "europe", "eu-west", "eu-central" -> "§bEU §7• Europa";
+            case "na", "us", "us-east", "us-west"       -> "§bNA §7• Norteamérica";
+            case "sa", "latam", "br"                    -> "§bSA §7• Sudamérica";
+            case "as", "asia", "sg", "ap"               -> "§bAS §7• Asia";
+            case "oc", "au", "oceania"                  -> "§bOC §7• Oceanía";
+            case "af", "africa"                         -> "§bAF §7• África";
+            default -> "§b" + raw.toUpperCase();
+        };
+        return "§7Región: " + display;
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

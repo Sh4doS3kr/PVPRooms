@@ -200,9 +200,15 @@ public class TrimRouletteGUI {
                 }
             } catch (Exception ignored) {}
             
-            String col = plugin.getTrimManager().patternColour(trim.getPattern());
-            armorMeta.setDisplayName(col + trim.getPattern());
-            armorMeta.setLore(List.of("§7" + trim.getMaterial()));
+            String patternCol = plugin.getTrimManager().patternColour(trim.getPattern());
+            String materialCol = plugin.getTrimManager().materialColour(trim.getMaterial());
+            String patternName = capitalize(trim.getPattern());
+            String materialName = capitalize(trim.getMaterial());
+            armorMeta.setDisplayName(patternCol + patternName + " §7+ " + materialCol + materialName);
+            armorMeta.setLore(List.of(
+                "§7Patrón: " + patternCol + patternName,
+                "§7Material: " + materialCol + materialName
+            ));
             
             if (highlighted) {
                 armorMeta.addEnchant(Enchantment.UNBREAKING, 1, true);
@@ -213,6 +219,12 @@ public class TrimRouletteGUI {
         }
         
         return item;
+    }
+    
+    /** Capitalizes the first letter of a string */
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
     }
     
     /** Gets the netherite armor material for the given piece */

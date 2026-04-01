@@ -83,13 +83,16 @@ public class BotPracticeGUI implements Listener {
     public void openDifficultyMenu(Player player, String kitName) {
         selectedKit.put(player.getUniqueId(), kitName);
         
-        Inventory inv = Bukkit.createInventory(null, 27, Component.text(TITLE_DIFF));
+        Inventory inv = Bukkit.createInventory(null, 36, Component.text(TITLE_DIFF));
 
         // Difficulty items
         inv.setItem(10, createDifficultyItem(BotDifficulty.EASY, Material.LIME_WOOL));
         inv.setItem(12, createDifficultyItem(BotDifficulty.MEDIUM, Material.YELLOW_WOOL));
         inv.setItem(14, createDifficultyItem(BotDifficulty.HARD, Material.RED_WOOL));
         inv.setItem(16, createDifficultyItem(BotDifficulty.HACKER, Material.BLACK_WOOL));
+        
+        // Adaptive AI mode (special)
+        inv.setItem(22, createAdaptiveItem(player));
 
         // Back button
         ItemStack back = new ItemStack(Material.ARROW);
@@ -97,14 +100,77 @@ public class BotPracticeGUI implements Listener {
         backMeta.displayName(Component.text("« Volver", NamedTextColor.GRAY)
                 .decoration(TextDecoration.ITALIC, false));
         back.setItemMeta(backMeta);
-        inv.setItem(22, back);
+        inv.setItem(31, back);
 
         player.openInventory(inv);
     }
+    
+    private ItemStack createAdaptiveItem(Player player) {
+        ItemStack item = new ItemStack(Material.ENDER_EYE);
+        ItemMeta meta = item.getItemMeta();
+        
+        meta.displayName(Component.text("✦ ADAPTIVO", NamedTextColor.LIGHT_PURPLE)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
+        
+        // Check if player has enough learning data
+        boolean hasData = plugin.getBotManager().getAdaptiveAI().hasEnoughData(player.getUniqueId());
+        
+        if (hasData) {
+            meta.lore(List.of(
+                    Component.empty(),
+                    Component.text("» El bot aprende de TI", NamedTextColor.LIGHT_PURPLE)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("» Imita tu estilo de combate", NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("» Se adapta mientras juegas", NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.empty(),
+                    Component.text("✓ Datos de aprendizaje listos", NamedTextColor.GREEN)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.empty(),
+                    Component.text("Click para empezar", NamedTextColor.GREEN)
+                            .decoration(TextDecoration.ITALIC, false)
+            ));
+        } else {
+            meta.lore(List.of(
+                    Component.empty(),
+                    Component.text("» El bot aprende de TI", NamedTextColor.LIGHT_PURPLE)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("» Imita tu estilo de combate", NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("» Se adapta mientras juegas", NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.empty(),
+                    Component.text("⚠ Pocos datos - Juega más para", NamedTextColor.YELLOW)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("  que el bot aprenda mejor", NamedTextColor.YELLOW)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.empty(),
+                    Component.text("Click para empezar", NamedTextColor.GREEN)
+                            .decoration(TextDecoration.ITALIC, false)
+            ));
+        }
+        
+        item.setItemMeta(meta);
+        return item;
+    }
 
     private ItemStack createKitItem(String kitName) {
-        // Use diamond sword as default display material
-        Material material = Material.DIAMOND_SWORD;
+        // Pick material based on kit name
+        Material material = switch (kitName.toLowerCase()) {
+            case "sword"       -> Material.DIAMOND_SWORD;
+            case "axe"         -> Material.DIAMOND_AXE;
+            case "mace"        -> Material.MACE;
+            case "nethpot", "pot" -> Material.SPLASH_POTION;
+            case "uhc"         -> Material.GOLDEN_APPLE;
+            case "smp"         -> Material.SHIELD;
+            case "crystal"     -> Material.END_CRYSTAL;
+            case "spear", "trident" -> Material.TRIDENT;
+            case "bow"         -> Material.BOW;
+            case "crossbow"    -> Material.CROSSBOW;
+            default            -> Material.DIAMOND_SWORD;
+        };
 
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -134,6 +200,7 @@ public class BotPracticeGUI implements Listener {
             case MEDIUM -> NamedTextColor.YELLOW;
             case HARD -> NamedTextColor.RED;
             case HACKER -> NamedTextColor.DARK_RED;
+            case ADAPTIVE -> NamedTextColor.LIGHT_PURPLE;
         };
         
         meta.displayName(Component.text(difficulty.name(), color)
@@ -144,14 +211,16 @@ public class BotPracticeGUI implements Listener {
             case EASY -> "Reacción lenta, falla mucho";
             case MEDIUM -> "Reacción normal, precisión media";
             case HARD -> "Reacción rápida, muy preciso";
-            case HACKER -> "Reacción instantánea, nunca falla";
+            case HACKER -> "Reacción muy rápida, muy preciso";
+            case ADAPTIVE -> "Se adapta a tu estilo";
         };
 
         String healDesc = switch (difficulty) {
             case EASY -> "Cura al " + difficulty.healThreshold + "% HP";
             case MEDIUM -> "Cura al " + difficulty.healThreshold + "% HP";
             case HARD -> "Cura al " + difficulty.healThreshold + "% HP";
-            case HACKER -> "Cura instantáneamente";
+            case HACKER -> "Cura al " + difficulty.healThreshold + "% HP";
+            case ADAPTIVE -> "Aprende cuándo curas tú";
         };
 
         meta.lore(List.of(
@@ -233,6 +302,7 @@ public class BotPracticeGUI implements Listener {
             case YELLOW_WOOL -> BotDifficulty.MEDIUM;
             case RED_WOOL -> BotDifficulty.HARD;
             case BLACK_WOOL -> BotDifficulty.HACKER;
+            case ENDER_EYE -> BotDifficulty.ADAPTIVE;
             default -> null;
         };
     }

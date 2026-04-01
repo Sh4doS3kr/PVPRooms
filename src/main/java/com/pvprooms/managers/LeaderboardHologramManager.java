@@ -398,7 +398,7 @@ public class LeaderboardHologramManager implements Listener {
                 lines.add("&d◆ LT1 &8→ &c&l◆ HT1");
                 lines.add(" ");
                 lines.add("&7Verificación via ticket:");
-                lines.add("&b&ndiscord.mlmc.lat");
+                lines.add("&b&ntiers.mlmc.lat/tickets.html");
             }
             
             case INFO_KITS -> {

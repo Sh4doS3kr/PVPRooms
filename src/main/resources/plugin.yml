@@ -85,15 +85,16 @@ commands:
     usage: /party <create|invite|accept|deny|leave|kick|disband|list>
     permission: pvprooms.party
     aliases: [p, grupo]
-  verify:
-    description: Verificar cuenta web con código
-    usage: /verify <código>
+  verificar:
+    description: Verificar cuenta web con código de 9 dígitos
+    usage: /verificar <código>
     permission: pvprooms.verify
+  staff:
+    description: Activa/desactiva el modo staff con herramientas de administración
+    usage: /staff
+    permission: pvprooms.staff
 
 permissions:
-  pvprooms.verify:
-    description: Verificar cuenta web
-    default: true
   pvprooms.kit:
     description: Access /kit commands (admin only)
     default: op
@@ -130,6 +131,12 @@ permissions:
   pvprooms.party:
     description: Usar parties
     default: true
+  pvprooms.verify:
+    description: Verificar cuenta web
+    default: true
+  pvprooms.staff:
+    description: Acceso al modo staff (vanish, ver partidas, TP, etc.)
+    default: op
   pvprooms.admin:
     description: Full admin access
     default: op
@@ -137,3 +144,4 @@ permissions:
       pvprooms.kit: true
       pvprooms.arena: true
       pvprooms.kittrim: true
+      pvprooms.staff: true

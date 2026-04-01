@@ -1,0 +1,4069 @@
+prefix: '#ff7109&lᴍᴏᴏɴɢᴜᴀʀᴅ &8»'
+alerts:
+  format: '%prefix% &e%player% &festá usando &e%check%&f (&e%complex-type%&f) &8[#ff7109%vl%
+    &8| #ff7109%ping%ms&8]'
+  hover-message:
+  - '#DBD9D9• &fJugador: &e%player%'
+  - '#DBD9D9• &fCheck: &e%client-brand% #DBD9D9(%version%)'
+  - '#DBD9D9• &fComprobación: &e%check% #DBD9D9(Tipo &f%type%#DBD9D9)'
+  - '#DBD9D9• &fViolaciones: &e%vl% #DBD9D9/ &e%max-vl%'
+  - '#DBD9D9• &fPing: &e%ping%ms'
+  - '#DBD9D9• &fTPS: &e%tps%'
+  - ''
+  - '#DBD9D9Info: %description%'
+  - ''
+  - '#DBD9D9• &fHaz clic para teletransportarte a &e%player%'
+  click-commands:
+  - /tp %player%
+  click-alert-command-commands:
+  - tp %player%
+  toggled-on-message: '%prefix% &fLas alertas han sido &aactivadas.'
+  toggled-off-message: '%prefix% &fLas alertas han sido &cdesactivadas&f.'
+  print-to-console: true
+  console-format: '[Vulcan] %player% activó %check% %dev%(Tipo %type%)%dev% (%vl%/%max-vl%)'
+  custom-commands: []
+  severity:
+    violations:
+      '2': 2
+      '3': 4
+      '4': 6
+      '5': 8
+      '6': 10
+      '7': 12
+      '8': 14
+      '9': 16
+      '10': 18
+    colors:
+      '1': '&a'
+      '2': '&e'
+      '3': '&e'
+      '4': '&6'
+      '5': '&6'
+      '6': '&c'
+      '7': '&c'
+      '8': '&4'
+      '9': '&4'
+      '10': '&4'
+  experimental-symbol: ✦
+verbose:
+  format: '%prefix% &f%player% &7verbosed &f%check% &7(&f%type%&7) %dev% &7[&4%percent%%&7]'
+  hover-message:
+  - '&7Ping: &c%ping% &8| &7TPS: &c%tps% &8| &7Version: &c%version%'
+  - ''
+  - '&7Description:'
+  - '&7%description%'
+  - ''
+  - '&7Buffer:'
+  - '&7%buffer%/%max-buffer%'
+  - ''
+  - '&7Click to teleport to &b%player%&7.'
+  click-commands:
+  - /tp %player%
+  toggled-on-message: '%prefix% &7Vulcan verbose &aenabled&7!'
+  toggled-off-message: '%prefix% &7Vulcan verbose &cdisabled&7!'
+log-file:
+  enabled: true
+  alert-message: '&e%player% &fha fallado &e%check% (%type%) #DBD9D9| #ff7109x%vl%
+    #DBD9D9%ping%ms TPS: %tps% Version: %version% Client: %client-brand%]'
+  punishment-message: '&e%player% &frecibió un castigo por &e%check% (%type%) #DBD9D9|
+    #ff7109x%vl% #DBD9D9%ping%ms TPS: %tps% Cliente: %client-brand%'
+unloaded-chunks:
+  setback-enabled: false
+  message: '%prefix% &f%player% #DBD9D9fue retrotraído por estar en un trozo descargado!'
+  max-ticks: 40
+punishment-file:
+  enabled: true
+violation-reset:
+  enabled: true
+  interval-in-minutes: 5
+  message-enabled: false
+  message: '%prefix% &6¡Las violaciones de todos los jugadores en línea han sido reiniciadas!'
+client-brand-alerts:
+  resolve: true
+  enabled: true
+  ignore-alerts-list:
+  - vanilla
+  message: '%prefix% &f%player% #DBD9D9se unió usando &f%client-brand%'
+  blocked-client-brands: []
+  unallowed-client-brand-kick-message: '&c¡No puedes unirte con %client-brand%!'
+  console: false
+  console-message: '[Vulcan] %player% se unió usando %client-brand%!'
+  whitelist-enabled: false
+  whitelisted-client-brands: []
+connection:
+  desync:
+    kick-enabled: false
+    max-ticks: 600
+    kick-message: 'Internal Exception: io.netty.handler.timeout.ReadTimeoutException'
+    staff-alert-message: '%prefix% &c%player% &7was kicked for being out of sync with
+      the server! &7(&c%ticks% &7ticks)'
+    console-message: '[Vulcan] &c%player% &7was kicked for being out of sync with
+      the server! &7(&c%ticks% &7ticks)'
+  transaction:
+    kick-enabled: false
+    max-delay: 60000
+    kick-message: 'Internal Exception: io.netty.handler.timeout.ReadTimeoutException'
+    staff-alert-message: '%prefix% &c%player% &7was kicked for not replying to Transaction
+      Packets! &7(&c%delay%ms&7)'
+    console-message: '[Vulcan] &c%player% &7was kicked for not replying to Transaction
+      Packets! &7(&c%delay%ms&7)'
+  keepalive:
+    kick-enabled: false
+    max-delay: 60000
+    kick-message: '&cConexión perdida: No hay respuesta a la señal de keepalive.'
+    staff-alert-message: '%prefix% &e%player% #DBD9D9no respondió a los paquetes keepalive
+      dentro de &c%delay%ms#DBD9D9.'
+    console-message: '[Vulcan] &e%player% no respondió a los paquetes keepalive en
+      &c%delay%ms.'
+  max-ping:
+    kick-enabled: false
+    max-ping: 10000
+    max-ticks: 20
+    kick-message: '&cConexión perdida: Tu ping excedió el límite permitido.'
+    staff-alert-message: '%prefix% &e%player% #DBD9D9fue expulsado por ping excesivo
+      (&c%ping%ms#DBD9D9).'
+    console-message: '[Vulcan] &e%player% fue desconectado por tener ping muy alto:
+      &c%ping%ms.'
+punishments:
+  message: '%prefix% &e%player% &f fue removido de la red debido a &e%check% (%type%)
+    #DBD9D9| #ff7109x%vl%'
+  broadcast:
+  - '&6× &f%player% #DBD9D9fue removido por &cVentajas Injustas#DBD9D9.'
+judgement-days:
+  started-broadcast:
+  - '&6&m---»--*-------------------------------------*--«---'
+  - '&cVulcan Día del Juicio v1 ha comenzado...'
+  - '&6&m---»--*-------------------------------------*--«---'
+  ended-broadcast:
+  - '&6&m---»--*-------------------------------------*--«---'
+  - '&cDía del Juicio terminado... #ff7109%amount% jugadores castigados.'
+  - '&6&m---»--*-------------------------------------*--«---'
+  commands:
+  - ban %player% &c[Vulcan] Día del Juicio v1
+  broadcast:
+  - '&6&m---»--*-------------------------------------*--«---'
+  - '&e%player% &6fue baneado por &c[Vulcan] Día del Juicio v1&6.'
+  - '&6&m---»--*-------------------------------------*--«---'
+  cooldown: 1000
+  run-at-interval: false
+  interval: 36000
+freeze:
+  logged-out-while-frozen-commands: []
+ghost-blocks-fix:
+  enabled: false
+  ghost-water-fix: false
+  minimum-tps: 18.5
+  ignore-legacy-via: true
+  buffer:
+    max: 3
+    decay: 0.1
+  setback: false
+  update-blocks: false
+  ticks: 3
+  message-enabled: false
+  message: '&cEstabas parado en un bloque fantasma. ¡Tu posición ha sido corregida!'
+  staff-message-enabled: true
+  staff-message: '%prefix% &fLa #DBD9D9posición de %player% fue corregida por bloques
+    fantasmas en &e(&c%world%, %x%, %y%, %z%&e) &6[%ticks% ticks]'
+  print-to-console: true
+  console-message: '[Vulcan] Posición de %player% corregida por bloque fantasma en
+    (%world%, %x%, %y%, %z%) &6[%ticks% ticks]'
+messages:
+  no-permission: '&6Anticheat #DBD9D9| &cPermisos insuficientes para ejecutar este
+    comando.'
+  cant-execute-from-console: '%prefix% &f¡No puedes ejecutar esto desde la consola!'
+  ban-command-syntax: '%prefix% &fUsa &c/vulcan ban (jugador)'
+  kb-command-syntax: '%prefix% &fUsa &c/vulcan knockback (jugador) &8o &c/vulcan kb
+    (jugador)'
+  profile-command-syntax: '%prefix% &fUsa &c/vulcan profile (jugador)'
+  jday-command-syntax: '%prefix% &fUsa &c/jday add (jugador) &8| &c/jday execute &8|
+    &c/jday list &8| &c/jday remove (jugador)'
+  reload-success: '%prefix% &f¡Tu Anticheat fue &arecargado &fexitosamente!'
+  invalid-target: '%prefix% &f¡Jugador no encontrado!'
+  kb-test-success: '%prefix% &a¡Knockback enviado a %player%!'
+  jday-no-pending-bans: '%prefix% &f¡JDay &cno &ftiene ningún ban para ejecutar!'
+  jday-added-to-list: '%prefix% &f¡Agregado %player% a la lista JDay!'
+  reset-command: '%prefix% &f¡Las violaciones de todos han sido &areseteadas &fexitosamente!'
+  no-next-page: '%prefix% &f¡Ya estás en la &cúltima página&f, no hay más páginas!'
+  no-previous-page: '%prefix% &f¡Ya estás en la &cprimera página!'
+  enabled-all-checks: '%prefix% &a¡Todas las comprobaciones activadas!'
+  disabled-all-checks: '%prefix% &c¡Todas las comprobaciones desactivadas!'
+  enabled-all-punishments: '%prefix% &a¡Todos los castigos activados!'
+  disabled-all-punishments: '%prefix% &c¡Todos los castigos desactivados!'
+  disabled-check: '%prefix% &c¡Comprobación %check% desactivada!'
+  enabled-check: '%prefix% &a¡Comprobación %check% activada!'
+  disabled-punishment: '%prefix% &c¡Castigo desactivado para %check%!'
+  enabled-punishment: '%prefix% &a¡Castigo activado para %check%!'
+  disabled-hotbar-shuffle: '%prefix% &c¡Mezcla de hotbar desactivada para %check%!'
+  enabled-hotbar-shuffle: '%prefix% &a¡Mezcla de hotbar activada para %check%!'
+  disabled-random-rotation: '%prefix% &c¡Rotación aleatoria desactivada para %check%!'
+  enabled-random-rotation: '%prefix% &a¡Rotación aleatoria activada para %check%!'
+  disabled-broadcast-punishment: '%prefix% &c¡Transmisión desactivada para %check%!'
+  enabled-broadcast-punishment: '%prefix% &a¡Transmisión activada para %check%!'
+  must-be-an-integer: '%prefix% &c¡Eso debe ser un número entero!'
+  must-be-positive: '%prefix% &c¡El número debe ser positivo!'
+  must-be-number: '%prefix% &c¡Eso no es un número!'
+  set-max-buffer: '%prefix% &fMáximo buffer para &e%check% &fconfigurado a &a%value%'
+  set-hotbar-shuffle-minimum-violations: '%prefix% &fViolaciones mínimas para mezcla
+    de hotbar para &e%check% &fconfiguradas a &a%value%'
+  set-hotbar-shuffle-interval: '%prefix% &fIntervalo de mezcla de hotbar para &e%check%
+    &fconfigurado a &a%value%'
+  set-random-rotation-minimum-violations: '%prefix% &fViolaciones mínimas para rotación
+    aleatoria para &e%check% &fconfiguradas a &a%value%'
+  set-random-rotation-interval: '%prefix% &fIntervalo de rotación aleatoria para &e%check%
+    &fconfigurado a &a%value%'
+  set-alert-interval: '%prefix% &fRetraso de alerta para &e%check% &fconfigurado a
+    &a%value%'
+  set-buffer-decay: '%prefix% &fDecaimiento del buffer para &e%check% &fconfigurado
+    a &a%value%'
+  set-buffer-multiple: '%prefix% &fMúltiplo del buffer para &e%check% &fconfigurado
+    a &a%value%'
+  set-max-violations: '%prefix% &fViolaciones máximas para &e%check% &fconfiguradas
+    a &a%value%'
+  set-minimum-violations-to-alert: '%prefix% &fViolaciones mínimas para alertar para
+    &e%check% &fconfiguradas a &a%value%'
+  set-maximum-ping: '%prefix% &fPing máximo para &e%check% &fconfigurado a &a%value%'
+  set-minimum-tps: '%prefix% &fTPS mínimo para &e%check% &fconfigurado a &a%value%'
+  removed-punishment-command: '%prefix% &fEliminado &c%command% &fde &e%check%'
+  invalid-index-number: '%prefix% &c¡Ese número no funciona!'
+  stopped-editing-punishment-commands: '%prefix% &f¡Detenido la edición de comandos
+    de castigo!'
+  added-punishment-command: '%prefix% &fAgregado &a%command% &fa &e%check%'
+  enter-punishment-command: '%prefix% &fEscribe el comando para agregar. Escribe &cSTOP
+    &fo &cCANCEL &fpara salir.'
+  remove-punishment-command: '%prefix% &fEscribe el índice para eliminar. Escribe
+    &cSTOP &fo &cCANCEL &fpara salir.'
+  disable-check-command-syntax: '%prefix% &fUsa: &c/vulcan disablecheck (nombre-comprobación)'
+  invalid-check: '%prefix% &c¡Esa comprobación no existe! Intenta algo como &fAimA,
+    BadPacketsF...'
+  removed-check: '%prefix% &c¡%check% desactivada!'
+  violations-command-syntax: '%prefix% &fUsa: &c/vulcan violations (jugador)'
+  no-logs: '%prefix% &c¡No hay registros para este jugador!'
+  cps-command-syntax: '%prefix% &fUsa: &c/vulcan cps (jugador)'
+  connection-command-syntax: '%prefix% &fUsa: &c/vulcan connection (jugador)'
+  logs-command-syntax: '%prefix% &fUsa: &c/logs (jugador) (página)'
+  no-logs-file: '%prefix% &c¡No se pudieron encontrar los registros!'
+  logs-command-no-logs: '%prefix% &c¡No hay registros para &f%player%&c!'
+  no-page: '%prefix% &c¡Página %page% no encontrada para &f%player%&c!'
+  update-available: '%prefix% &f¡Nueva versión de Vulcan disponible! (&a%new-version%&f)'
+  latest-version: '%prefix% &a¡Estás en la última versión!'
+  injection-failure: '%prefix% &cTe uniste demasiado rápido. ¡Inténtalo de nuevo!'
+  frozen: '&c¡Estás congelado! Espera al staff.'
+  logged-out-while-frozen: '%prefix% &e%player% se desconectó mientras estaba congelado!'
+  froze: '%prefix% &fCongelaste a &e%player%'
+  unfroze: '%prefix% &fDescongelaste a &a%player%'
+  freeze-command-syntax: '%prefix% &fUsa: &c/vulcan freeze (jugador)'
+  shuffle-command-syntax: '%prefix% &fUsa: &c/vulcan shuffle (jugador)'
+  shuffled-hotbar: '%prefix% &fHotbar mezclado para &a%player%'
+  rotate-command-syntax: '%prefix% &fUsa: &c/vulcan rotate (jugador)'
+  randomly-rotated: '%prefix% &f¡%player% &frotado aleatoriamente!'
+  reset-command-syntax: '%prefix% &fUsa: &c/vulcan reset (jugador)'
+  violations-reset: '%prefix% &f¡Violaciones reseteadas para &a%player%!'
+  unknown-command: '%prefix% &c¡Comando desconocido!'
+  unfroze-staff-broadcast: '%prefix% &e%player% &fdescongelado por &e%staff%'
+  froze-staff-broadcast: '%prefix% &e%player% &ffue congelado por &e%staff%'
+  removed-from-jday: '%prefix% &f¡Eliminado &a%player% &fdel Día del Juicio!'
+  jday-remove-syntax: '%prefix% &fUsa: &c/jday remove (jugador)'
+  punishlogs-syntax: '%prefix% &fUsa: &c/punishlogs (jugador)'
+  sent-test-alert: '%prefix% &a¡Alerta de prueba enviada!'
+  description-command-syntax: '%prefix% &fUsa: &c/vulcan description (nombre-comprobación)'
+commands:
+  help:
+  - '#DBD9D9&m                                                                '
+  - '&#ff7109Vulcan &8» &eResumen de Comandos'
+  - '&r'
+  - '&6Comandos Generales'
+  - ' #DBD9D9• &e/vulcan help #DBD9D9• &fMuestra esta lista de comandos'
+  - ' #DBD9D9• &e/vulcan reload #DBD9D9• &fRecarga los archivos de configuración'
+  - ' #DBD9D9• &e/vulcan checks #DBD9D9• &fLista de todas las comprobaciones activas'
+  - ' #DBD9D9• &e/vulcan testalert #DBD9D9• &fPrueba alertas de Discord'
+  - '&r'
+  - '&6Moderación'
+  - ' #DBD9D9• &e/vulcan profile #DBD9D9• &fVer estadísticas de Vulcan de un jugador'
+  - ' #DBD9D9• &e/vulcan ban (jugador) #DBD9D9• &fBanea a alguien usando Vulcan'
+  - ' #DBD9D9• &e/vulcan freeze (jugador) #DBD9D9• &fCongela o descongela a un jugador'
+  - ' #DBD9D9• &e/vulcan disablecheck (comprobación) #DBD9D9• &fDesactiva una comprobación
+    (sensible a mayúsculas)'
+  - ' #DBD9D9• &e/vulcan violations (jugador) #DBD9D9• &fVer historial de violaciones
+    de un jugador'
+  - ' #DBD9D9• &e/vulcan cps (jugador) #DBD9D9• &fVer CPS del jugador'
+  - ' #DBD9D9• &e/vulcan connection (jugador) #DBD9D9• &fVer información de conexión
+    de un jugador'
+  - ' #DBD9D9• &e/vulcan logs (jugador) (página) #DBD9D9• &fLeer registros de un jugador'
+  - ' #DBD9D9• &e/vulcan top #DBD9D9• &fTop de violadores por tipo de comprobación'
+  - '&r'
+  - '&6Herramientas de Trol / Diversión'
+  - ' #DBD9D9• &e/vulcan knockback (jugador) #DBD9D9• &fEmpuja a un jugador hacia
+    atrás'
+  - ' #DBD9D9• &e/vulcan rotate (jugador) #DBD9D9• &fGira la cámara del jugador'
+  - ' #DBD9D9• &e/vulcan shuffle (jugador) #DBD9D9• &fAleatoriza la ranura de hotbar'
+  - '&r'
+  - '&6Día del Juicio'
+  - ' #DBD9D9• &e/jday add (jugador) #DBD9D9• &fAgrega un jugador al Día del Juicio'
+  - ' #DBD9D9• &e/jday execute #DBD9D9• &fInicia el Día del Juicio'
+  - '&r'
+  - '&6Sin Prefijo'
+  - ' #DBD9D9• &e/verbose #DBD9D9• &fAlternar modo verbose'
+  - ' #DBD9D9• &e/punishlogs (jugador) #DBD9D9• &fVer historial de castigos de un
+    jugador'
+  - ' #DBD9D9• &e/alerts #DBD9D9• &fAlternar mensajes de alerta de trucos'
+  - '&r'
+  - '#DBD9D9Configuración por &ediamondclass'
+  - '&bhttps://builtbybit.com/resources/grim-vulcan-anticheat-config.69465/'
+  - '&r'
+  - '#DBD9D9&m                                                                '
+  
+  ban:
+    commands:
+    - tempban %player% Ventaja Injusta 5d -s
+    broadcast:
+    - '&6Anticheat #DBD9D9elimina a &f%player% #DBD9D9debido a &cVentajas Injustas#DBD9D9.'
+  profile:
+  - '#DBD9D9&m                                                                '
+  - '&fPerfil de Vulcan para #ff7109%player%'
+  - ' &e👥 &fID: &e%uuid%'
+  - ''
+  - ' #DBD9D9• &fVersión: &e%client-version%'
+  - ' #DBD9D9• &fCheck de Cliente: &e%client-brand%'
+  - ' #DBD9D9• &fSensibilidad: &e%sensitivity%%'
+  - ' #DBD9D9• &fÚltimo CPS: &e%cps% CPS'
+  - ' #DBD9D9• &fVelocidad de Movimiento: &e%move-speed%'
+  - ''
+  - '&e🔥 &fViolaciones Totales (#ff7109%total-violations%&f)'
+  - ' #DBD9D9• &fCombate: &e%combat-violations%'
+  - ' #DBD9D9• &fMovimiento: &e%movement-violations%'
+  - ' #DBD9D9• &fJugador: &e%player-violations%'
+  - ''
+  - ' #DBD9D9• &fEfectos de Poción: %potion-effects%'
+  - '#DBD9D9&m                                                                '
+  cps: '%prefix% &e%player% &fCPS promedio: #ff7109%cps%'
+  connection:
+  - '#DBD9D9&m                                                                '
+  - ' #DBD9D9• &fInformación de Conexión para #ff7109%player%'
+  - ''
+  - ' #DBD9D9• &fPing de Transacción: &e%transaction-ping%ms'
+  - ' #DBD9D9• &fPing KeepAlive: &e%keepalive-ping%ms'
+  - ''
+  - ' #DBD9D9• &fÚltima Transacción Respondida: &e%last-replied-transaction%ms atrás'
+  - ' #DBD9D9• &fTransacciones en Cola: &e%queued-transactions%'
+  - ''
+  - ' #DBD9D9• &fRetraso de Vuelo: &e%flying-delay%ms'
+  - '#DBD9D9&m                                                                '
+  logs:
+    color: '&f'
+    header-footer: '&8&m---»--*--&r&6[ Registros para #ff7109%player% &6(#ff7109%page%&8/#ff7109%max-pages%&6)
+      &6]&8&m--*--«---'
+  top:
+  - '#DBD9D9&m                                                                '
+  - '&6Top Violaciones Totales'
+  - ' #DBD9D9• #ff7109❶ &f%total-1-name% &e(#ff7109%total-1-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❷ &f%total-2-name% &e(#ff7109%total-2-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❸ &f%total-3-name% &e(#ff7109%total-3-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❹ &f%total-4-name% &e(#ff7109%total-4-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❺ &f%total-5-name% &e(#ff7109%total-5-violations% VL&e)'
+  - ''
+  - '&6Top Violaciones de Combate'
+  - ' #DBD9D9• #ff7109❶ &f%combat-1-name% &e(#ff7109%combat-1-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❷ &f%combat-2-name% &e(#ff7109%combat-2-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❸ &f%combat-3-name% &e(#ff7109%combat-3-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❹ &f%combat-4-name% &e(#ff7109%combat-4-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❺ &f%combat-5-name% &e(#ff7109%combat-5-violations% VL&e)'
+  - ''
+  - '&6Top Violaciones de Movimiento'
+  - ' #DBD9D9• #ff7109❶ &f%movement-1-name% &e(#ff7109%movement-1-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❷ &f%movement-2-name% &e(#ff7109%movement-2-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❸ &f%movement-3-name% &e(#ff7109%movement-3-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❹ &f%movement-4-name% &e(#ff7109%movement-4-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❺ &f%movement-5-name% &e(#ff7109%movement-5-violations% VL&e)'
+  - ''
+  - '&6Top Violaciones de Jugador'
+  - ' #DBD9D9• #ff7109❶ &f%player-1-name% &e(#ff7109%player-1-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❷ &f%player-2-name% &e(#ff7109%player-2-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❸ &f%player-3-name% &e(#ff7109%player-3-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❹ &f%player-4-name% &e(#ff7109%player-4-violations% VL&e)'
+  - ' #DBD9D9• #ff7109❺ &f%player-5-name% &e(#ff7109%player-5-violations% VL&e)'
+  - '#DBD9D9&m                                                                '
+  jday:
+    list-header-footer: '#DBD9D9&m                                                                '
+    list-format: ' #DBD9D9• &e%name%'
+  punishlogs:
+    header-footer: '&8&m---»--*--&r&6[ Registros de Castigos para #ff7109%player%
+      &6]&8&m--*--«---'
+  description: '%prefix% &eDescripción para #ff7109%check%&e: %description%'
+punishment-statistics-broadcast:
+  enabled: false
+  interval: 18000
+  broadcast:
+  - '#DBD9D9&m                                                                '
+  - '&fEn los últimos 7 días, &#ff7109Vulcan &fha castigado a #ff7109%amount% &ftramposos.'
+  - '#DBD9D9&m                                                                '
+settings:
+  # Si las alertas se habilitarán automáticamente al unirse para jugadores con el permiso "vulcan.alerts"
+  toggle-alerts-on-join: true
+  # Si el placeholder de severidad debe basarse en violaciones por comprobación o en las violaciones totales del jugador
+  per-check-severities: true
+  # Si el modo cinematográfico será verificado para ciertas comprobaciones de puntería. No es gran cosa y puede dejarse desactivado
+  # ya que esto casi NUNCA sucede a menos que se haga intencionalmente. Habilitarlo ralentizará las velocidades de detección.
+  cinematic: false
+  # Esto está aquí por si olvido quitar un mensaje de debug al publicar una actualización. Si olvido quitar un mensaje de debug
+  # y ves [Vulcan Debug] en tu servidor, desactiva esto (no te afectará si está habilitado o deshabilitado a menos que olvide
+  # quitar un mensaje de debug, pero si ves [Vulcan Debug] en el chat, configúralo en false y recarga).
+  debug: true
+  # Si el mensaje '¡Hay una nueva actualización disponible!' se mostrará al unirse para jugadores con permiso 'vulcan.admin'
+  check-for-updates: true
+  # Configuración para PacketEvents, podemos pedirte que cambies esto si tienes problemas con la inyección. Si todo funciona
+  # bien, no lo toques.
+  inject-early: true
+  # Es el tiempo (en ticks - 20 ticks por segundo - valor por defecto es 80 (4 segundos)) de cuánto tiempo deben estar exentos
+  # los jugadores de ciertas comprobaciones después de que se les aplique velocidad mediante otro plugin o algo (como Launchpads,
+  # plugins de crates, etc.).
+  max-velocity-ticks: 80
+  # Es el tamaño máximo del archivo (en KB) antes de que violations.txt deba ser comprimido y puesto en la carpeta de logs
+  max-logs-file-size: 7500
+  # Si tienes una red bungee y quieres tener un nombre de servidor específico para mensajes de castigo/alerta, etc
+  server-name: Default
+  # Si los mensajes de alerta deben enviarse en el hilo principal o de forma asíncrona. Si tu servidor está en bungee, se recomienda
+  # mantener esto desactivado ya que enviar grandes mensajes de componentes de chat con tanta información (hover, comandos de clic, etc.)
+  # como los comandos de alerta pueden causar que a veces las personas sean expulsadas por 'El servidor en el que estabas se ha caído' o algo.
+  # TLDR:
+  # - Redes Bungeecord: dejar en FALSE
+  # - Servidores individuales: configurarlo en TRUE para ahorrar rendimiento
+  async-alerts: false
+  # Si la API debe estar habilitada. Si quieres conectar con Vulcan y hacer algo sofisticado, entonces habilítalo, sin embargo
+  # la mayoría de la gente nunca usará esto y deshabilitarlo permite menos runnables y más rendimiento ya que los eventos no
+  # necesitan ser llamados en absoluto (también están obligados a ser llamados sincronizados, así que es una ganancia de rendimiento
+  # ganancia-ganancia)
+  enable-api: false
+  # Si el verificador de actualizaciones debe estar habilitado
+  update-checker: true
+  # El retraso en milisegundos (1000ms = 1 segundo)
+  punishment-delay: 15000
+  # Si Vulcan debe ignorar automáticamente a jugadores de Bedrock usando la API de Floodgate.
+  ignore-floodgate: true
+  # Esto es altamente altamente recomendado mantener en false ya que puede ser falsificado por el cliente, sin embargo, si estás
+  # usando Geyser y por alguna razón no puedes hacer que Floodgate funcione, entonces habilítalo. Si tienes floodgate-bukkit en
+  # tu servidor y Geyser funciona bien, entonces no lo toques.
+  ignore-flags-geyser-client-brand: false
+  # Cuánto tiempo debemos esperar para que todo se inicialice antes de que los jugadores comiencen a ser verificados (en milisegundos).
+  # El valor por defecto es 2500ms.
+  join-check-wait-time: 2500
+  # Si los jugadores con UUID que comienzan con '000000' deben ser ignorados y no Checkdos - usado para exenciones de
+  # jugadores de Geyser si todo lo demás falla.
+  ignore-geyser-uuids: true
+  # Si debemos ignorar Checks para jugadores cuyos nombres de usuario comienzan con un cierto carácter/cadena de caracteres
+  ignore-geyser-prefixes: true
+  # La cadena a ser ignorada - todos los nombres de jugadores que comiencen con * no serán Checkdos (sensible a mayúsculas si no son símbolos)
+  ignore-geyser-prefix: '*'
+  # La violación máxima (violaciones por encima de esta no serán enviadas)
+  max-alert-violation: 250
+  # Cuánto tiempo deben estar exentos las personas de las comprobaciones cuando estaban en /fly (por defecto = 40 ticks, 2 segundos)
+  flight-cooldown: 60
+  # Lo que el comando /vulcan top debe mostrar si no hay suficientes usuarios para ordenar
+  top-command-unresolved: Sin Resolver
+  # Si los jugadores que están en la cola del día del juicio deben poder ser baneados de nuevo.
+  ignore-if-in-judgement-day: false
+  # Si los jugadores que se unen con Vivecraft deben ser ignorados. Ten cuidado con esto ya que puede ser falsificado.
+  ignore-vivecraft: false
+  # Los andamios son bloques realmente rotos, si debemos ser más indulgentes con ellos para ciertas comprobaciones.
+  lenient-scaffolding: true
+  # Si bStats debe cargarse
+  bstats: true
+  # Si Vulcan debe tener en cuenta las colisiones de entidades
+  entity-collision: true
+  # Si Vulcan debe conectarse con mcMMO si está disponible.
+  hook-mcmmo: true
+  # Si Vulcan debe conectarse con MythicMobs si está disponible.
+  hook-mythicmobs: true
+  # Si Vulcan debe conectarse con GSit si está disponible
+  hook-gsit: true
+  # Si Vulcan debe conectarse con Brewery si está disponible
+  hook-brewery: true
+  # Si Vulcan debe ignorar alertas para violaciones que son mayores que el umbral de violaciones máximas
+  ignore-alerts-over-max-violations: false
+  # La cantidad mayor que las violaciones máximas que deben ser ignoradas (ejemplo, 3 significaría que si las violaciones máximas
+  # estaban configuradas en 10, las alertas mayores a VL 13 serían ignoradas)
+  ignore-alerts-over-max-violations-amount: 3
+  # Si Vulcan debe advertirte si es posible que estés usando un fork de spigot incompatible.
+  incompatability-manager: true
+  # Si Vulcan debe enviar mensajes de plugin
+  plugin-messaging: true
+  # Si Vulcan debe retrotraer a los jugadores cuando están más bajos que su última posición enGround (esto puede llevar a
+  # cosas como anti-voids, por lo que no se recomienda particularmente si tienes algo como un servidor SkyWars/BedWars)
+  dont-setback-lower-positions: false
+  # Ticks mínimos de existencia antes de que un jugador sea verificado, similar a join-check-wait-time arriba
+  min-ticks-existed: 3
+  # Si debemos calcular la distancia entre el jugador y WorldBorder para prevenir falsas Checks en las
+  # comprobaciones de Velocidad. Solo necesario en servidores muy específicos.
+  velocity-world-border: false
+  # Si Vulcan debe tener en cuenta tener 10 kabillion entidades en un lugar que te lanza muy rápido y podría
+  # 'falsificar' algunas comprobaciones. No importará en el 99% de los servidores
+  entity-cram-fix-enabled: true
+  # La cantidad de entidades que deben ser tenidas en cuenta
+  entity-cram-entities-amount: 10
+  # Cuánto tiempo deben estar exentas las comprobaciones si se encuentran las entidades de arriba
+  entity-cram-exempt-ticks: 30
+  # Soporte para modificadores de atributos
+  handle-attributes: true
+discord-webhook:
+  # Si el cooldown está habilitado
+  cooldown: false
+  # Con qué frecuencia debe reiniciarse el contador en ticks (por defecto = 12000 ticks o 10 mins, 20 ticks = 1 segundo)
+  cooldown-reset-ticks: 12000
+  # Máximos webhooks permitidos en el período de tiempo anterior
+  cooldown-max-webhooks: 100
+  # La sección para las alertas de Discord Webhook
+  alerts:
+    # Si las Alertas de Discord Webhook deben estar habilitadas
+    enabled: true
+    # Pega la URL a tu webhook aquí. Para cómo crear un webhook, por favor ve https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+    url: https://discord.com/api/webhooks/1376644499522060328/tuAhYI2JwGAcwWIim5YP1ncC-JDafKXmTh_jeumH4X2D4Dvgr60e3kk0Oh77zb_68r4g
+    # El avatar para el webhook
+    avatar: http://cravatar.eu/avatar/%name%/64.png
+    # Miniatura para el webhook
+    thumbnail: http://cravatar.eu/avatar/%name%/64.png
+    # Colores para el webhook (usa un sitio web como https://www.rapidtables.com/web/color/RGB_Color.html para elegir colores)
+    color-r: 252
+    color-g: 140
+    color-b: 3
+    # Nombre de usuario del webhook
+    username: Detecciones (Survival)
+    # Título del webhook
+    title: Nueva Alerta de Vulcan
+    # Descripción del webhook
+    description: '**%player%** falló %check% (%type%) [%vl%/%max-vl%]'
+    # El contenido enviará texto fuera del embed, así que puedes etiquetar roles o personas por ejemplo.
+    content: ''
+    information-field: false
+    client-version-field: true
+    client-brand-field: true
+    server-name-field: false
+    description-field: true
+    location-field: false
+    ping-tps-field: true
+  punishments:
+    # Mismas configuraciones y explicaciones que arriba
+    enabled: true
+    url: https://discord.com/api/webhooks/1376644499522060328/tuAhYI2JwGAcwWIim5YP1ncC-JDafKXmTh_jeumH4X2D4Dvgr60e3kk0Oh77zb_68r4g
+    avatar: http://cravatar.eu/avatar/%name%/64.png
+    thumbnail: http://cravatar.eu/avatar/%name%/64.png
+    color-r: 255
+    color-g: 0
+    color-b: 0
+    username: Castigo
+    title: Nuevo Castigo de Vulcan
+    description: '**%player%** fue baneado debido a %check% (%type%) [VL: %vl%]'
+    content: ''
+    description-field: true
+    server-name-field: false
+    client-brand-field: true
+    client-version-field: true
+    ping-tps-field: true
+    location-field: false
+checks:
+  combat:
+    aim:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.75
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 8
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.75
+          decay: 0.95
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      c:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.5
+          decay: 0.75
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      d:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 8
+          multiple: 0.5
+          decay: 0.75
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      e:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.75
+          decay: 0.25
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      f:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 12
+          multiple: 0.5
+          decay: 0.45
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      g:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.75
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      h:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 7
+          multiple: 0.5
+          decay: 0.75
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      i:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 7
+          multiple: 0.5
+          decay: 0.75
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      k:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.5
+          decay: 0.25
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      l:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 10
+          multiple: 0.45
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      m:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.4
+          decay: 0.25
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      n:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.5
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      o:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.5
+          decay: 0.25
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      p:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.4
+          decay: 0.25
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      q:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.5
+          decay: 0.25
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      r:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 20
+          multiple: 0.3
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      s:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 20
+          multiple: 0.25
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      u:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      w:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 20
+          multiple: 0.25
+          decay: 0.125
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      x:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 12
+          multiple: 0.25
+          decay: 0.125
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      y:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+    autoblock:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      c:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.5
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      d:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+    # AutoClicker checks not really recommended for banning since you can't ever be 100% certain, if you crank up
+    # the violations you should be fine but it's all just probability / statistics.
+    autoclicker:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-cps: 22
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.5
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 1
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.5
+      e:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.75
+      f:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 1.25
+      g:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.25
+          decay: 1.25
+      h:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 1
+      i:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.5
+          decay: 1.25
+      j:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 1.25
+      k:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.75
+      l:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 1
+      m:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.75
+      n:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 25
+          multiple: 0.15
+          decay: 0.75
+      o:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.25
+          decay: 1.25
+      p:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+      q:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 35
+          multiple: 0.3
+          decay: 2.0
+      r:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 50
+          multiple: 0.15
+          decay: 10
+      s:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 30
+          multiple: 0.15
+          decay: 0.825
+      t:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 25
+          multiple: 0.15
+          decay: 0.75
+        min-kurtosis: 13
+    reach:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 4
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.035
+        max-reach: 3.15
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.25
+          decay: 0.225
+        max-reach: 3.25
+    fastbow:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.125
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+    criticals:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.05
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.05
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+    killaura:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: false
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: false
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 8
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.6
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      c:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 6
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.5
+          decay: 0.25
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      f:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 10
+          multiple: 0.25
+          decay: 2
+      h:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      j:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.5
+      k:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.75
+      l:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.6
+          decay: 0.5
+        hotbar-shuffle:
+          enabled: true
+          minimum-vl-to-shuffle: 2
+          shuffle-every: 2
+        random-rotation:
+          enabled: true
+          minimum-vl-to-randomly-rotate: 2
+          rotate-every: 2
+    hitbox:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.3
+        max-angle: 0.38
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.25
+          decay: 0.125
+        max-angle: 45
+    velocity:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.075
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.35
+          decay: 0.125
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.25
+          decay: 0.175
+      d:
+        enabled: false
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.05
+  movement:
+    noslow:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.15
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 7
+          multiple: 0.25
+          decay: 0.075
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 7
+          multiple: 0.25
+          decay: 0.15
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 7
+          multiple: 0.25
+          decay: 0.15
+      e:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 7
+          multiple: 0.25
+          decay: 0.15
+    motion:
+      a:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.25
+      b:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.25
+      c:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.05
+      d:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.05
+      e:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.05
+      g:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.15
+      h:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.15
+    jump:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.15
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.15
+      c:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.15
+    step:
+      a:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      b:
+        enabled: true
+        punishable: false
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.25
+          decay: 0.35
+      c:
+        enabled: true
+        punishable: false
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.1
+    boatfly:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.33
+          decay: 0.125
+        kick-out: true
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.25
+          decay: 0.25
+        kick-out: true
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.25
+          decay: 0.125
+        kick-out: true
+    entityflight:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.5
+          decay: 0.25
+        kick-out: true
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.5
+          decay: 0.25
+    antilevitation:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 8
+          multiple: 0.25
+          decay: 0.075
+    nosaddle:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.5
+          decay: 0.125
+    entityspeed:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.5
+          decay: 0.25
+        kick-out: true
+        min-difference: 0.01
+    elytra:
+      a:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.25
+        max-speed: 4.25
+      b:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 8
+          multiple: 0.25
+          decay: 0.125
+      c:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.5
+          decay: 0.125
+      f:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.25
+          decay: 0.125
+      g:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 25
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.1
+      i:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.1
+      k:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.1
+      l:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.1
+      m:
+        enabled: true
+        punishable: false
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.1
+      n:
+        enabled: false
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 2
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.045
+    speed:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 2
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.35
+          decay: 0.125
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 2
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.045
+        min-difference: 0.0025
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 2
+        dont-alert-until: 2
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.045
+        min-difference: 0.001
+      d:
+        enabled: false
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 2
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.045
+        min-difference: 0.0025
+      e:
+        enabled: false
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 2
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.025
+    fastclimb:
+      a:
+        enabled: true
+        punishable: true
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.125
+    wallclimb:
+      a:
+        enabled: true
+        punishable: true
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.35
+          decay: 0.225
+    jesus:
+      a:
+        enabled: true
+        punishable: true
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.025
+      b:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.175
+      c:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 10
+          multiple: 0.45
+          decay: 0.75
+      d:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.45
+          decay: 0.175
+      e:
+        enabled: true
+        punishable: false
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 10
+          multiple: 0.25
+          decay: 0.175
+    flight:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 3
+        broadcast-punishment: true
+        max-violations: 30
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.65
+          decay: 0.275
+        # Whether or not this check should be disabled for suspected ghost blocks - enabling this will make these checks prone
+        # to be bypasses by certain fly modules which spoof onGround values as if the player were on a ghost block, so if you enable
+        # this make sure to enable setbacks for ghost-blocks in the ghost-blocks-fix section.
+        ignore-ghost-blocks: true
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.275
+      c:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.75
+          decay: 0.225
+        # Whether or not this check should be disabled for suspected ghost blocks - enabling this will make these checks prone
+        # to be bypasses by certain fly modules which spoof onGround values as if the player were on a ghost block, so if you enable
+        # this make sure to enable setbacks for ghost-blocks in the ghost-blocks-fix section.
+        ignore-ghost-blocks: true
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.35
+          decay: 0.275
+        # Whether or not this check should be disabled for suspected ghost blocks - enabling this will make these checks prone
+        # to be bypasses by certain fly modules which spoof onGround values as if the player were on a ghost block, so if you enable
+        # this make sure to enable setbacks for ghost-blocks in the ghost-blocks-fix section.
+        ignore-ghost-blocks: true
+      e:
+        enabled: false
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.4
+          decay: 0.5
+        # Whether or not this check should be disabled for suspected ghost blocks - enabling this will make these checks prone
+        # to be bypasses by certain fly modules which spoof onGround values as if the player were on a ghost block, so if you enable
+        # this make sure to enable setbacks for ghost-blocks in the ghost-blocks-fix section.
+        ignore-ghost-blocks: true
+      f:
+        enabled: false
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.4
+          decay: 0.04
+    vclip:
+      a:
+        enabled: true
+        punishable: true
+        setback: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+    sprint:
+      a:
+        enabled: false
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.25
+          decay: 0.4
+    strafe:
+      a:
+        enabled: true
+        punishable: true
+        setback: true
+        min-vl-to-setback: 1
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 2
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.5
+          decay: 0.05
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.15
+          decay: 0.075
+  player:
+    fastuse:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+    fastplace:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-blocks: 15
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.25
+          decay: 0.5
+        max-blocks: 4
+    fastbreak:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.5
+        min-difference: -125
+    tower:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.75
+    scaffold:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.25
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.5
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.5
+      e:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.5
+      f:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.1
+      g:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.25
+      h:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 8
+          multiple: 0.25
+          decay: 0.35
+      i:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      j:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      k:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.35
+        max-blocks: 6
+      m:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 12
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.25
+      n:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 12
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.25
+      o:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 12
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+    timer:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 2
+        dont-alert-until: 3
+        maximum-ping: 5000
+        minimum-tps: 19.8
+        punishment-commands:
+        - 'minecraft:kick %player% Internal Exception: io.netty.handler.timeout.ReadTimeoutException'
+        buffer:
+          max: 35
+          multiple: 0.425
+          decay: 1.85
+        max-speed: 1.05
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 35
+        alert-interval: 2
+        dont-alert-until: 8
+        maximum-ping: 5000
+        minimum-tps: 19.8
+        punishment-commands:
+        - 'minecraft:kick %player% Internal Exception: io.netty.handler.timeout.ReadTimeoutException'
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.25
+        max-balance: 75
+    baritone:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 20
+          multiple: 0.5
+          decay: 0.25
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.5
+          decay: 0.05
+    ghosthand:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        cancel: true
+    airplace:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+    badpackets:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.5
+          decay: 0.25
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.01
+      e:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      f:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      g:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      h:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      i:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      j:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      k:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.4
+      m:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.33
+          decay: 0.25
+      n:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 20
+          multiple: 0.25
+          decay: 2.5
+      o:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.15
+      p:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.15
+      q:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.15
+      r:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.5
+          decay: 0.25
+      s:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      t:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      u:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      v:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 8
+          multiple: 0.5
+          decay: 0.075
+        kick-out: false
+      w:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 8
+          multiple: 0.5
+          decay: 0.75
+      x:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 6
+          multiple: 0.5
+          decay: 0.35
+      y:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      z:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 3
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      '1':
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 12
+          multiple: 0.25
+          decay: 0.25
+      '2':
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 12
+          multiple: 0.25
+          decay: 0.25
+      '4':
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.25
+          decay: 0.025
+      '5':
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+      '6':
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.05
+      '7':
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 10
+          multiple: 0.25
+          decay: 0.05
+      '8':
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 5
+          multiple: 0.25
+          decay: 0.05
+    inventory:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.25
+      b:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.25
+    invalid:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 8
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.25
+          decay: 0.05
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 8
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.25
+          decay: 0.045
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 8
+          multiple: 0.25
+          decay: 0.5
+      e:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 8
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.01
+      f:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.01
+      g:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 2
+          multiple: 0.5
+          decay: 0.025
+      h:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.05
+      i:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 3
+          multiple: 0.5
+          decay: 0.05
+      j:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        setback: true
+        min-vl-to-setback: 1
+        broadcast-punishment: true
+        max-violations: 20
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 1
+          multiple: 0.5
+          decay: 0.05
+    groundspoof:
+      a:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.125
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 5
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.125
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 15
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        buffer:
+          max: 4
+          multiple: 0.5
+          decay: 0.125
+    improbable:
+      a:
+        enabled: true
+        punishable: true
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 10
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-combat-violations: 25
+      b:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-movement-violations: 30
+      c:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-player-violations: 30
+      d:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-autoclicker-violations: 30
+      e:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-total-violations: 50
+      f:
+        enabled: true
+        punishable: false
+        discord-alert-interval: 5
+        broadcast-punishment: true
+        max-violations: 1
+        alert-interval: 1
+        dont-alert-until: 1
+        maximum-ping: 5000
+        minimum-tps: 17.5
+        punishment-commands:
+        - tempban %player% 1h &4ᴍᴏᴏɴɢᴜᴀʀᴅ &f- Ventaja Injusta (AntiCheat)
+        max-scaffold-violations: 25

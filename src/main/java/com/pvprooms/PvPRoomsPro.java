@@ -93,7 +93,10 @@ public class PvPRoomsPro extends JavaPlugin {
     private com.pvprooms.listeners.AntiMultiaccountListener antiMultiaccountListener;
     private BotManager botManager;
     private BotPracticeGUI botPracticeGUI;
-    private TicketManager ticketManager;
+    private com.pvprooms.managers.TicketManager ticketManager;
+    private com.pvprooms.discord.DiscordBot discordBot;
+    private StaffManager staffManager;
+    private WorldPoolManager worldPoolManager;
     /** Detected or configured server region code (e.g. "eu", "na"). */
     private volatile String serverRegion = "eu";
 
@@ -136,29 +139,38 @@ public class PvPRoomsPro extends JavaPlugin {
         partyGUI                = new com.pvprooms.gui.PartyGUI(this);
         botManager              = new BotManager(this);
         botPracticeGUI          = new BotPracticeGUI(this);
-        ticketManager           = new TicketManager(this);
+        ticketManager           = new com.pvprooms.managers.TicketManager(this);
+        staffManager            = new StaffManager(this);
+        worldPoolManager        = new WorldPoolManager(this);
         SpearItem.init(this);
         TrimCrate.init(this);
         PhysicalTrimCrate.init(this);
 
-        // Detect server region asynchronously
-        String fallback = getConfig().getString("server.region", "eu");
-        serverRegion = fallback;
-        RegionDetector.detectAsync(this, fallback, region -> {
-            serverRegion = region;
-            // Start API server after region is known
-            int apiPort = getConfig().getInt("web-api.port", 27090);
-            if (getConfig().getBoolean("web-api.enabled", true)) {
-                tierApiServer = new TierApiServer(this, apiPort);
-                tierApiServer.start();
-            }
-        });
+        // Use configured server region (edit server.region in config.yml to change)
+        serverRegion = getConfig().getString("server.region", "eu");
+        getLogger().info("[PvPRooms] Región del servidor: " + serverRegion.toUpperCase());
+
+        // Start API server
+        int apiPort = getConfig().getInt("web-api.port", 27090);
+        if (getConfig().getBoolean("web-api.enabled", true)) {
+            tierApiServer = new TierApiServer(this, apiPort);
+            tierApiServer.start();
+        }
 
         // Start matchmaking runnable
         queueManager.startMatchmaking();
 
         // Start lobby scoreboard task
         scoreboardManager.startLobbyTask();
+
+        // Disable auto-save on template worlds (they are read-only, saves cause HDD lag)
+        Bukkit.getScheduler().runTaskLater(this,
+                () -> arenaInstanceManager.disableAutoSaveOnTemplates(), 2L);
+
+        // Warm up the world pool (staggered to spread HDD I/O)
+        int warmDelay   = getConfig().getInt("arena-pool.warm-up-delay", 60);
+        int staggerTicks = getConfig().getInt("arena-pool.stagger-ticks", 40);
+        worldPoolManager.warmUpAll(warmDelay, staggerTicks);
         
         // Register PlaceholderAPI expansion
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -179,6 +191,13 @@ public class PvPRoomsPro extends JavaPlugin {
         // Register event listeners
         registerListeners();
 
+        // Start Discord bot
+        String discordToken = getConfig().getString("discord.token", "");
+        if (!discordToken.isEmpty() && getConfig().getBoolean("discord.enabled", true)) {
+            discordBot = new com.pvprooms.discord.DiscordBot(this);
+            discordBot.start(discordToken);
+        }
+
         getLogger().info("§aPvPRoomsPro enabled successfully!");
         getLogger().info("§7Kits loaded: " + kitManager.getAllKits().size());
         getLogger().info("§7Arenas loaded: " + arenaManager.getAllArenas().size());
@@ -186,6 +205,9 @@ public class PvPRoomsPro extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Shutdown world pool (unload without deleting for fast next startup)
+        if (worldPoolManager != null) worldPoolManager.shutdown();
+
         // Stop matchmaking
         if (queueManager != null) {
             queueManager.stopMatchmaking();
@@ -204,6 +226,12 @@ public class PvPRoomsPro extends JavaPlugin {
 
         // Stop web API server
         if (tierApiServer != null) tierApiServer.stop();
+
+        // Stop Discord bot
+        if (discordBot != null) discordBot.stop();
+        
+        // Save adaptive AI data
+        if (botManager != null) botManager.saveAdaptiveData();
 
         // Save tier data
         if (tierManager != null) tierManager.save();
@@ -235,8 +263,9 @@ public class PvPRoomsPro extends JavaPlugin {
      */
     private void cleanupArenaWorlds() {
         File serverFolder = Bukkit.getWorldContainer();
-        File[] worldFolders = serverFolder.listFiles((dir, name) -> 
-            name.startsWith("pvp_match_") || name.startsWith("arena_bot_"));
+        File[] worldFolders = serverFolder.listFiles((dir, name) ->
+            (name.startsWith("pvp_match_") || name.startsWith("arena_bot_"))
+            && !name.startsWith(WorldPoolManager.POOL_PREFIX));
         
         if (worldFolders == null || worldFolders.length == 0) {
             return;
@@ -343,7 +372,10 @@ public class PvPRoomsPro extends JavaPlugin {
         AdminNpcHoloCommand adminNpcHoloCmd = new AdminNpcHoloCommand(this);
         // Admin command already registered, just add NPC/Holo subcommands via the existing /admin
 
-        getCommand("verify").setExecutor(new VerifyCommand(this));
+        getCommand("verificar").setExecutor(new com.pvprooms.commands.VerifyCommand(this));
+
+        StaffCommand staffCmd = new StaffCommand(this);
+        getCommand("staff").setExecutor(staffCmd);
     }
 
     private void registerListeners() {
@@ -363,8 +395,12 @@ public class PvPRoomsPro extends JavaPlugin {
         // Bot practice system (only if Citizens is present)
         if (Bukkit.getPluginManager().getPlugin("Citizens") != null) {
             pm.registerEvents(new BotListener(this), this);
+            pm.registerEvents(new com.pvprooms.bot.PlayerBehaviorTracker(this), this);
         }
         
+        // Staff system
+        pm.registerEvents(new com.pvprooms.listeners.StaffListener(this), this);
+
         // Anti-multiaccount system
         antiMultiaccountListener = new com.pvprooms.listeners.AntiMultiaccountListener(this);
         pm.registerEvents(antiMultiaccountListener, this);
@@ -446,5 +482,7 @@ public class PvPRoomsPro extends JavaPlugin {
     public String                getServerRegion()           { return serverRegion; }
     public BotManager            getBotManager()              { return botManager; }
     public BotPracticeGUI        getBotPracticeGUI()          { return botPracticeGUI; }
-    public TicketManager         getTicketManager()           { return ticketManager; }
+    public com.pvprooms.managers.TicketManager getTicketManager() { return ticketManager; }
+    public StaffManager          getStaffManager()            { return staffManager; }
+    public WorldPoolManager      getWorldPoolManager()        { return worldPoolManager; }
 }

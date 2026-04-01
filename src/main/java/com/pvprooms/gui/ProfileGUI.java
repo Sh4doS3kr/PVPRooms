@@ -67,6 +67,9 @@ public class ProfileGUI implements Listener {
         inv.setItem(32, createBestStreakItem(uuid));
         inv.setItem(33, createWinrateItem(uuid));
         inv.setItem(34, createGamesItem(uuid));
+        
+        // Accuracy stat (slot 40 - center of row 3)
+        inv.setItem(40, createAccuracyItem(uuid));
 
         // Kit tiers row (slots 37-43)
         inv.setItem(37, createKitTiersItem(uuid));
@@ -270,16 +273,27 @@ public class ProfileGUI implements Listener {
 
     private ItemStack createKDRItem(UUID uuid) {
         var stats = plugin.getStatsManager().getStats(uuid);
-        double kdr = stats.getKDR();
         ItemStack item = new ItemStack(Material.BLAZE_POWDER);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text("K/D Ratio", NamedTextColor.GOLD)
                 .decoration(TextDecoration.ITALIC, false));
-        meta.lore(List.of(
-                Component.empty(),
-                Component.text(String.format("%.2f", kdr), NamedTextColor.GOLD)
-                        .decoration(TextDecoration.ITALIC, false)
-        ));
+        if (stats.hasKDR()) {
+            meta.lore(List.of(
+                    Component.empty(),
+                    Component.text(String.format("%.2f", stats.getKDR()), NamedTextColor.GOLD)
+                            .decoration(TextDecoration.ITALIC, false)
+            ));
+        } else {
+            int gamesLeft = com.pvprooms.managers.StatsManager.MIN_GAMES_FOR_KDR - (stats.wins() + stats.losses());
+            meta.lore(List.of(
+                    Component.empty(),
+                    Component.text("\u2014", NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.empty(),
+                    Component.text("Juega " + gamesLeft + " partida" + (gamesLeft == 1 ? "" : "s") + " más", NamedTextColor.GRAY)
+                            .decoration(TextDecoration.ITALIC, false)
+            ));
+        }
         item.setItemMeta(meta);
         return item;
     }
@@ -346,6 +360,27 @@ public class ProfileGUI implements Listener {
         item.setItemMeta(meta);
         return item;
     }
+    
+    private ItemStack createAccuracyItem(UUID uuid) {
+        var stats = plugin.getStatsManager().getStats(uuid);
+        double accuracy = stats.getAccuracy();
+        ItemStack item = new ItemStack(Material.TARGET);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Precisión", NamedTextColor.YELLOW)
+                .decoration(TextDecoration.ITALIC, false));
+        meta.lore(List.of(
+                Component.empty(),
+                Component.text(String.format("%.1f%%", accuracy), NamedTextColor.YELLOW)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.empty(),
+                Component.text("Golpes: " + stats.hits(), NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Intentos: " + stats.swings(), NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        item.setItemMeta(meta);
+        return item;
+    }
 
     private ItemStack createKitTiersItem(UUID uuid) {
         ItemStack item = new ItemStack(Material.CHEST);
@@ -405,7 +440,7 @@ public class ProfileGUI implements Listener {
                 .decoration(TextDecoration.BOLD, true)
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("1. Abre ticket en ", NamedTextColor.WHITE)
-                .append(Component.text("discord.mlmc.lat", NamedTextColor.AQUA)
+                .append(Component.text("tiers.mlmc.lat/tickets.html", NamedTextColor.AQUA)
                         .decoration(TextDecoration.UNDERLINED, true))
                 .decoration(TextDecoration.ITALIC, false));
         lore.add(Component.text("2. Se te asignará un Tester de tu nivel", NamedTextColor.WHITE)

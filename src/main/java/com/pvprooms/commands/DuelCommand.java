@@ -22,6 +22,8 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
     private final Map<UUID, UUID> pendingRequests = new HashMap<>();
     /** Request timestamps for expiration */
     private final Map<UUID, Long> requestTimestamps = new HashMap<>();
+    /** Kit selected for pending request: challenged UUID -> kit name */
+    private final Map<UUID, String> pendingKits = new HashMap<>();
     
     private static final long REQUEST_TIMEOUT_MS = 60_000; // 60 seconds
 
@@ -94,9 +96,16 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         // Check if there's already a pending request from target to challenger
         UUID existingChallenger = pendingRequests.get(challenger.getUniqueId());
         if (existingChallenger != null && existingChallenger.equals(target.getUniqueId())) {
-            // Target already challenged us - auto accept
+            // Target already challenged us - auto accept with their kit
+            String existingKit = pendingKits.get(challenger.getUniqueId());
             cleanupRequest(challenger.getUniqueId());
-            startKitSelection(challenger, target);
+            if (existingKit != null) {
+                startDuelWithKit(target, challenger, existingKit);
+            } else {
+                // Fallback
+                String kit = plugin.getKitManager().getKitNames().stream().findFirst().orElse("default");
+                startDuelWithKit(target, challenger, kit);
+            }
             return;
         }
 
@@ -114,31 +123,39 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         pendingRequests.put(target.getUniqueId(), challenger.getUniqueId());
         requestTimestamps.put(target.getUniqueId(), System.currentTimeMillis());
 
-        challenger.sendMessage(plugin.prefix() + "§a¡Reto enviado a §f" + target.getName() + "§a!");
-        challenger.sendMessage(plugin.prefix() + "§7Esperando respuesta... (60s)");
-
-        target.sendMessage("");
-        target.sendMessage(plugin.prefix() + "§e§l¡RETO DE DUELO!");
-        target.sendMessage(plugin.prefix() + "§f" + challenger.getName() + " §ete ha retado a un duelo.");
-        target.sendMessage(plugin.prefix() + "§aEscribe §f/duel accept §apara aceptar");
-        target.sendMessage(plugin.prefix() + "§cEscribe §f/duel deny §cpara rechazar");
-        target.sendMessage("");
-
-        // Auto-expire after timeout
+        // Open kit selection GUI for challenger first
+        final Player finalTarget = target;
         final UUID targetUUID = target.getUniqueId();
         final UUID challengerUUID = challenger.getUniqueId();
         final String tgtName = target.getName();
         final String chName = challenger.getName();
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (pendingRequests.containsKey(targetUUID) 
-                    && pendingRequests.get(targetUUID).equals(challengerUUID)) {
-                cleanupRequest(targetUUID);
-                Player ch = Bukkit.getPlayer(challengerUUID);
-                Player tg = Bukkit.getPlayer(targetUUID);
-                if (ch != null) ch.sendMessage(plugin.prefix() + "§cTu reto a §e" + tgtName + " §cha expirado.");
-                if (tg != null) tg.sendMessage(plugin.prefix() + "§cEl reto de §e" + chName + " §cha expirado.");
-            }
-        }, REQUEST_TIMEOUT_MS / 50); // Convert to ticks
+        
+        plugin.getKitGUI().openDuelChallengeKitSelection(challenger, (kitName) -> {
+            // Callback when kit is selected
+            pendingKits.put(finalTarget.getUniqueId(), kitName);
+            
+            challenger.sendMessage(plugin.prefix() + "§a¡Reto enviado a §f" + finalTarget.getName() + "§a! §8[§e" + kitName + "§8]");
+            challenger.sendMessage(plugin.prefix() + "§7Esperando respuesta... (60s)");
+            
+            finalTarget.sendMessage("");
+            finalTarget.sendMessage(plugin.prefix() + "§e§l¡RETO DE DUELO!");
+            finalTarget.sendMessage(plugin.prefix() + "§f" + challenger.getName() + " §ete ha retado a un duelo. §8[§bKit: §e" + kitName + "§8]");
+            finalTarget.sendMessage(plugin.prefix() + "§aEscribe §f/duel accept §apara aceptar");
+            finalTarget.sendMessage(plugin.prefix() + "§cEscribe §f/duel deny §cpara rechazar");
+            finalTarget.sendMessage("");
+            
+            // Auto-expire after timeout
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (pendingRequests.containsKey(targetUUID) 
+                        && pendingRequests.get(targetUUID).equals(challengerUUID)) {
+                    cleanupRequest(targetUUID);
+                    Player ch = Bukkit.getPlayer(challengerUUID);
+                    Player tg = Bukkit.getPlayer(targetUUID);
+                    if (ch != null) ch.sendMessage(plugin.prefix() + "§cTu reto a §e" + tgtName + " §cha expirado.");
+                    if (tg != null) tg.sendMessage(plugin.prefix() + "§cEl reto de §e" + chName + " §cha expirado.");
+                }
+            }, REQUEST_TIMEOUT_MS / 50); // Convert to ticks
+        });
     }
 
     private void handleAccept(Player player) {
@@ -162,8 +179,15 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
+        String kitName = pendingKits.get(player.getUniqueId());
         cleanupRequest(player.getUniqueId());
-        startKitSelection(challenger, player);
+        
+        if (kitName == null) {
+            // Fallback: shouldn't happen, but use default kit
+            kitName = plugin.getKitManager().getKitNames().stream().findFirst().orElse("default");
+        }
+        
+        startDuelWithKit(challenger, player, kitName);
     }
 
     private void handleDeny(Player player) {
@@ -182,21 +206,18 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void startKitSelection(Player challenger, Player target) {
-        challenger.sendMessage(plugin.prefix() + "§a¡" + target.getName() + " §aha aceptado tu reto!");
-        target.sendMessage(plugin.prefix() + "§a¡Has aceptado el reto de §f" + challenger.getName() + "§a!");
+    private void startDuelWithKit(Player challenger, Player target, String kitName) {
+        challenger.sendMessage(plugin.prefix() + "§a¡" + target.getName() + " §aha aceptado tu reto! §8[§e" + kitName + "§8]");
+        target.sendMessage(plugin.prefix() + "§a¡Has aceptado el reto de §f" + challenger.getName() + "§a! §8[§e" + kitName + "§8]");
 
-        // Store the duel pair temporarily
-        plugin.getQueueManager().storeDuelPair(challenger.getUniqueId(), target.getUniqueId());
-
-        // Open kit selection GUI for challenger (target will see it after challenger picks)
-        challenger.sendMessage(plugin.prefix() + "§eElige un kit para el duelo:");
-        plugin.getKitGUI().openDuelKitSelection(challenger, target.getUniqueId());
+        // Start the duel directly with the pre-selected kit
+        plugin.getDuelManager().startDuel(challenger.getUniqueId(), target.getUniqueId(), kitName);
     }
 
     private void cleanupRequest(UUID targetUUID) {
         pendingRequests.remove(targetUUID);
         requestTimestamps.remove(targetUUID);
+        pendingKits.remove(targetUUID);
     }
 
     private void cleanExpiredRequests() {

@@ -10,6 +10,7 @@ import com.pvprooms.gui.KitEditorHolder;
 import com.pvprooms.gui.KitGUI;
 import com.pvprooms.gui.KitSelectHolder;
 import com.pvprooms.gui.DuelKitSelectHolder;
+import com.pvprooms.gui.DuelChallengeKitHolder;
 import com.pvprooms.gui.KitReorderHolder;
 import com.pvprooms.gui.QueueModeGUI;
 import com.pvprooms.gui.QueueModeHolder;
@@ -76,6 +77,21 @@ public class InventoryListener implements Listener {
             player.closeInventory();
             // Start the duel with the selected kit
             plugin.getQueueManager().startDuelFromPair(player.getUniqueId(), kitName);
+            return;
+        }
+
+        // ── Duel Challenge Kit Selection GUI (/duel <player> command) ────────
+        if (event.getInventory().getHolder() instanceof DuelChallengeKitHolder holder) {
+            event.setCancelled(true);
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || clicked.getType() == Material.BLACK_STAINED_GLASS_PANE) return;
+            String kitName = plugin.getKitGUI().extractKitName(clicked);
+            if (kitName == null || !plugin.getKitManager().kitExists(kitName)) return;
+            player.closeInventory();
+            // Execute the callback with the selected kit name
+            if (holder.getOnKitSelected() != null) {
+                holder.getOnKitSelected().accept(kitName);
+            }
             return;
         }
 
@@ -298,7 +314,48 @@ public class InventoryListener implements Listener {
         }
     }
 
-    // ── Inventory drop prevention during duels ─────────────────────────────
+    // ── Prevent item theft via shift+click in plugin GUIs ─────────────────────
+    
+    /**
+     * Global protection: Clear cursor when closing ANY plugin GUI to prevent
+     * the shift+click + Escape exploit that allows stealing items.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPluginGuiClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) return;
+        
+        // Check if this is a plugin GUI (has a custom holder or known title)
+        var holder = event.getInventory().getHolder();
+        boolean isPluginGui = holder instanceof KitSelectHolder
+                || holder instanceof DuelKitSelectHolder
+                || holder instanceof DuelChallengeKitHolder
+                || holder instanceof QueueModeHolder
+                || holder instanceof AdminPanelHolder
+                || holder instanceof ArenaConfigHolder
+                || holder instanceof com.pvprooms.gui.TrimRouletteGUI.TrimRouletteHolder
+                || holder instanceof com.pvprooms.gui.TrimRouletteGUI.PreviewHolder;
+        
+        // Also check by title for GUIs without custom holders
+        String title = ChatColor.stripColor(event.getView().getTitle());
+        if (!isPluginGui) {
+            isPluginGui = title.contains("Tu Perfil")
+                    || title.contains("Party")
+                    || title.contains("Invitar")
+                    || title.contains("Bot Practice")
+                    || title.contains("RULETA")
+                    || title.contains("Pág");
+        }
+        
+        if (isPluginGui) {
+            // Clear any item on cursor to prevent theft
+            ItemStack cursor = player.getItemOnCursor();
+            if (cursor != null && cursor.getType() != Material.AIR) {
+                player.setItemOnCursor(null);
+            }
+        }
+    }
+
+    // ── Kit Reorder save on close ─────────────────────────────────────────────
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
