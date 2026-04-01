@@ -249,15 +249,22 @@ public class ArenaInstanceManager {
         // Notify caller — reset is complete (all sync, instant)
         if (callback != null) callback.run();
 
-        // Pre-warm spawn chunks async so next duel starts with hot chunks
-        preWarmSpawnChunks(world, template);
+        // Force-load spawn chunks so they stay in RAM permanently (survive round resets)
+        forceLoadSpawnChunks(world, template);
     }
 
     /**
-     * Asynchronously loads chunks around both spawn points of the template.
-     * Uses Paper's getChunkAtAsync — zero main-thread cost.
+     * Force-loads chunks around both spawn points of the template.
+     *
+     * setChunkForceLoaded keeps the chunk pinned in RAM permanently — it will
+     * never be unloaded by Paper's tick-based eviction. This prevents the
+     * on-demand chunk-load CPU spike when players teleport to a reset arena.
+     *
+     * We force-load a 5x5 area around each spawn (covers most arena combat zones).
+     * The world object persists across resets, so force-loaded chunks survive
+     * the chunk.unload(false) calls in resetPoolWorld.
      */
-    private void preWarmSpawnChunks(World world, ArenaTemplate template) {
+    public void forceLoadSpawnChunks(World world, ArenaTemplate template) {
         try {
             Location s1 = template.getSpawn1(world);
             Location s2 = template.getSpawn2(world);
@@ -267,12 +274,13 @@ public class ArenaInstanceManager {
                 int cz = spawn.getBlockZ() >> 4;
                 for (int dx = -2; dx <= 2; dx++) {
                     for (int dz = -2; dz <= 2; dz++) {
-                        world.getChunkAtAsync(cx + dx, cz + dz);
+                        world.setChunkForceLoaded(cx + dx, cz + dz, true);
                     }
                 }
             }
+            plugin.getLogger().info("[Pool] Force-loaded spawn chunks for " + world.getName());
         } catch (Exception e) {
-            plugin.getLogger().warning("[Pool] Error pre-warming chunks for " + world.getName() + ": " + e.getMessage());
+            plugin.getLogger().warning("[Pool] Error force-loading chunks for " + world.getName() + ": " + e.getMessage());
         }
     }
 

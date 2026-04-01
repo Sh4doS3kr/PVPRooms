@@ -382,30 +382,23 @@ public class PlayerListener implements Listener {
             player.sendMessage(plugin.prefix() + "§cNo puedes romper bloques en el spawn.");
             return;
         }
-        // Mundos de instancia de arena (PvP)
-        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        // Check any active duel world (covers pvp_match_* AND pvp_pool_* worlds)
         String blockWorld = event.getBlock().getWorld().getName();
-        if (blockWorld.startsWith(instancePrefix)) {
-            Duel duel = plugin.getDuelManager().getDuelByWorldName(blockWorld);
-            // Espectadores: nunca pueden romper bloques
-            if (duel != null && duel.isSpectator(player.getUniqueId())) {
-                event.setCancelled(true);
-                return;
-            }
-            // Comprobar permiso de la arena (check duel first, then FFA)
-            ArenaTemplate template = duel != null ? duel.getArenaTemplate() : null;
-            if (template == null) {
-                // Check if it's a FFA match
-                template = plugin.getDuelManager().getFFATemplateByWorldName(blockWorld);
-            }
-            if (template == null || !template.isAllowBlockBreak()) {
-                event.setCancelled(true);
-            }
+        Duel duel = plugin.getDuelManager().getDuelByWorldName(blockWorld);
+        if (duel != null) {
+            if (duel.isSpectator(player.getUniqueId())) { event.setCancelled(true); return; }
+            if (!duel.getArenaTemplate().isAllowBlockBreak()) event.setCancelled(true);
             return;
         }
-        // Bloquear a espectadores en cualquier arena
-        Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
-        if (duel != null && duel.isSpectator(player.getUniqueId())) {
+        // FFA match world
+        ArenaTemplate ffaTemplate = plugin.getDuelManager().getFFATemplateByWorldName(blockWorld);
+        if (ffaTemplate != null) {
+            if (!ffaTemplate.isAllowBlockBreak()) event.setCancelled(true);
+            return;
+        }
+        // Block spectators breaking blocks in any other context
+        Duel playerDuel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
+        if (playerDuel != null && playerDuel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
         }
     }
@@ -420,40 +413,29 @@ public class PlayerListener implements Listener {
             player.sendMessage(plugin.prefix() + "§cNo puedes colocar bloques en el spawn.");
             return;
         }
-        // Mundos de instancia de arena (PvP)
-        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        // Check any active duel world (covers pvp_match_* AND pvp_pool_* worlds)
         String blockWorld = event.getBlock().getWorld().getName();
-        if (blockWorld.startsWith(instancePrefix)) {
-            // Check regular duels first
-            Duel duel = plugin.getDuelManager().getDuelByWorldName(blockWorld);
-            if (duel != null && duel.isSpectator(player.getUniqueId())) {
-                event.setCancelled(true);
-                return;
-            }
-            
-            ArenaTemplate template = null;
-            if (duel != null) {
-                template = duel.getArenaTemplate();
-            } else {
-                // Check FFA matches
-                template = plugin.getDuelManager().getFFATemplateByWorldName(blockWorld);
-            }
-            if (template == null) {
-                // Check bot duels
-                var botDuel = plugin.getBotManager().getBotDuel(player.getUniqueId());
-                if (botDuel != null && botDuel.instanceWorldName.equals(blockWorld)) {
-                    template = botDuel.template;
-                }
-            }
-            
-            if (template == null || !template.isAllowBlockPlace()) {
-                event.setCancelled(true);
-            }
+        Duel duel = plugin.getDuelManager().getDuelByWorldName(blockWorld);
+        if (duel != null) {
+            if (duel.isSpectator(player.getUniqueId())) { event.setCancelled(true); return; }
+            if (!duel.getArenaTemplate().isAllowBlockPlace()) event.setCancelled(true);
             return;
         }
-        // Bloquear a espectadores
-        Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
-        if (duel != null && duel.isSpectator(player.getUniqueId())) {
+        // FFA match world
+        ArenaTemplate ffaTemplate = plugin.getDuelManager().getFFATemplateByWorldName(blockWorld);
+        if (ffaTemplate != null) {
+            if (!ffaTemplate.isAllowBlockPlace()) event.setCancelled(true);
+            return;
+        }
+        // Bot duel world
+        var botDuel = plugin.getBotManager().getBotDuel(player.getUniqueId());
+        if (botDuel != null && botDuel.instanceWorldName.equals(blockWorld)) {
+            if (!botDuel.template.isAllowBlockPlace()) event.setCancelled(true);
+            return;
+        }
+        // Block spectators placing blocks in any other context
+        Duel playerDuel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
+        if (playerDuel != null && playerDuel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
         }
     }

@@ -102,6 +102,8 @@ public class WorldPoolManager {
             loadWorld(worldName, () -> {
                 addToReady(template.getName(), worldName);
                 plugin.getLogger().info("[Pool] Mundo del pool cargado desde disco: " + worldName);
+                World w = Bukkit.getWorld(worldName);
+                if (w != null) plugin.getArenaInstanceManager().forceLoadSpawnChunks(w, template);
             });
             return;
         }
@@ -110,6 +112,8 @@ public class WorldPoolManager {
         copyFromTemplateAsync(worldName, template, () -> {
             addToReady(template.getName(), worldName);
             plugin.getLogger().info("[Pool] Mundo del pool creado: " + worldName);
+            World w = Bukkit.getWorld(worldName);
+            if (w != null) plugin.getArenaInstanceManager().forceLoadSpawnChunks(w, template);
         });
     }
 
