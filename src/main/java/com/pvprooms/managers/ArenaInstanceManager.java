@@ -3,6 +3,7 @@ package com.pvprooms.managers;
 import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.ArenaTemplate;
 import org.bukkit.*;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.*;
@@ -197,74 +198,82 @@ public class ArenaInstanceManager {
         });
     }
 
-    // ── Pool world reset (no unloadWorld — avoids DimensionDataStorage spike) ──
+    // ── Pool world reset (zero disk I/O) ─────────────────────────────────────
 
     /**
-     * Resets a pre-warmed pool world WITHOUT calling Bukkit.unloadWorld().
+     * Resets a pool world with ZERO disk I/O and NO world unload.
      *
-     * Problem with resetInstance for pool worlds: Bukkit.unloadWorld(w, false) still
-     * triggers DimensionDataStorage.saveAndJoin() on the main thread, causing 3000+ms
-     * lag spikes even with save=false.
+     * Why no file copy is needed:
+     *   Pool worlds are created with setAutoSave(false). During a duel, block
+     *   changes accumulate only in RAM. chunk.unload(false) discards them without
+     *   writing to disk. Therefore the on-disk region files always contain the
+     *   original clean template data — no copy required.
      *
-     * This method avoids that by:
-     *   1. Unloading only individual chunks (no disk I/O, just discards memory cache)
-     *   2. Copying template files async (world folder on disk gets refreshed)
-     *   3. Callback on main thread (chunks reload from fresh files on next access)
+     * Why no unloadWorld:
+     *   Bukkit.unloadWorld() triggers DimensionDataStorage.saveAndJoin() on the
+     *   main thread even with save=false, causing 3000+ms spikes.
+     *
+     * After reset, spawn chunks are pre-warmed async (Paper API) so the next
+     * duel has no on-demand chunk-load spike when players teleport in.
      */
     public void resetPoolWorld(String worldName, ArenaTemplate template, Runnable callback) {
         World world = Bukkit.getWorld(worldName);
         if (world == null) {
             plugin.getLogger().warning("[Pool] Cannot reset non-existent pool world: " + worldName);
-            if (callback != null) Bukkit.getScheduler().runTask(plugin, callback);
+            if (callback != null) callback.run();
             return;
         }
 
-        // Disable auto-save and clear dropped items
         world.setAutoSave(false);
-        world.getEntitiesByClass(org.bukkit.entity.Item.class).forEach(org.bukkit.entity.Entity::remove);
 
-        // Unload all loaded chunks WITHOUT saving — fast (memory discard, no disk write)
-        // This does NOT trigger DimensionDataStorage.saveAndJoin()
+        // Remove lingering non-player entities (items, orbs, projectiles, crystals)
+        for (org.bukkit.entity.Entity e : world.getEntities()) {
+            if (!(e instanceof Player)) e.remove();
+        }
+
+        // Unload all loaded chunks WITHOUT saving — pure RAM discard, no disk write.
+        // Disk files were never modified (autoSave=false), so they're already clean.
         for (Chunk chunk : world.getLoadedChunks()) {
             chunk.unload(false);
         }
 
-        // Resolve template source folder
-        String worldFolderName = (template.getWorldName() != null && !template.getWorldName().isBlank())
-                ? template.getWorldName() : template.getName();
-        File sourceDir = new File(Bukkit.getWorldContainer(), worldFolderName);
-        try { sourceDir = sourceDir.getCanonicalFile(); }
-        catch (IOException e) { sourceDir = sourceDir.getAbsoluteFile(); }
+        // Reset gamerules (world object persists, just re-apply)
+        world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+        world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+        world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+        world.setTime(6000L);
 
-        File destDir = new File(Bukkit.getWorldContainer(), worldName);
-        final File finalSourceDir = sourceDir;
+        plugin.getLogger().info("[Pool] Pool world reset (zero I/O): " + worldName);
 
-        // Async: copy template files over the existing world folder
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                copyDirectory(finalSourceDir.toPath(), destDir.toPath());
-                new File(destDir, "session.lock").delete();
-                new File(destDir, "uid.dat").delete();
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.SEVERE, "[Pool] Error resetting pool world " + worldName, e);
-            }
+        // Notify caller — reset is complete (all sync, instant)
+        if (callback != null) callback.run();
 
-            // Back to main thread — world is still registered in Bukkit,
-            // chunks will reload from fresh files on next access
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                World w = Bukkit.getWorld(worldName);
-                if (w != null) {
-                    w.setAutoSave(false);
-                    w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-                    w.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
-                    w.setGameRule(GameRule.DO_MOB_SPAWNING, false);
-                    w.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-                    w.setTime(6000L);
+        // Pre-warm spawn chunks async so next duel starts with hot chunks
+        preWarmSpawnChunks(world, template);
+    }
+
+    /**
+     * Asynchronously loads chunks around both spawn points of the template.
+     * Uses Paper's getChunkAtAsync — zero main-thread cost.
+     */
+    private void preWarmSpawnChunks(World world, ArenaTemplate template) {
+        try {
+            Location s1 = template.getSpawn1(world);
+            Location s2 = template.getSpawn2(world);
+            for (Location spawn : new Location[]{s1, s2}) {
+                if (spawn == null) continue;
+                int cx = spawn.getBlockX() >> 4;
+                int cz = spawn.getBlockZ() >> 4;
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        world.getChunkAtAsync(cx + dx, cz + dz);
+                    }
                 }
-                plugin.getLogger().info("[Pool] Pool world reset (sin unload): " + worldName);
-                if (callback != null) callback.run();
-            });
-        });
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Pool] Error pre-warming chunks for " + world.getName() + ": " + e.getMessage());
+        }
     }
 
     // ── World destruction ──────────────────────────────────────────────────
