@@ -163,8 +163,10 @@ public class WorldPoolManager {
                     .forEach(org.bukkit.entity.Entity::remove);
         }
 
-        // Reset world and re-add to pool when done
-        plugin.getArenaInstanceManager().resetInstance(worldName, template, () -> {
+        // Reset world and re-add to pool when done.
+        // Uses resetPoolWorld (not resetInstance) to avoid Bukkit.unloadWorld()
+        // which triggers DimensionDataStorage.saveAndJoin() on the main thread (~3500ms spike).
+        plugin.getArenaInstanceManager().resetPoolWorld(worldName, template, () -> {
             resetting.remove(worldName);
             addToReady(template.getName(), worldName);
             plugin.getLogger().info("[Pool] Mundo devuelto al pool: " + worldName

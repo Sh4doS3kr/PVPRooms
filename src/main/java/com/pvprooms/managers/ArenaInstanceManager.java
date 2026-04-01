@@ -192,6 +192,76 @@ public class ArenaInstanceManager {
         });
     }
 
+    // ── Pool world reset (no unloadWorld — avoids DimensionDataStorage spike) ──
+
+    /**
+     * Resets a pre-warmed pool world WITHOUT calling Bukkit.unloadWorld().
+     *
+     * Problem with resetInstance for pool worlds: Bukkit.unloadWorld(w, false) still
+     * triggers DimensionDataStorage.saveAndJoin() on the main thread, causing 3000+ms
+     * lag spikes even with save=false.
+     *
+     * This method avoids that by:
+     *   1. Unloading only individual chunks (no disk I/O, just discards memory cache)
+     *   2. Copying template files async (world folder on disk gets refreshed)
+     *   3. Callback on main thread (chunks reload from fresh files on next access)
+     */
+    public void resetPoolWorld(String worldName, ArenaTemplate template, Runnable callback) {
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            plugin.getLogger().warning("[Pool] Cannot reset non-existent pool world: " + worldName);
+            if (callback != null) Bukkit.getScheduler().runTask(plugin, callback);
+            return;
+        }
+
+        // Disable auto-save and clear dropped items
+        world.setAutoSave(false);
+        world.getEntitiesByClass(org.bukkit.entity.Item.class).forEach(org.bukkit.entity.Entity::remove);
+
+        // Unload all loaded chunks WITHOUT saving — fast (memory discard, no disk write)
+        // This does NOT trigger DimensionDataStorage.saveAndJoin()
+        for (Chunk chunk : world.getLoadedChunks()) {
+            chunk.unload(false);
+        }
+
+        // Resolve template source folder
+        String worldFolderName = (template.getWorldName() != null && !template.getWorldName().isBlank())
+                ? template.getWorldName() : template.getName();
+        File sourceDir = new File(Bukkit.getWorldContainer(), worldFolderName);
+        try { sourceDir = sourceDir.getCanonicalFile(); }
+        catch (IOException e) { sourceDir = sourceDir.getAbsoluteFile(); }
+
+        File destDir = new File(Bukkit.getWorldContainer(), worldName);
+        final File finalSourceDir = sourceDir;
+
+        // Async: copy template files over the existing world folder
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                copyDirectory(finalSourceDir.toPath(), destDir.toPath());
+                new File(destDir, "session.lock").delete();
+                new File(destDir, "uid.dat").delete();
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "[Pool] Error resetting pool world " + worldName, e);
+            }
+
+            // Back to main thread — world is still registered in Bukkit,
+            // chunks will reload from fresh files on next access
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                World w = Bukkit.getWorld(worldName);
+                if (w != null) {
+                    w.setAutoSave(false);
+                    w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+                    w.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+                    w.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+                    w.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+                    w.setTime(6000L);
+                }
+                plugin.getLogger().info("[Pool] Pool world reset (sin unload): " + worldName);
+                if (callback != null) callback.run();
+            });
+        });
+    }
+
     // ── World destruction ──────────────────────────────────────────────────
 
     /**
