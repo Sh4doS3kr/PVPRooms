@@ -36,6 +36,8 @@ import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.world.PortalCreateEvent;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -51,6 +53,9 @@ import java.util.UUID;
 public class PlayerListener implements Listener {
 
     private final PvPRoomsPro plugin;
+
+    /** Last known safe (non-solid) location per dueling player for wall-clip rollback */
+    private final Map<UUID, Location> lastSafeLoc = new HashMap<>();
 
     public PlayerListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -212,6 +217,48 @@ public class PlayerListener implements Listener {
             // Allow drops during fight; some kits involve throwing items
             // Change to event.setCancelled(true) if you want to prevent it
         }
+    }
+
+    // ── Movement freeze (countdown, no-walls arenas) ───────────────────────
+
+    // ── Wall clip detection ────────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onPlayerMoveWallClip(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+
+        // Only check active combatants — skip spectators, lobby, countdown
+        Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
+        if (duel == null || duel.getState() != Duel.State.FIGHTING) return;
+        if (duel.getSpectators().contains(uuid)) return;
+
+        Location to = event.getTo();
+        if (to == null) return;
+
+        // Skip pure head-rotation events
+        Location from = event.getFrom();
+        if (from.getX() == to.getX() && from.getY() == to.getY() && from.getZ() == to.getZ()) return;
+
+        if (isInsideWall(to)) {
+            event.setCancelled(true);
+            // If from is also inside a wall (teleport hack), push to last known safe spot
+            if (isInsideWall(from)) {
+                Location safe = lastSafeLoc.get(uuid);
+                if (safe != null) player.teleport(safe);
+            }
+            player.sendActionBar(net.kyori.adventure.text.Component.text("§c§lMovimiento inválido"));
+        } else {
+            lastSafeLoc.put(uuid, to.clone());
+        }
+    }
+
+    /** Returns true if both feet-level and eye-level blocks at loc are non-passable (solid wall). */
+    private boolean isInsideWall(Location loc) {
+        Block feet = loc.getBlock();
+        Block eyes = loc.getWorld().getBlockAt(loc.getBlockX(),
+                (int) Math.floor(loc.getY() + 1.62), loc.getBlockZ());
+        return !feet.isPassable() && !eyes.isPassable();
     }
 
     // ── Movement freeze (countdown, no-walls arenas) ───────────────────────
