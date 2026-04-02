@@ -63,9 +63,44 @@ public class PlayerListener implements Listener {
 
     /** Last known safe (non-solid) location per dueling player for wall-clip rollback */
     private final Map<UUID, Location> lastSafeLoc = new HashMap<>();
+    /** Anti-clip scheduler task ID */
+    private int antiClipTaskId = -1;
 
     public PlayerListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
+        startAntiClipTask();
+    }
+
+    /** Periodic validator (every 2 ticks) to catch elytra/packet-bypass wall clips */
+    private void startAntiClipTask() {
+        antiClipTaskId = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+            for (org.bukkit.entity.Player p : plugin.getServer().getOnlinePlayers()) {
+                UUID uid = p.getUniqueId();
+                boolean inActiveDuel = false;
+                var duel = plugin.getDuelManager().getDuelByPlayer(uid);
+                if (duel != null && duel.getState() == com.pvprooms.model.Duel.State.FIGHTING
+                        && !duel.getSpectators().contains(uid)) {
+                    inActiveDuel = true;
+                }
+                if (!inActiveDuel && plugin.getDuelManager().isInFFA(uid)
+                        && !plugin.getDuelManager().isFFASpectator(uid)) {
+                    inActiveDuel = true;
+                }
+                if (!inActiveDuel) continue;
+
+                Location loc = p.getLocation();
+                if (isInsideWall(loc)) {
+                    Location safe = lastSafeLoc.get(uid);
+                    if (safe != null) {
+                        p.teleport(safe);
+                    } else {
+                        p.teleport(loc.clone().add(0, 1, 0));
+                    }
+                } else {
+                    lastSafeLoc.put(uid, loc.clone());
+                }
+            }
+        }, 2L, 2L).getTaskId();
     }
 
     // ── Join ───────────────────────────────────────────────────────────────
@@ -252,10 +287,16 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
 
-        // Only check active combatants — skip spectators, lobby, countdown
+        // Check active duel combatants and active FFA fighters
+        boolean active = false;
         Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
-        if (duel == null || duel.getState() != Duel.State.FIGHTING) return;
-        if (duel.getSpectators().contains(uuid)) return;
+        if (duel != null && duel.getState() == Duel.State.FIGHTING && !duel.getSpectators().contains(uuid)) {
+            active = true;
+        }
+        if (!active && plugin.getDuelManager().isInFFA(uuid) && !plugin.getDuelManager().isFFASpectator(uuid)) {
+            active = true;
+        }
+        if (!active) return;
 
         Location to = event.getTo();
         if (to == null) return;
@@ -265,24 +306,36 @@ public class PlayerListener implements Listener {
         if (from.getX() == to.getX() && from.getY() == to.getY() && from.getZ() == to.getZ()) return;
 
         if (isInsideWall(to)) {
-            event.setCancelled(true);
-            // If from is also inside a wall (teleport hack), push to last known safe spot
-            if (isInsideWall(from)) {
-                Location safe = lastSafeLoc.get(uuid);
-                if (safe != null) player.teleport(safe);
+            // setTo is more reliable than setCancelled for elytra/packet bypasses on Paper
+            event.setTo(from);
+            Location safe = lastSafeLoc.get(uuid);
+            if (safe != null) {
+                player.teleport(safe);
+            } else if (!isInsideWall(from)) {
+                player.teleport(from);
             }
-            player.sendActionBar(net.kyori.adventure.text.Component.text("§c§lMovimiento inválido"));
         } else {
             lastSafeLoc.put(uuid, to.clone());
         }
     }
 
-    /** Returns true if both feet-level and eye-level blocks at loc are non-passable (solid wall). */
+    /**
+     * Returns true if the player's body occupies a solid (non-passable) block.
+     * Checks feet level AND chest level independently (OR) to catch both
+     * full-body clips and partial clips (e.g. elytra through a 1-block wall).
+     */
     private boolean isInsideWall(Location loc) {
-        Block feet = loc.getBlock();
-        Block eyes = loc.getWorld().getBlockAt(loc.getBlockX(),
-                (int) Math.floor(loc.getY() + 1.62), loc.getBlockZ());
-        return !feet.isPassable() && !eyes.isPassable();
+        World w = loc.getWorld();
+        int bx = loc.getBlockX(), bz = loc.getBlockZ();
+        // Feet: block at floor(Y)
+        Block feet = w.getBlockAt(bx, (int) Math.floor(loc.getY()), bz);
+        if (!feet.isPassable()) return true;
+        // Chest: block at floor(Y + 0.9)
+        Block chest = w.getBlockAt(bx, (int) Math.floor(loc.getY() + 0.9), bz);
+        if (!chest.isPassable()) return true;
+        // Head/eyes: block at floor(Y + 1.62)
+        Block eyes = w.getBlockAt(bx, (int) Math.floor(loc.getY() + 1.62), bz);
+        return !eyes.isPassable();
     }
 
     // ── Movement freeze (countdown, no-walls arenas) ───────────────────────
