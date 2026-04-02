@@ -193,13 +193,15 @@ public class PlayerListener implements Listener {
         // Determine winner
         UUID winnerUUID = duel.getOpponent(uuid);
 
-        // Schedule duel end on next tick (death handling must complete first)
+        // Respawn dead player on next tick (death screen must clear first)
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            if (dead.isDead()) {
-                dead.spigot().respawn();
-            }
-            plugin.getDuelManager().endDuel(duel, winnerUUID, "death");
+            if (dead.isDead()) dead.spigot().respawn();
         }, 1L);
+
+        // End duel after 1.5s so winner can see the kill before being teleported out
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            plugin.getDuelManager().endDuel(duel, winnerUUID, "death");
+        }, 30L);
     }
 
     // ── Respawn ────────────────────────────────────────────────────────────
@@ -480,6 +482,12 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
+        // Allow spawn eggs in active arena worlds (e.g. explosivo kit creepers)
+        if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
+            String worldName = event.getLocation().getWorld().getName();
+            String prefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+            if (worldName.startsWith(prefix)) return;
+        }
         if (isMob(event.getEntity())) {
             event.setCancelled(true);
         }
