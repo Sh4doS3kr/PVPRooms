@@ -306,9 +306,12 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onFoodLevelChange(FoodLevelChangeEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
+        if (plugin.getLobbyManager().isInLobby(player)) {
+            event.setCancelled(true);
+            return;
+        }
         Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (duel != null && duel.getState() == Duel.State.COUNTDOWN) {
-            // Lock food at 20 during countdown
             event.setCancelled(true);
         }
     }
