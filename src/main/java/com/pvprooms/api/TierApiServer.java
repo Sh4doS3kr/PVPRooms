@@ -311,6 +311,11 @@ public class TierApiServer {
     }
 
     private UUID resolveUUID(String name) {
+        // Check online players first — guaranteed to be found
+        for (var p : plugin.getServer().getOnlinePlayers()) {
+            if (name.equalsIgnoreCase(p.getName())) return p.getUniqueId();
+        }
+        // Fall back to offline player data
         for (var p : plugin.getServer().getOfflinePlayers()) {
             if (name.equalsIgnoreCase(p.getName())) return p.getUniqueId();
         }
