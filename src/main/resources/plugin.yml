@@ -97,6 +97,9 @@ commands:
     description: Da Golden Heads a un jugador
     usage: /gheads [jugador] [cantidad]
     permission: pvprooms.admin
+  linkcode:
+    description: Muestra tu código pendiente de vinculación con Discord
+    usage: /linkcode
 
 permissions:
   pvprooms.kit:

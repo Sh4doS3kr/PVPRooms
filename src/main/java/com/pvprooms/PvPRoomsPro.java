@@ -384,6 +384,8 @@ public class PvPRoomsPro extends JavaPlugin {
 
         getCommand("verificar").setExecutor(new com.pvprooms.commands.VerifyCommand(this));
 
+        getCommand("linkcode").setExecutor(new LinkcodeCommand(this));
+
         StaffCommand staffCmd = new StaffCommand(this);
         getCommand("staff").setExecutor(staffCmd);
 

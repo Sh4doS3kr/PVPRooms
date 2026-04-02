@@ -477,6 +477,16 @@ public class TierManager {
         return uuid;
     }
 
+    /** Returns the pending link code for a player UUID, or null if none. */
+    public String getPendingCode(UUID uuid) {
+        long now = System.currentTimeMillis();
+        return pendingLinkCodes.entrySet().stream()
+                .filter(e -> e.getValue()[0].equals(uuid.toString())
+                        && now - Long.parseLong(e.getValue()[3]) <= 300_000)
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+    }
+
     /** Returns the Discord ID linked to this Minecraft UUID, or null if not linked. */
     public String getLinkedDiscord(UUID uuid) {
         return discordLinks.get(uuid);
