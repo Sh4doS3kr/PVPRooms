@@ -2,12 +2,8 @@ package com.pvprooms.listeners;
 
 import com.pvprooms.PvPRoomsPro;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -18,11 +14,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
-import org.bukkit.util.Vector;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * Handles all lobby-specific events:
@@ -35,8 +26,6 @@ import java.util.UUID;
 public class LobbyListener implements Listener {
 
     private final PvPRoomsPro plugin;
-    private final Map<UUID, Long> creeperLaunchCooldowns = new HashMap<>();
-    private static final long CREEPER_COOLDOWN_MS = 5000L;
 
     public LobbyListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -225,46 +214,7 @@ public class LobbyListener implements Listener {
             return true;
         }
 
-        if (lm.isCreeperLauncherItem(item)) {
-            launchCreeper(player);
-            return true;
-        }
-
         return false;
-    }
-
-    private void launchCreeper(Player launcher) {
-        long now = System.currentTimeMillis();
-        Long last = creeperLaunchCooldowns.get(launcher.getUniqueId());
-        if (last != null && now - last < CREEPER_COOLDOWN_MS) {
-            long secs = (CREEPER_COOLDOWN_MS - (now - last) + 999) / 1000;
-            launcher.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§c¡Recargando! §7(" + secs + "s)"));
-            return;
-        }
-        creeperLaunchCooldowns.put(launcher.getUniqueId(), now);
-
-        Vector dir = launcher.getLocation().getDirection().setY(0).normalize();
-        Location spawnLoc = launcher.getLocation().clone().add(dir.clone().multiply(2));
-
-        Creeper creeper = (Creeper) launcher.getWorld().spawnEntity(spawnLoc, EntityType.CREEPER);
-        creeper.setPowered(true);
-        creeper.setMaxFuseTicks(40);
-
-        Player target = null;
-        double minDist = Double.MAX_VALUE;
-        for (Player p : launcher.getWorld().getPlayers()) {
-            if (p.equals(launcher)) continue;
-            double dist = p.getLocation().distanceSquared(launcher.getLocation());
-            if (dist < minDist) { minDist = dist; target = p; }
-        }
-
-        Vector velocity = (target != null
-                ? target.getLocation().toVector().subtract(spawnLoc.toVector()).normalize()
-                : dir.clone()).setY(0.35).multiply(1.3);
-        creeper.setVelocity(velocity);
-
-        launcher.getWorld().playSound(launcher.getLocation(), Sound.ENTITY_CREEPER_HURT, 1.0f, 1.0f);
     }
 
     private void handleQuickMatch(Player player) {

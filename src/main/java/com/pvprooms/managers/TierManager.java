@@ -361,10 +361,10 @@ public class TierManager {
         return playersByName.values().stream()
                 .map(uuid -> new PlayerRank(uuid, getTotalScore(uuid), null, -1, getElo(uuid)))
                 .sorted((a, b) -> {
-                    // First by score (higher first), then by ELO (higher first)
-                    int cmp = Integer.compare(b.score(), a.score());
-                    if (cmp != 0) return cmp;
-                    return Integer.compare(b.elo(), a.elo());
+                    // Combined average of (ELO + Points) for fair ranking
+                    int combinedA = (a.elo() + a.score()) / 2;
+                    int combinedB = (b.elo() + b.score()) / 2;
+                    return Integer.compare(combinedB, combinedA);
                 })
                 .limit(limit)
                 .collect(Collectors.toList());

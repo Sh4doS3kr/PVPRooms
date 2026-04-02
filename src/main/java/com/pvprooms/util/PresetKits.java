@@ -80,7 +80,7 @@ public class PresetKits {
         inventory[8] = new ItemStack(Material.ARROW, 6);
 
         // Offhand: Shield (slot 40 maps to offhand in applyKit)
-        return new KitPreset("axepvp", "§6⚔ Axe Kit", Material.DIAMOND_AXE, armor, inventory);
+        return new KitPreset("axepvp", "§6⚔ Axe Kit", Material.NETHERITE_AXE, armor, inventory);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -229,7 +229,7 @@ public class PresetKits {
             inventory[i] = createSplashPotion(i % 2 == 0 ? PotionType.STRONG_STRENGTH : PotionType.STRONG_SWIFTNESS);
         }
 
-        return new KitPreset("smp", "§2⚔ SMP Kit", Material.NETHERITE_SWORD, armor, inventory);
+        return new KitPreset("smp", "§2⚔ SMP Kit", Material.CHEST, armor, inventory);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -427,7 +427,7 @@ public class PresetKits {
         ItemStack[] inventory = new ItemStack[36];
         inventory[0] = createItem(Material.NETHERITE_SWORD,
             Map.of(Enchantment.SHARPNESS, 5, Enchantment.UNBREAKING, 3));
-        inventory[1] = new ItemStack(Material.TNT, 64);
+        inventory[1] = createCreeperLauncher();
         inventory[2] = new ItemStack(Material.TNT, 64);
         inventory[3] = createItem(Material.FLINT_AND_STEEL,
             Map.of(Enchantment.UNBREAKING, 3, Enchantment.MENDING, 1));
@@ -467,6 +467,22 @@ public class PresetKits {
             potion.setItemMeta(meta);
         }
         return potion;
+    }
+
+    private static ItemStack createCreeperLauncher() {
+        ItemStack item = new ItemStack(Material.CREEPER_HEAD);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("\u00a7a\u00a7lLanzador de Creepers");
+            meta.setLore(java.util.List.of(
+                "",
+                "\u00a77Click derecho para lanzar un creeper",
+                "\u00a78Cooldown: 5 segundos"
+            ));
+            meta.setCustomModelData(1006);
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     /**

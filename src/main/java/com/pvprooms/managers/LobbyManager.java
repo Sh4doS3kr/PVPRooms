@@ -40,9 +40,6 @@ public class LobbyManager {
         // Slot 1: Quick Match (Golden Sword)
         player.getInventory().setItem(1, createQuickMatchItem());
 
-        // Slot 2: Creeper Launcher
-        player.getInventory().setItem(2, createCreeperLauncherItem());
-
         // Slot 4: Party Manager (Cake)
         player.getInventory().setItem(4, createPartyItem());
 
