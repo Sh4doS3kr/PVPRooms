@@ -192,6 +192,18 @@ public class DuelManager {
 
                     duel.setState(Duel.State.FIGHTING);
                     duel.setStartTimeMillis(System.currentTimeMillis());
+
+                    // Crystal kit: initialize attack speed based on held item at fight start
+                    if ("crystal".equalsIgnoreCase(duel.getKitName())) {
+                        for (Player cp : new Player[]{p1, p2}) {
+                            var spd = cp.getAttribute(org.bukkit.attribute.Attribute.ATTACK_SPEED);
+                            if (spd != null) {
+                                org.bukkit.inventory.ItemStack held = cp.getInventory().getItemInMainHand();
+                                spd.setBaseValue(held.getType() == org.bukkit.Material.END_CRYSTAL ? 1024.0 : 4.0);
+                            }
+                        }
+                    }
+
                     sendTitle(p1, "§c§l¡PELEA!", "");
                     sendTitle(p2, "§c§l¡PELEA!", "");
                     p1.sendMessage(plugin.prefix() + "§c§l¡Comienza el duelo!");
@@ -565,6 +577,8 @@ public class DuelManager {
         PlayerSnapshot snap = inventorySnapshots.remove(player.getUniqueId());
         if (snap != null) snap.restore(player);
         healPlayer(player);
+        var atkSpeed = player.getAttribute(org.bukkit.attribute.Attribute.ATTACK_SPEED);
+        if (atkSpeed != null) atkSpeed.setBaseValue(4.0);
     }
 
     private void restoreSpectator(Player player) {
