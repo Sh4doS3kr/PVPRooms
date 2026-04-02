@@ -1393,8 +1393,13 @@ public class BotCombatAI {
     private void moveTowardsTarget(Player bot, double distance) {
         if (distance < 2.0) return;
 
-        // Falling — let gravity finish before moving
-        if (!bot.isOnGround() && bot.getVelocity().getY() < -0.1) return;
+        // Apply gravity manually when airborne (Player entities are client-driven normally)
+        if (!bot.isOnGround()) {
+            Vector vel = bot.getVelocity();
+            vel.setY(Math.max(vel.getY() - 0.08, -3.92));
+            bot.setVelocity(vel);
+            return;
+        }
 
         Location targetLoc = target.getLocation();
 

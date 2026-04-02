@@ -205,6 +205,11 @@ public class BotManager {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (bot.isSpawned() && bot.getEntity() != null) {
                     bot.getEntity().teleport(exactSpawn);
+                    bot.getEntity().setGravity(true);
+                    if (bot.getEntity() instanceof Player botPlayer) {
+                        botPlayer.setAllowFlight(false);
+                        botPlayer.setFlying(false);
+                    }
                     plugin.getLogger().info("[BotDuel] Bot force-teleported to exact spawn: " + 
                         exactSpawn.getBlockX() + "," + exactSpawn.getBlockY() + "," + exactSpawn.getBlockZ());
                 }

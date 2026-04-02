@@ -411,7 +411,7 @@ public class PresetKits {
 
     // ══════════════════════════════════════════════════════════════════════
     // EXPLOSIVO KIT - TNT/Explosion PvP
-    // Chainmail armor Blast Protection IV, knockback stick, TNT, Flint & Steel
+    // Chainmail Blast Prot IV | Sword Sharp II | TNT | Flame Bow | Spawn Eggs
     // ══════════════════════════════════════════════════════════════════════
     private static KitPreset createExplosivoKit() {
         ItemStack[] armor = new ItemStack[4];
@@ -425,22 +425,30 @@ public class PresetKits {
             Map.of(Enchantment.BLAST_PROTECTION, 4, Enchantment.UNBREAKING, 3));
 
         ItemStack[] inventory = new ItemStack[36];
-        inventory[0] = createItem(Material.STICK,
+        // Hotbar
+        inventory[0] = createItem(Material.DIAMOND_SWORD,
+            Map.of(Enchantment.SHARPNESS, 2, Enchantment.UNBREAKING, 3));
+        inventory[1] = createItem(Material.STICK,
             Map.of(Enchantment.KNOCKBACK, 2, Enchantment.UNBREAKING, 3));
-        inventory[1] = createCreeperLauncher();
-        inventory[2] = new ItemStack(Material.TNT, 64);
-        inventory[3] = createItem(Material.FLINT_AND_STEEL,
-            Map.of(Enchantment.UNBREAKING, 3, Enchantment.MENDING, 1));
-        inventory[4] = new ItemStack(Material.ENDER_PEARL, 16);
-        inventory[5] = new ItemStack(Material.GOLDEN_APPLE, 32);
-        inventory[6] = new ItemStack(Material.OBSIDIAN, 32);
-        inventory[7] = createItem(Material.SHIELD,
+        inventory[2] = createItem(Material.FLINT_AND_STEEL,
             Map.of(Enchantment.UNBREAKING, 3));
-        inventory[8] = new ItemStack(Material.TOTEM_OF_UNDYING, 1);
-        for (int i = 9; i < 18; i++) inventory[i] = new ItemStack(Material.TNT, 64);
-        for (int i = 18; i < 27; i++) inventory[i] = new ItemStack(Material.TOTEM_OF_UNDYING);
+        inventory[3] = createItem(Material.BOW,
+            Map.of(Enchantment.FLAME, 1, Enchantment.POWER, 2, Enchantment.UNBREAKING, 3, Enchantment.INFINITY, 1));
+        inventory[4] = new ItemStack(Material.TNT, 64);
+        inventory[5] = new ItemStack(Material.TNT, 64);
+        inventory[6] = new ItemStack(Material.ENDER_PEARL, 16);
+        inventory[7] = new ItemStack(Material.CREEPER_SPAWN_EGG, 16);
+        inventory[8] = new ItemStack(Material.GOLDEN_APPLE, 32);
+        // Inventory
+        inventory[9]  = new ItemStack(Material.ARROW, 1);
+        inventory[10] = new ItemStack(Material.TNT, 64);
+        inventory[11] = new ItemStack(Material.TNT, 64);
+        inventory[12] = new ItemStack(Material.OBSIDIAN, 32);
+        inventory[13] = new ItemStack(Material.CREEPER_SPAWN_EGG, 16);
+        inventory[14] = new ItemStack(Material.GOLDEN_APPLE, 32);
+        for (int i = 15; i < 18; i++) inventory[i] = new ItemStack(Material.TOTEM_OF_UNDYING);
 
-        return new KitPreset("explosivo", "\u00a7c\u00a7l💥 Explosivo Kit", Material.TNT, armor, inventory);
+        return new KitPreset("explosivo", "§c§l💥 Explosivo Kit", Material.TNT, armor, inventory);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -467,22 +475,6 @@ public class PresetKits {
             potion.setItemMeta(meta);
         }
         return potion;
-    }
-
-    private static ItemStack createCreeperLauncher() {
-        ItemStack item = new ItemStack(Material.CREEPER_HEAD);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName("\u00a7a\u00a7lLanzador de Creepers");
-            meta.setLore(java.util.List.of(
-                "",
-                "\u00a77Click derecho para lanzar un creeper",
-                "\u00a78Cooldown: 5 segundos"
-            ));
-            meta.setCustomModelData(1006);
-            item.setItemMeta(meta);
-        }
-        return item;
     }
 
     /**

@@ -187,6 +187,9 @@ public class PlayerListener implements Listener {
         event.setKeepInventory(true);
         event.setKeepLevel(true);
 
+        // Cosmetic lightning at death location
+        dead.getWorld().strikeLightningEffect(dead.getLocation());
+
         // Determine winner
         UUID winnerUUID = duel.getOpponent(uuid);
 
@@ -304,61 +307,6 @@ public class PlayerListener implements Listener {
             player.sendActionBar(net.kyori.adventure.text.Component.text(
                     "\u00a7c\u00a7l¡Espera al inicio!"));
         }
-    }
-
-    // ── Creeper Launcher (explosivo kit only) ────────────────────────────────
-
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onCreeperLauncherUse(org.bukkit.event.player.PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        Player player = event.getPlayer();
-        ItemStack item = event.getItem();
-        if (!plugin.getLobbyManager().isCreeperLauncherItem(item)) return;
-
-        event.setCancelled(true);
-
-        int used = plugin.getLobbyManager().getCreeperCount(player.getUniqueId());
-        if (used >= com.pvprooms.managers.LobbyManager.MAX_CREEPERS_PER_DUEL) {
-            player.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§c¡Límite alcanzado! §7(" + com.pvprooms.managers.LobbyManager.MAX_CREEPERS_PER_DUEL + " creepers máx)"));
-            return;
-        }
-        plugin.getLobbyManager().incrementCreeperCount(player.getUniqueId());
-
-        Vector dir = player.getLocation().getDirection().normalize();
-        Location spawnLoc = player.getEyeLocation().clone().add(dir.clone().multiply(1.5));
-
-        org.bukkit.entity.Creeper creeper = (org.bukkit.entity.Creeper) player.getWorld().spawnEntity(
-                spawnLoc, org.bukkit.entity.EntityType.CREEPER);
-        creeper.setPowered(true);
-        creeper.setMaxFuseTicks(10);
-        creeper.setFuseTicks(10);
-        creeper.setVelocity(dir.clone().multiply(1.5));
-
-        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.2f);
-
-        // Explode on ground contact
-        new org.bukkit.scheduler.BukkitRunnable() {
-            int ticks = 0;
-            @Override
-            public void run() {
-                if (!creeper.isValid() || creeper.isDead()) { cancel(); return; }
-                if (++ticks > 100) {
-                    creeper.getWorld().createExplosion(creeper.getLocation(), 4.0f, false, true);
-                    creeper.remove();
-                    cancel();
-                    return;
-                }
-                if (creeper.isOnGround() || ticks > 2) {
-                    // Only trigger on ground after initial launch arc
-                    if (ticks > 2 && creeper.isOnGround()) {
-                        creeper.getWorld().createExplosion(creeper.getLocation(), 4.0f, false, true);
-                        creeper.remove();
-                        cancel();
-                    }
-                }
-            }
-        }.runTaskTimer(plugin, 2L, 1L);
     }
 
     // ── Golden Head consumption ─────────────────────────────────────────────

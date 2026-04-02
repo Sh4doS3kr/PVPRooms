@@ -147,37 +147,63 @@ public class BotListener implements Listener {
                     double currentHealth = botEntity.getHealth();
                     
                     if (currentHealth - finalDamage <= 0) {
-                        // Check for totem in offhand first
+                        // Find totem: offhand first, then entire inventory
+                        ItemStack foundTotem = null;
+                        int totemInvSlot = -1;
                         ItemStack offhand = botEntity.getEquipment().getItemInOffHand();
                         if (offhand != null && offhand.getType() == org.bukkit.Material.TOTEM_OF_UNDYING) {
+                            foundTotem = offhand;
+                        } else if (botEntity instanceof Player botInvPlayer) {
+                            for (int si = 0; si < botInvPlayer.getInventory().getSize(); si++) {
+                                ItemStack slot = botInvPlayer.getInventory().getItem(si);
+                                if (slot != null && slot.getType() == org.bukkit.Material.TOTEM_OF_UNDYING) {
+                                    foundTotem = slot;
+                                    totemInvSlot = si;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (foundTotem != null) {
                             // Totem activates! Cancel death, apply totem effects
                             event.setCancelled(true);
-                            
-                            // Consume totem — must call setItemInOffHand; mutating the copy has no effect on NPC equipment
-                            int totemAmount = offhand.getAmount();
-                            if (totemAmount <= 1) {
-                                botEntity.getEquipment().setItemInOffHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR));
+
+                            // Consume totem
+                            if (totemInvSlot == -1) {
+                                // Was in offhand
+                                int amt = foundTotem.getAmount();
+                                if (amt <= 1) {
+                                    botEntity.getEquipment().setItemInOffHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR));
+                                } else {
+                                    foundTotem.setAmount(amt - 1);
+                                    botEntity.getEquipment().setItemInOffHand(foundTotem);
+                                }
                             } else {
-                                offhand.setAmount(totemAmount - 1);
-                                botEntity.getEquipment().setItemInOffHand(offhand);
+                                // Was in main inventory
+                                int amt = foundTotem.getAmount();
+                                if (amt <= 1) {
+                                    ((Player) botEntity).getInventory().setItem(totemInvSlot, null);
+                                } else {
+                                    foundTotem.setAmount(amt - 1);
+                                }
                             }
-                            
+
                             // Apply totem effects (vanilla behavior)
                             botEntity.setHealth(1.0);
                             botEntity.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.REGENERATION, 900, 1)); // 45 sec Regen II
+                                org.bukkit.potion.PotionEffectType.REGENERATION, 900, 1));
                             botEntity.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.ABSORPTION, 100, 1)); // 5 sec Absorption II
+                                org.bukkit.potion.PotionEffectType.ABSORPTION, 100, 1));
                             botEntity.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, 800, 0)); // 40 sec Fire Res
-                            
+                                org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, 800, 0));
+
                             // Totem animation and sound
-                            botEntity.getWorld().playSound(botEntity.getLocation(), 
+                            botEntity.getWorld().playSound(botEntity.getLocation(),
                                 org.bukkit.Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
                             botEntity.getWorld().spawnParticle(
-                                org.bukkit.Particle.TOTEM_OF_UNDYING, 
+                                org.bukkit.Particle.TOTEM_OF_UNDYING,
                                 botEntity.getLocation().add(0, 1, 0), 100, 0.5, 1, 0.5, 0.5);
-                            
+
                             return;
                         }
                         

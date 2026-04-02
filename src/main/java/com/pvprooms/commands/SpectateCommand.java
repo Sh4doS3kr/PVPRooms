@@ -74,7 +74,7 @@ public class SpectateCommand implements CommandExecutor, TabCompleter {
         }
 
         Duel duel = plugin.getDuelManager().getDuelByPlayer(target.getUniqueId());
-        if (duel == null || duel.getState() != Duel.State.FIGHTING) {
+        if (duel == null || duel.getState() == Duel.State.ENDED) {
             spectator.sendMessage(plugin.prefix() + "§e" + target.getName() + " §cno está en un duelo activo.");
             return true;
         }

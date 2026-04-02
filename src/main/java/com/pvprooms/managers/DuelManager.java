@@ -538,7 +538,7 @@ public class DuelManager {
         UUID duelId = playerDuelMap.get(target.getUniqueId());
         if (duelId == null) return false;
         Duel duel = activeDuels.get(duelId);
-        if (duel == null || duel.getState() != Duel.State.FIGHTING) return false;
+        if (duel == null || duel.getState() == Duel.State.ENDED) return false;
 
         saveSnapshot(spectator);
         prepareSpectator(spectator);
