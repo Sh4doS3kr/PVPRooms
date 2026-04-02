@@ -332,6 +332,17 @@ public class PlayerListener implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEnderPearlLand(org.bukkit.event.player.PlayerTeleportEvent event) {
+        if (event.getCause() != org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.ENDER_PEARL) return;
+        Location to = event.getTo();
+        if (to == null || !isInsideWall(to)) return;
+
+        // Pearl would clip player into a solid block — cancel and punish with cooldown
+        event.setCancelled(true);
+        event.getPlayer().setCooldown(org.bukkit.Material.ENDER_PEARL, 100); // 5 s
+    }
+
     /**
      * Returns true if the player's body occupies a solid (non-passable) block.
      * Checks feet level AND chest level independently (OR) to catch both

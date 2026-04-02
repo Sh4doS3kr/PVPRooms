@@ -954,6 +954,7 @@ public class DuelManager {
                 if (p != null) {
                     restorePlayer(p);
                     p.teleport(plugin.getLobbySpawn());
+                    plugin.getScoreboardManager().restoreLobbyScoreboard(p);
 
                     if (winner != null) {
                         if (p.equals(winner)) {
@@ -975,6 +976,7 @@ public class DuelManager {
             if (spec != null) {
                 restorePlayer(spec);
                 spec.teleport(plugin.getLobbySpawn());
+                plugin.getScoreboardManager().restoreLobbyScoreboard(spec);
                 spec.sendMessage(plugin.prefix() + "§7La partida FFA ha terminado.");
                 if (winner != null) {
                     spec.sendMessage(plugin.prefix() + "§e" + winner.getName() + " §7ha ganado el FFA.");
@@ -1008,6 +1010,7 @@ public class DuelManager {
         if (p != null) {
             restorePlayer(p);
             p.teleport(plugin.getLobbySpawn());
+            plugin.getScoreboardManager().restoreLobbyScoreboard(p);
         }
     }
     
