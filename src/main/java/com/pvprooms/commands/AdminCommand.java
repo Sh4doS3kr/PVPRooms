@@ -144,7 +144,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     private void handleCreateKit(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage(plugin.prefix() + "§cUso: /admin createkit <nombre>");
-            sender.sendMessage(plugin.prefix() + "§7Kits disponibles: §esword, axepvp, nethpot, uhc, smp, crystal, mace, spear, all");
+            sender.sendMessage(plugin.prefix() + "§7Kits disponibles: §esword, axepvp, nethpot, uhc, smp, crystal, mace, spear, explosivo, all");
             return;
         }
 
@@ -161,6 +161,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§7  • §5Crystal §8- §7Crystal PvP");
             sender.sendMessage("§7  • §8Mace §8- §71.21 Mace combat");
             sender.sendMessage("§7  • §3Spear §8- §7Trident + Attribute Swap");
+            sender.sendMessage("§7  • §cExplosivo §8- §7TNT / Explosions (Prot 4 solo)");
             return;
         }
 
@@ -169,7 +170,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(plugin.prefix() + "§7Usa §e/queue §7para probarlo.");
         } else {
             sender.sendMessage(plugin.prefix() + "§cKit §e" + kitName + " §cno encontrado.");
-            sender.sendMessage(plugin.prefix() + "§7Kits disponibles: §esword, axepvp, nethpot, uhc, smp, crystal, mace, spear, all");
+            sender.sendMessage(plugin.prefix() + "§7Kits disponibles: §esword, axepvp, nethpot, uhc, smp, crystal, mace, spear, explosivo, all");
         }
     }
 

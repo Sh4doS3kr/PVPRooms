@@ -93,6 +93,10 @@ commands:
     description: Activa/desactiva el modo staff con herramientas de administración
     usage: /staff
     permission: pvprooms.staff
+  gheads:
+    description: Da Golden Heads a un jugador
+    usage: /gheads [jugador] [cantidad]
+    permission: pvprooms.admin
 
 permissions:
   pvprooms.kit:

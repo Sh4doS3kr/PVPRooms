@@ -385,6 +385,10 @@ public class PvPRoomsPro extends JavaPlugin {
 
         StaffCommand staffCmd = new StaffCommand(this);
         getCommand("staff").setExecutor(staffCmd);
+
+        GoldenHeadCommand gheadsCmd = new GoldenHeadCommand(this);
+        getCommand("gheads").setExecutor(gheadsCmd);
+        getCommand("gheads").setTabCompleter(gheadsCmd);
     }
 
     private void registerListeners() {

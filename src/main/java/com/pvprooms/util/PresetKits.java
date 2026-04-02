@@ -29,6 +29,7 @@ public class PresetKits {
         presets.put("crystal", createCrystalKit());
         presets.put("mace", createMaceKit());
         presets.put("spear", createSpearKit());
+        presets.put("explosivo", createExplosivoKit());
         return presets;
     }
 
@@ -406,6 +407,40 @@ public class PresetKits {
         for (int i = 31; i <= 35; i++) inventory[i] = new ItemStack(Material.TOTEM_OF_UNDYING);
 
         return new KitPreset("spear", "§3🔱 Spear Kit", Material.NETHERITE_SPEAR, armor, inventory);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // EXPLOSIVO KIT - TNT/Explosion PvP
+    // Netherite armor Protection 4 only (NO Blast Protection), TNT, Flint & Steel
+    // ══════════════════════════════════════════════════════════════════════
+    private static KitPreset createExplosivoKit() {
+        ItemStack[] armor = new ItemStack[4];
+        armor[0] = createItem(Material.NETHERITE_BOOTS,
+            Map.of(Enchantment.PROTECTION, 4, Enchantment.FEATHER_FALLING, 4, Enchantment.UNBREAKING, 3));
+        armor[1] = createItem(Material.NETHERITE_LEGGINGS,
+            Map.of(Enchantment.PROTECTION, 4, Enchantment.UNBREAKING, 3));
+        armor[2] = createItem(Material.NETHERITE_CHESTPLATE,
+            Map.of(Enchantment.PROTECTION, 4, Enchantment.UNBREAKING, 3));
+        armor[3] = createItem(Material.NETHERITE_HELMET,
+            Map.of(Enchantment.PROTECTION, 4, Enchantment.UNBREAKING, 3));
+
+        ItemStack[] inventory = new ItemStack[36];
+        inventory[0] = createItem(Material.NETHERITE_SWORD,
+            Map.of(Enchantment.SHARPNESS, 5, Enchantment.UNBREAKING, 3));
+        inventory[1] = new ItemStack(Material.TNT, 64);
+        inventory[2] = new ItemStack(Material.TNT, 64);
+        inventory[3] = createItem(Material.FLINT_AND_STEEL,
+            Map.of(Enchantment.UNBREAKING, 3, Enchantment.MENDING, 1));
+        inventory[4] = new ItemStack(Material.ENDER_PEARL, 16);
+        inventory[5] = new ItemStack(Material.GOLDEN_APPLE, 32);
+        inventory[6] = new ItemStack(Material.OBSIDIAN, 32);
+        inventory[7] = createItem(Material.SHIELD,
+            Map.of(Enchantment.UNBREAKING, 3));
+        inventory[8] = new ItemStack(Material.TOTEM_OF_UNDYING, 1);
+        for (int i = 9; i < 18; i++) inventory[i] = new ItemStack(Material.TNT, 64);
+        for (int i = 18; i < 27; i++) inventory[i] = new ItemStack(Material.TOTEM_OF_UNDYING);
+
+        return new KitPreset("explosivo", "\u00a7c\u00a7l💥 Explosivo Kit", Material.TNT, armor, inventory);
     }
 
     // ══════════════════════════════════════════════════════════════════════

@@ -6,9 +6,14 @@ import com.pvprooms.managers.WallManager;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.Action;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -301,6 +306,30 @@ public class PlayerListener implements Listener {
         }
     }
 
+    // ── Golden Head consumption ─────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onGoldenHeadUse(org.bukkit.event.player.PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        Player player = event.getPlayer();
+        ItemStack item = event.getItem();
+        if (!plugin.getLobbyManager().isGoldenHeadItem(item)) return;
+
+        event.setCancelled(true);
+
+        player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1, false, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 600, 0, false, true));
+
+        if (item.getAmount() <= 1) {
+            player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+        } else {
+            item.setAmount(item.getAmount() - 1);
+        }
+
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_BURP, 1.0f, 1.0f);
+        player.sendActionBar(net.kyori.adventure.text.Component.text("§6§lGolden Head §eactivado!"));
+    }
+
     // ── Food level ─────────────────────────────────────────────────────────
 
     @EventHandler
@@ -447,6 +476,7 @@ public class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent event) {
+        if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
         if (isMob(event.getEntity())) {
             event.setCancelled(true);
         }

@@ -21,6 +21,8 @@ public class LobbyManager {
 
     // Item identifiers stored in persistent data
     public static final String LOBBY_ITEM_KEY = "pvprooms_lobby_item";
+    public static final int CMI_CREEPER_LAUNCHER = 1006;
+    public static final int CMI_GOLDEN_HEAD      = 2001;
 
     public LobbyManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
@@ -37,6 +39,9 @@ public class LobbyManager {
 
         // Slot 1: Quick Match (Golden Sword)
         player.getInventory().setItem(1, createQuickMatchItem());
+
+        // Slot 2: Creeper Launcher
+        player.getInventory().setItem(2, createCreeperLauncherItem());
 
         // Slot 4: Party Manager (Cake)
         player.getInventory().setItem(4, createPartyItem());
@@ -136,6 +141,40 @@ public class LobbyManager {
         return item;
     }
 
+    public ItemStack createCreeperLauncherItem() {
+        ItemStack item = new ItemStack(Material.CREEPER_HEAD);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Lanzador de Creepers", NamedTextColor.GREEN)
+                .decoration(TextDecoration.ITALIC, false));
+        meta.lore(List.of(
+                Component.empty(),
+                Component.text("Click derecho para lanzar un creeper", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Cooldown: 5 segundos", NamedTextColor.DARK_GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        meta.setCustomModelData(CMI_CREEPER_LAUNCHER);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public ItemStack createGoldenHeadItem(int amount) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD, Math.max(1, Math.min(64, amount)));
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text("Golden Head", NamedTextColor.GOLD)
+                .decoration(TextDecoration.ITALIC, false));
+        meta.lore(List.of(
+                Component.empty(),
+                Component.text("Click derecho para consumir", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Regen II 5s + Absorción I 30s", NamedTextColor.DARK_GRAY)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        meta.setCustomModelData(CMI_GOLDEN_HEAD);
+        item.setItemMeta(meta);
+        return item;
+    }
+
     private ItemStack createSettingsItem() {
         ItemStack item = new ItemStack(Material.REDSTONE);
         ItemMeta meta = item.getItemMeta();
@@ -185,8 +224,20 @@ public class LobbyManager {
                 && item.getItemMeta().getCustomModelData() == 1005;
     }
 
+    public boolean isCreeperLauncherItem(ItemStack item) {
+        return item != null && item.getType() == Material.CREEPER_HEAD
+                && item.hasItemMeta() && item.getItemMeta().hasCustomModelData()
+                && item.getItemMeta().getCustomModelData() == CMI_CREEPER_LAUNCHER;
+    }
+
+    public boolean isGoldenHeadItem(ItemStack item) {
+        return item != null && item.getType() == Material.PLAYER_HEAD
+                && item.hasItemMeta() && item.getItemMeta().hasCustomModelData()
+                && item.getItemMeta().getCustomModelData() == CMI_GOLDEN_HEAD;
+    }
+
     public boolean isLobbyItem(ItemStack item) {
-        return isQueueItem(item) || isQuickMatchItem(item) || isPartyItem(item) 
-                || isProfileItem(item) || isSettingsItem(item);
+        return isQueueItem(item) || isQuickMatchItem(item) || isPartyItem(item)
+                || isProfileItem(item) || isSettingsItem(item) || isCreeperLauncherItem(item);
     }
 }
