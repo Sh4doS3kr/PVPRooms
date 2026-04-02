@@ -54,7 +54,7 @@ public class StatsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§8§m══════════════════════════════");
         sender.sendMessage("§6§l  ⚔ Estadísticas de §f" + target.getName());
         sender.sendMessage("§8§m══════════════════════════════");
-        Tier tier = Tier.forPlayer(plugin.getEloManager(), uuid);
+        Tier tier = plugin.getTierManager().getBestTier(uuid);
         sender.sendMessage("§eELO:     §f" + elo);
         sender.sendMessage("§eTier:    " + tier.formatted());
         sender.sendMessage("§eRanking: §f" + (rank == -1 ? "§7Sin rango" : "#" + rank));
