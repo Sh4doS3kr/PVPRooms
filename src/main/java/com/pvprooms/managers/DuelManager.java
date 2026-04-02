@@ -302,9 +302,6 @@ public class DuelManager {
                 int[] changes = plugin.getEloManager().processResult(
                         winnerUUID, winnerName, loserUUID, loserName);
                 announceResult(p1, p2, winnerUUID, loserUUID, duel.getKitName(), changes[0], changes[1]);
-                
-                // Give trim key every 2 ELO wins
-                giveTrimKeyReward(winner, winnerUUID);
             }
         }
 
@@ -324,6 +321,11 @@ public class DuelManager {
         Location lobby = plugin.getLobbySpawn();
         if (p1 != null) { restorePlayer(p1); p1.teleport(lobby); }
         if (p2 != null) { restorePlayer(p2); p2.teleport(lobby); }
+
+        // Give trim key AFTER restore so the snapshot doesn't overwrite it
+        if (winnerUUID != null && !duel.isBo3()) {
+            giveTrimKeyReward(Bukkit.getPlayer(winnerUUID), winnerUUID);
+        }
 
         // Remove from tracking maps
         activeDuels.remove(duel.getId());

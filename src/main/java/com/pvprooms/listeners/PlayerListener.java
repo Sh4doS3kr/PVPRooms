@@ -23,11 +23,13 @@ import com.pvprooms.model.ArenaTemplate;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Slime;
 import org.bukkit.entity.Ghast;
 import org.bukkit.entity.Phantom;
 import org.bukkit.entity.Shulker;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
@@ -311,6 +313,54 @@ public class PlayerListener implements Listener {
         }
     }
 
+    // ── Creeper spawn egg (Explosivo kit) ────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onCreeperEggUse(PlayerInteractEvent event) {
+        if (event.getHand() == null) return;
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK && event.getAction() != Action.RIGHT_CLICK_AIR) return;
+        Player player = event.getPlayer();
+        ItemStack item = event.getItem();
+        if (item == null || item.getType() != Material.CREEPER_SPAWN_EGG) return;
+
+        // Only active explosivo duels (regular or bot)
+        boolean inExplosivo = false;
+        Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
+        if (duel != null && duel.getState() == Duel.State.FIGHTING
+                && "explosivo".equalsIgnoreCase(duel.getKitName())) {
+            inExplosivo = true;
+        }
+        if (!inExplosivo) {
+            var botDuel = plugin.getBotManager().getBotDuel(player.getUniqueId());
+            if (botDuel != null && "explosivo".equalsIgnoreCase(botDuel.kitName)) inExplosivo = true;
+        }
+        if (!inExplosivo) return;
+
+        // Cancel vanilla handling (bypasses DO_MOB_SPAWNING gamerule)
+        event.setCancelled(true);
+
+        // Determine spawn location
+        Location spawnLoc;
+        if (event.getClickedBlock() != null) {
+            spawnLoc = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().add(0.5, 0.0, 0.5);
+        } else {
+            spawnLoc = player.getEyeLocation().add(player.getLocation().getDirection().multiply(3));
+        }
+
+        // Spawn via CUSTOM reason — already whitelisted in onCreatureSpawn
+        player.getWorld().spawnEntity(spawnLoc, EntityType.CREEPER);
+
+        // Consume one egg from the correct hand
+        if (event.getHand() == EquipmentSlot.OFF_HAND) {
+            ItemStack offhand = player.getInventory().getItemInOffHand();
+            if (offhand.getAmount() <= 1) player.getInventory().setItemInOffHand(new ItemStack(Material.AIR));
+            else offhand.setAmount(offhand.getAmount() - 1);
+        } else {
+            if (item.getAmount() <= 1) player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+            else item.setAmount(item.getAmount() - 1);
+        }
+    }
+
     // ── Golden Head consumption ─────────────────────────────────────────────
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -482,12 +532,6 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
-        // Allow spawn eggs in active arena worlds (e.g. explosivo kit creepers)
-        if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
-            String worldName = event.getLocation().getWorld().getName();
-            String prefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
-            if (worldName.startsWith(prefix)) return;
-        }
         if (isMob(event.getEntity())) {
             event.setCancelled(true);
         }
