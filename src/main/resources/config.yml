@@ -55,6 +55,7 @@ server:
 web-api:
   enabled: true
   port: 27090      # Puerto HTTP para la web de clasificación
+  discord-api-key: "CAMBIA_ESTA_CLAVE_SECRETA"   # API key para el bot de Discord
 
 scoreboard:
   # Whether to enable the scoreboard

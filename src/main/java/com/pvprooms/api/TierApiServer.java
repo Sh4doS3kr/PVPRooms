@@ -60,6 +60,13 @@ public class TierApiServer {
             server.createContext("/api/admin/users",    this::handleAdminUsers);
             server.createContext("/api/admin/logs",     this::handleAdminLogs);
             server.createContext("/api/admin/user",     this::handleAdminUserAction);
+            // Discord bot endpoints
+            server.createContext("/api/discord/settier",       this::handleDiscordSetTier);
+            server.createContext("/api/discord/notify",        this::handleDiscordNotify);
+            server.createContext("/api/discord/player",        this::handleDiscordPlayer);
+            server.createContext("/api/discord/send-link-code",this::handleDiscordSendLinkCode);
+            server.createContext("/api/discord/confirm-link",  this::handleDiscordConfirmLink);
+            server.createContext("/api/discord/link-status",   this::handleDiscordLinkStatus);
             server.createContext("/",           this::handleRoot);
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
@@ -786,6 +793,248 @@ public class TierApiServer {
         }
 
         sendJson(ex, "{\"success\":" + success + ",\"message\":\"" + esc(message) + "\"}");
+    }
+
+    // ── Discord Bot Endpoints ─────────────────────────────────────────────
+
+    /**
+     * POST /api/discord/settier
+     * Headers: X-Api-Key: <secret>
+     * Body: { "player": "Steve", "tier": "LT3", "kit": "sword" }
+     * Assigns a tier to a player (online or offline) and notifies them in-game if online.
+     */
+    private void handleDiscordSetTier(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!checkDiscordKey(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { ex.sendResponseHeaders(405, -1); return; }
+
+        String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String playerName = extractJson(body, "player");
+        String tierStr    = extractJson(body, "tier").toUpperCase();
+        String kitName    = extractJson(body, "kit").toLowerCase();
+
+        if (playerName.isBlank() || tierStr.isBlank() || kitName.isBlank()) {
+            sendError(ex, 400, "Requerido: player, tier, kit"); return;
+        }
+
+        Tier tier;
+        try { tier = Tier.valueOf(tierStr); }
+        catch (IllegalArgumentException e) {
+            sendError(ex, 400, "Tier inválido: " + tierStr + ". Válidos: " +
+                    java.util.Arrays.stream(Tier.values()).map(Enum::name)
+                            .collect(java.util.stream.Collectors.joining(", ")));
+            return;
+        }
+
+        UUID uuid = resolveUUID(playerName);
+        if (uuid == null) { sendError(ex, 404, "Jugador no encontrado: " + playerName); return; }
+
+        // Set tier points to the minimum for that tier
+        plugin.getTierManager().setPoints(uuid, kitName, tier.minPoints);
+
+        // Notify the player if online (must run on main thread)
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayer(uuid);
+            if (p != null) {
+                p.sendMessage(plugin.prefix() + "§d§l✦ ¡TIER ASIGNADO POR DISCORD!");
+                p.sendMessage(plugin.prefix() + "§7Kit: §b" + kitName + " §8→ " + tier.colour + "§l" + tier.displayName);
+                p.playSound(p.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            }
+        });
+
+        plugin.getLogger().info("[Discord] Tier asignado: " + playerName + " → " + tier.displayName + " (" + kitName + ")");
+        sendJson(ex, "{\"success\":true,\"player\":\"" + esc(playerName) + "\",\"tier\":\"" + tier.displayName + "\",\"kit\":\"" + esc(kitName) + "\"}");
+    }
+
+    /**
+     * POST /api/discord/notify
+     * Headers: X-Api-Key: <secret>
+     * Body: { "player": "Steve", "message": "Tu test está listo" }
+     * Sends a chat message to an online player from Discord staff.
+     */
+    private void handleDiscordNotify(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!checkDiscordKey(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { ex.sendResponseHeaders(405, -1); return; }
+
+        String body    = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String target  = extractJson(body, "player");
+        String message = extractJson(body, "message");
+
+        if (target.isBlank() || message.isBlank()) {
+            sendError(ex, 400, "Requerido: player, message"); return;
+        }
+
+        UUID uuid = resolveUUID(target);
+        if (uuid == null) { sendError(ex, 404, "Jugador no encontrado: " + target); return; }
+
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayer(uuid);
+            if (p != null) {
+                p.sendMessage("§b[Discord Staff] §f" + message);
+            }
+        });
+
+        boolean online = org.bukkit.Bukkit.getPlayer(uuid) != null;
+        sendJson(ex, "{\"success\":true,\"online\":" + online + "}");
+    }
+
+    /**
+     * GET /api/discord/player/{nombre}
+     * Headers: X-Api-Key: <secret>
+     * Returns tier and ELO info for a player — useful for the Discord bot to display stats.
+     */
+    private void handleDiscordPlayer(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!checkDiscordKey(ex)) return;
+
+        String[] parts = ex.getRequestURI().getPath().split("/", -1);
+        if (parts.length < 5 || parts[4].isBlank()) {
+            sendError(ex, 400, "Uso: /api/discord/player/{nombre}"); return;
+        }
+        String name = parts[4];
+        UUID uuid = resolveUUID(name);
+        if (uuid == null) { sendError(ex, 404, "Jugador no encontrado"); return; }
+
+        TierManager tm = plugin.getTierManager();
+        int elo = plugin.getEloManager().getElo(uuid);
+        Tier bestTier = tm.getBestTier(uuid);
+        boolean online = org.bukkit.Bukkit.getPlayer(uuid) != null;
+
+        StringBuilder kitsJson = new StringBuilder("{");
+        boolean first = true;
+        for (var entry : tm.getKitPoints(uuid).entrySet()) {
+            if (!first) kitsJson.append(",");
+            Tier t = Tier.fromPoints(entry.getValue());
+            kitsJson.append("\"").append(esc(entry.getKey())).append("\":{\"points\":")
+                    .append(entry.getValue()).append(",\"tier\":\"")
+                    .append(t.displayName).append("\"}");
+            first = false;
+        }
+        kitsJson.append("}");
+
+        sendJson(ex, "{\"player\":\"" + esc(resolveName(uuid)) + "\",\"elo\":" + elo
+                + ",\"best_tier\":\"" + bestTier.displayName + "\",\"online\":" + online
+                + ",\"kits\":" + kitsJson + "}");
+    }
+
+    /**
+     * POST /api/discord/send-link-code
+     * Body: { "player": "Steve", "discordId": "123456789", "discordUsername": "steve" }
+     * Generates a 6-digit code, sends it to the player in-game, and waits for them to
+     * confirm by telling the bot the code (which then calls /confirm-link).
+     */
+    private void handleDiscordSendLinkCode(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!checkDiscordKey(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { ex.sendResponseHeaders(405, -1); return; }
+
+        String body          = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String playerName    = extractJson(body, "player");
+        String discordId     = extractJson(body, "discordId");
+        String discordUser   = extractJson(body, "discordUsername");
+
+        if (playerName.isBlank() || discordId.isBlank()) {
+            sendError(ex, 400, "Requerido: player, discordId"); return;
+        }
+
+        UUID uuid = resolveUUID(playerName);
+        if (uuid == null) { sendError(ex, 404, "Jugador no encontrado: " + playerName); return; }
+
+        String code = plugin.getTierManager().createLinkCode(uuid, discordId, discordUser.isBlank() ? discordId : discordUser);
+
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayer(uuid);
+            if (p != null) {
+                p.sendMessage("§8§m──────────────────────────────");
+                p.sendMessage(plugin.prefix() + "§b§lVinculación de Discord");
+                p.sendMessage(plugin.prefix() + "§7Tu código de vinculación es:");
+                p.sendMessage(plugin.prefix() + "§a§l" + code);
+                p.sendMessage(plugin.prefix() + "§7Envíalo al bot de Discord. Válido 5 min.");
+                p.sendMessage("§8§m──────────────────────────────");
+                p.playSound(p.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1f);
+            }
+        });
+
+        boolean online = org.bukkit.Bukkit.getPlayer(uuid) != null;
+        sendJson(ex, "{\"success\":true,\"code\":\"" + code + "\",\"online\":" + online + "}");
+    }
+
+    /**
+     * POST /api/discord/confirm-link
+     * Body: { "code": "123456", "discordId": "123456789" }
+     * Called by the Discord bot after the player tells them the code.
+     * Confirms the link and notifies the player in-game.
+     */
+    private void handleDiscordConfirmLink(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!checkDiscordKey(ex)) return;
+        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { ex.sendResponseHeaders(405, -1); return; }
+
+        String body      = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        String code      = extractJson(body, "code");
+        String discordId = extractJson(body, "discordId");
+
+        if (code.isBlank() || discordId.isBlank()) {
+            sendError(ex, 400, "Requerido: code, discordId"); return;
+        }
+
+        UUID uuid = plugin.getTierManager().confirmLinkCode(code, discordId);
+        if (uuid == null) {
+            sendError(ex, 400, "Código inválido, expirado o Discord ID incorrecto"); return;
+        }
+
+        String playerName = resolveName(uuid);
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayer(uuid);
+            if (p != null) {
+                p.sendMessage(plugin.prefix() + "§a§l¡Discord vinculado correctamente!");
+                p.sendMessage(plugin.prefix() + "§7Cuenta: §b" + discordId);
+                p.playSound(p.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            }
+        });
+
+        plugin.getLogger().info("[Discord] Vinculado: " + playerName + " → " + discordId);
+        sendJson(ex, "{\"success\":true,\"player\":\"" + esc(playerName) + "\",\"uuid\":\"" + uuid + "\"}");
+    }
+
+    /**
+     * GET /api/discord/link-status/{discordId}
+     * Returns whether a Discord ID is linked to a Minecraft account.
+     */
+    private void handleDiscordLinkStatus(HttpExchange ex) throws IOException {
+        cors(ex);
+        if (preflight(ex)) return;
+        if (!checkDiscordKey(ex)) return;
+
+        String[] parts = ex.getRequestURI().getPath().split("/", -1);
+        if (parts.length < 5 || parts[4].isBlank()) {
+            sendError(ex, 400, "Uso: /api/discord/link-status/{discordId}"); return;
+        }
+        String discordId = parts[4];
+        UUID uuid = plugin.getTierManager().getLinkedUUID(discordId);
+        if (uuid == null) {
+            sendJson(ex, "{\"linked\":false}"); return;
+        }
+        String name = resolveName(uuid);
+        boolean online = org.bukkit.Bukkit.getPlayer(uuid) != null;
+        sendJson(ex, "{\"linked\":true,\"player\":\"" + esc(name) + "\",\"uuid\":\"" + uuid + "\",\"online\":" + online + "}");
+    }
+
+    /** Returns true if the request carries a valid Discord API key, sends 403 otherwise. */
+    private boolean checkDiscordKey(HttpExchange ex) throws IOException {
+        String expected = plugin.getConfig().getString("web-api.discord-api-key", "");
+        String provided = ex.getRequestHeaders().getFirst("X-Api-Key");
+        if (expected.isBlank() || !expected.equals(provided)) {
+            sendError(ex, 403, "API key inválida");
+            return false;
+        }
+        return true;
     }
 
     private String extractJson(String json, String key) {

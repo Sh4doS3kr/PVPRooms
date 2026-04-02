@@ -62,6 +62,12 @@ public class TierManager {
     /** uuid → (kitName_lower → puntos) */
     private final Map<UUID, Map<String, Integer>> pointsByKit = new LinkedHashMap<>();
 
+    /** uuid → discordId (cuenta vinculada) */
+    private final Map<UUID, String> discordLinks = new LinkedHashMap<>();
+
+    /** código temporal → [uuid, discordId, discordUsername, timestamp] */
+    private final Map<String, String[]> pendingLinkCodes = new java.util.concurrent.ConcurrentHashMap<>();
+
     public TierManager(PvPRoomsPro plugin) {
         this.plugin   = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "tier_points.yml");
@@ -72,22 +78,31 @@ public class TierManager {
 
     public void load() {
         pointsByKit.clear();
+        discordLinks.clear();
         if (!dataFile.exists()) return;
         FileConfiguration cfg = YamlConfiguration.loadConfiguration(dataFile);
         var section = cfg.getConfigurationSection("points");
-        if (section == null) return;
-
-        for (String uuidStr : section.getKeys(false)) {
-            try {
-                UUID uuid = UUID.fromString(uuidStr);
-                var kitSection = cfg.getConfigurationSection("points." + uuidStr);
-                if (kitSection == null) continue;
-                Map<String, Integer> kits = new LinkedHashMap<>();
-                for (String kit : kitSection.getKeys(false)) {
-                    kits.put(kit.toLowerCase(), kitSection.getInt(kit, 0));
-                }
-                pointsByKit.put(uuid, kits);
-            } catch (IllegalArgumentException ignored) {}
+        if (section != null) {
+            for (String uuidStr : section.getKeys(false)) {
+                try {
+                    UUID uuid = UUID.fromString(uuidStr);
+                    var kitSection = cfg.getConfigurationSection("points." + uuidStr);
+                    if (kitSection == null) continue;
+                    Map<String, Integer> kits = new LinkedHashMap<>();
+                    for (String kit : kitSection.getKeys(false)) {
+                        kits.put(kit.toLowerCase(), kitSection.getInt(kit, 0));
+                    }
+                    pointsByKit.put(uuid, kits);
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        var discordSection = cfg.getConfigurationSection("discord_links");
+        if (discordSection != null) {
+            for (String uuidStr : discordSection.getKeys(false)) {
+                try {
+                    discordLinks.put(UUID.fromString(uuidStr), discordSection.getString(uuidStr, ""));
+                } catch (IllegalArgumentException ignored) {}
+            }
         }
         plugin.getLogger().info("[TierManager] " + pointsByKit.size() + " jugadores cargados.");
     }
@@ -99,6 +114,9 @@ public class TierManager {
             for (var kit : e.getValue().entrySet()) {
                 cfg.set(base + "." + kit.getKey(), kit.getValue());
             }
+        }
+        for (var e : discordLinks.entrySet()) {
+            cfg.set("discord_links." + e.getKey(), e.getValue());
         }
         try {
             cfg.save(dataFile);
@@ -423,6 +441,53 @@ public class TierManager {
     public void resetPlayer(UUID uuid) {
         pointsByKit.remove(uuid);
         save();
+    }
+
+    // ── Discord Link ──────────────────────────────────────────────────────
+
+    /**
+     * Generates a 6-digit code and stores it as a pending link.
+     * The Discord bot sends this code to the player in-game; the player
+     * then tells the bot the code to confirm.
+     * @return the generated code
+     */
+    public String createLinkCode(UUID uuid, String discordId, String discordUsername) {
+        // Expire old codes after 5 minutes
+        long now = System.currentTimeMillis();
+        pendingLinkCodes.entrySet().removeIf(e -> now - Long.parseLong(e.getValue()[3]) > 300_000);
+
+        String code = String.format("%06d", new java.util.Random().nextInt(1_000_000));
+        pendingLinkCodes.put(code, new String[]{ uuid.toString(), discordId, discordUsername, String.valueOf(now) });
+        return code;
+    }
+
+    /**
+     * Confirms a pending link code. Returns the UUID that was linked, or null if invalid/expired.
+     */
+    public UUID confirmLinkCode(String code, String discordId) {
+        String[] data = pendingLinkCodes.remove(code);
+        if (data == null) return null;
+        long age = System.currentTimeMillis() - Long.parseLong(data[3]);
+        if (age > 300_000) return null; // expired
+        if (!data[1].equals(discordId)) return null; // wrong Discord account
+
+        UUID uuid = UUID.fromString(data[0]);
+        discordLinks.put(uuid, discordId);
+        save();
+        return uuid;
+    }
+
+    /** Returns the Discord ID linked to this Minecraft UUID, or null if not linked. */
+    public String getLinkedDiscord(UUID uuid) {
+        return discordLinks.get(uuid);
+    }
+
+    /** Returns the Minecraft UUID linked to this Discord ID, or null. */
+    public UUID getLinkedUUID(String discordId) {
+        return discordLinks.entrySet().stream()
+                .filter(e -> e.getValue().equals(discordId))
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null);
     }
 
     // ── Inner record ─────────────────────────────────────────────────────

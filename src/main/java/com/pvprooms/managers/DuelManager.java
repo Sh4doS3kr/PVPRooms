@@ -293,7 +293,8 @@ public class DuelManager {
             plugin.getStatsManager().recordDeath(loserUUID, loserName);
             
             if (duel.isBo3()) {
-                // TIER mode: tiers are assigned manually via tickets — no auto point change
+                // TIER mode: update tier points (auto up to HT3; elite requires ticket)
+                plugin.getTierManager().recordResult(winnerUUID, loserUUID, duel.getKitName());
                 announceResultTier(p1, p2, winnerUUID, loserUUID, duel.getKitName());
             } else {
                 // ELO mode: ONLY update ELO, NOT tier points
@@ -687,18 +688,22 @@ public class DuelManager {
         com.pvprooms.model.TierTitle lTitle = plugin.getTierManager().getTitle(loserUUID);
 
         if (winner != null) {
+            int pts = plugin.getTierManager().getPoints(winnerUUID, kitName);
             winner.sendMessage(plugin.prefix()
                     + "§a§l¡VICTORIA! §avs §e" + loserName
                     + "  §8[§bTIER §e" + kitName + "§8]  "
-                    + wTier.colour + wTier.displayName);
+                    + wTier.colour + wTier.displayName
+                    + "  §8› §7" + pts + " pts");
             winner.sendMessage(plugin.prefix() + "§7Insignia: " + wTitle.formatted());
             sendTitle(winner, "§a§l¡VICTORIA!", wTier.colour + wTier.displayName, 80);
         }
         if (loser != null) {
+            int pts = plugin.getTierManager().getPoints(loserUUID, kitName);
             loser.sendMessage(plugin.prefix()
                     + "§c§lDERROTA §cvs §e" + winnerName
                     + "  §8[§bTIER §e" + kitName + "§8]  "
-                    + lTier.colour + lTier.displayName);
+                    + lTier.colour + lTier.displayName
+                    + "  §8› §7" + pts + " pts");
             loser.sendMessage(plugin.prefix() + "§7Insignia: " + lTitle.formatted());
             sendTitle(loser, "§c§lDERROTA", lTier.colour + lTier.displayName, 80);
         }
