@@ -120,6 +120,18 @@ public class PlayerListener implements Listener {
         
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             plugin.getScoreboardManager().showLobbyScoreboard(player);
+
+            // Show pending Discord link code if any
+            String pendingCode = plugin.getTierManager().getPendingCode(player.getUniqueId());
+            if (pendingCode != null && plugin.getTierManager().getLinkedDiscord(player.getUniqueId()) == null) {
+                player.sendMessage("§8§m──────────────────────────────");
+                player.sendMessage(plugin.prefix() + "§b§lVinculación de Discord pendiente");
+                player.sendMessage(plugin.prefix() + "§7Tu código es: §a§l" + pendingCode);
+                player.sendMessage(plugin.prefix() + "§7Envíalo al bot de Discord para confirmar.");
+                player.sendMessage("§8§m──────────────────────────────");
+                player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1f);
+            }
+
             // Fix stale spectator state from FFA disconnect
             if (player.getGameMode() == GameMode.SPECTATOR) {
                 player.setGameMode(GameMode.SURVIVAL);

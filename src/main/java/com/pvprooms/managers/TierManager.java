@@ -454,7 +454,7 @@ public class TierManager {
     public String createLinkCode(UUID uuid, String discordId, String discordUsername) {
         // Expire old codes after 5 minutes
         long now = System.currentTimeMillis();
-        pendingLinkCodes.entrySet().removeIf(e -> now - Long.parseLong(e.getValue()[3]) > 300_000);
+        pendingLinkCodes.entrySet().removeIf(e -> now - Long.parseLong(e.getValue()[3]) > 1_800_000);
 
         String code = String.format("%06d", new java.util.Random().nextInt(1_000_000));
         pendingLinkCodes.put(code, new String[]{ uuid.toString(), discordId, discordUsername, String.valueOf(now) });
@@ -468,7 +468,7 @@ public class TierManager {
         String[] data = pendingLinkCodes.remove(code);
         if (data == null) return null;
         long age = System.currentTimeMillis() - Long.parseLong(data[3]);
-        if (age > 300_000) return null; // expired
+        if (age > 1_800_000) return null; // expired (30 min)
         if (!data[1].equals(discordId)) return null; // wrong Discord account
 
         UUID uuid = UUID.fromString(data[0]);
@@ -482,7 +482,7 @@ public class TierManager {
         long now = System.currentTimeMillis();
         return pendingLinkCodes.entrySet().stream()
                 .filter(e -> e.getValue()[0].equals(uuid.toString())
-                        && now - Long.parseLong(e.getValue()[3]) <= 300_000)
+                        && now - Long.parseLong(e.getValue()[3]) <= 1_800_000)
                 .map(Map.Entry::getKey)
                 .findFirst().orElse(null);
     }
