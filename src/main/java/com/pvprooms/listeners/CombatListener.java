@@ -155,6 +155,14 @@ public class CombatListener implements Listener {
 
         // Check if victim is in FFA match first
         if (plugin.getDuelManager().isInFFA(victim.getUniqueId())) {
+            // Allow end crystal explosion damage (damager is EnderCrystal, not a player)
+            if (attacker == null && event.getDamager() instanceof org.bukkit.entity.EnderCrystal) {
+                if (plugin.getDuelManager().isFrozen(victim.getUniqueId())) {
+                    event.setCancelled(true);
+                    return;
+                }
+                return; // allow crystal damage in FFA
+            }
             // Both must be in the same FFA match
             if (attacker != null && plugin.getDuelManager().isInFFA(attacker.getUniqueId())) {
                 UUID victimMatch = plugin.getDuelManager().getFFAMatchId(victim.getUniqueId());
