@@ -167,6 +167,7 @@ public class BotPracticeGUI implements Listener {
             case "smp"         -> Material.SHIELD;
             case "crystal"     -> Material.END_CRYSTAL;
             case "spear", "trident" -> Material.TRIDENT;
+            case "explosivo"   -> Material.TNT;
             case "bow"         -> Material.BOW;
             case "crossbow"    -> Material.CROSSBOW;
             default            -> Material.DIAMOND_SWORD;

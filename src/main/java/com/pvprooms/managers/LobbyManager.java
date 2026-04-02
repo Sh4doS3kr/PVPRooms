@@ -46,6 +46,8 @@ public class LobbyManager {
 
         // Slot 8: Settings (Redstone)
         player.getInventory().setItem(8, createSettingsItem());
+
+        player.getInventory().setHeldItemSlot(2);
     }
 
     /**

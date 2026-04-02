@@ -4,6 +4,8 @@ import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
+import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -15,6 +17,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerAnimationType;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
 import java.util.UUID;
@@ -38,6 +42,33 @@ public class CombatListener implements Listener {
 
     public CombatListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+
+    // ── Crystal kit: attack speed changes with held item ────────────────────
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onItemHeld(PlayerItemHeldEvent event) {
+        Player player = event.getPlayer();
+        Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
+        boolean inBotCrystal = plugin.getBotManager().isInBotDuel(player.getUniqueId())
+                && "crystal".equalsIgnoreCase(plugin.getBotManager().getBotDuel(player.getUniqueId()) != null
+                ? plugin.getBotManager().getBotDuel(player.getUniqueId()).kitName : "");
+
+        boolean inCrystalDuel = (duel != null && "crystal".equalsIgnoreCase(duel.getKitName()))
+                || inBotCrystal;
+        if (!inCrystalDuel) return;
+
+        var atkSpeed = player.getAttribute(Attribute.ATTACK_SPEED);
+        if (atkSpeed == null) return;
+
+        ItemStack newItem = player.getInventory().getItem(event.getNewSlot());
+        boolean holdingCrystal = newItem != null && newItem.getType() == Material.END_CRYSTAL;
+
+        if (holdingCrystal) {
+            atkSpeed.setBaseValue(1024.0);
+        } else {
+            atkSpeed.setBaseValue(4.0);
+        }
     }
     
     // ── Swing tracking for accuracy ─────────────────────────────────────────

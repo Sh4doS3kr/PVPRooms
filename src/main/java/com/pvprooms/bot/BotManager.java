@@ -410,6 +410,8 @@ public class BotManager {
             player.setHealth(player.getMaxHealth());
             player.setFoodLevel(20);
             player.getActivePotionEffects().forEach(e -> player.removePotionEffect(e.getType()));
+            var atkSpeed = player.getAttribute(org.bukkit.attribute.Attribute.ATTACK_SPEED);
+            if (atkSpeed != null) atkSpeed.setBaseValue(4.0);
             plugin.getLobbyManager().giveLobbyItems(player);
             player.teleport(plugin.getLobbySpawn());
             

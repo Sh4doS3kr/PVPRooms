@@ -153,8 +153,14 @@ public class BotListener implements Listener {
                             // Totem activates! Cancel death, apply totem effects
                             event.setCancelled(true);
                             
-                            // Consume totem
-                            offhand.setAmount(offhand.getAmount() - 1);
+                            // Consume totem — must call setItemInOffHand; mutating the copy has no effect on NPC equipment
+                            int totemAmount = offhand.getAmount();
+                            if (totemAmount <= 1) {
+                                botEntity.getEquipment().setItemInOffHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR));
+                            } else {
+                                offhand.setAmount(totemAmount - 1);
+                                botEntity.getEquipment().setItemInOffHand(offhand);
+                            }
                             
                             // Apply totem effects (vanilla behavior)
                             botEntity.setHealth(1.0);
