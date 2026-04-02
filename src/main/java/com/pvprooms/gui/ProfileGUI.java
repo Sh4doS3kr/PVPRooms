@@ -55,7 +55,7 @@ public class ProfileGUI implements Listener {
         inv.setItem(20, createRankItem(uuid));
         inv.setItem(21, createTierItem(uuid));
         inv.setItem(22, createTitleItem(uuid));
-        inv.setItem(23, createPointsItem(uuid));
+        inv.setItem(23, createTicketItem());
         inv.setItem(24, createWinsItem(uuid));
         inv.setItem(25, createKDRItem(uuid));
 
@@ -193,18 +193,21 @@ public class ProfileGUI implements Listener {
         return item;
     }
 
-    private ItemStack createPointsItem(UUID uuid) {
-        int points = plugin.getTierManager().getTotalPoints(uuid);
-        ItemStack item = new ItemStack(Material.NETHER_STAR);
+    private ItemStack createTicketItem() {
+        ItemStack item = new ItemStack(Material.PAPER);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Puntos Totales", NamedTextColor.LIGHT_PURPLE)
+        meta.displayName(Component.text("Solicitar Test de Tier", NamedTextColor.AQUA)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(
                 Component.empty(),
-                Component.text(String.valueOf(points), NamedTextColor.LIGHT_PURPLE)
+                Component.text("Los tiers se asignan mediante", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("pruebas con un tester oficial.", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.empty(),
-                Component.text("Suma de puntos en todos los kits", NamedTextColor.DARK_GRAY)
+                Component.text("Abre un ticket en:", NamedTextColor.YELLOW)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("tiers.mlmc.lat/tickets.html", NamedTextColor.AQUA)
                         .decoration(TextDecoration.ITALIC, false)
         ));
         item.setItemMeta(meta);

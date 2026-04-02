@@ -91,11 +91,17 @@ public class PlayerListener implements Listener {
                 Location loc = p.getLocation();
                 if (isInsideWall(loc)) {
                     Location safe = lastSafeLoc.get(uid);
-                    if (safe != null) {
-                        p.teleport(safe);
+                    Location target = safe != null ? safe : loc.clone().add(0, 1, 0);
+                    p.teleport(target);
+                    // Knockback: push away from the wall toward the safe spot
+                    org.bukkit.util.Vector push = target.toVector().subtract(loc.toVector());
+                    if (push.lengthSquared() > 0.001) {
+                        push.normalize().multiply(0.45);
                     } else {
-                        p.teleport(loc.clone().add(0, 1, 0));
+                        push.zero();
                     }
+                    push.setY(0.15);
+                    p.setVelocity(push);
                 } else {
                     lastSafeLoc.put(uid, loc.clone());
                 }
@@ -306,13 +312,20 @@ public class PlayerListener implements Listener {
         if (from.getX() == to.getX() && from.getY() == to.getY() && from.getZ() == to.getZ()) return;
 
         if (isInsideWall(to)) {
-            // setTo is more reliable than setCancelled for elytra/packet bypasses on Paper
             event.setTo(from);
             Location safe = lastSafeLoc.get(uuid);
-            if (safe != null) {
-                player.teleport(safe);
-            } else if (!isInsideWall(from)) {
-                player.teleport(from);
+            Location target = safe != null ? safe : (!isInsideWall(from) ? from : null);
+            if (target != null) {
+                player.teleport(target);
+                // Knockback: push opposite to movement direction
+                org.bukkit.util.Vector push = target.toVector().subtract(to.toVector());
+                if (push.lengthSquared() > 0.001) {
+                    push.normalize().multiply(0.45);
+                } else {
+                    push.zero();
+                }
+                push.setY(0.15);
+                player.setVelocity(push);
             }
         } else {
             lastSafeLoc.put(uuid, to.clone());

@@ -125,7 +125,6 @@ public class ScoreboardManager {
         int s = 0;
         Tier qTier = plugin.getTierManager().getTier(player.getUniqueId(), kitName);
         int  qElo  = plugin.getEloManager().getElo(player.getUniqueId());
-        int  qPts  = plugin.getTierManager().getPoints(player.getUniqueId(), kitName);
         String waitStr = elapsedSeconds < 60
                 ? "§a" + elapsedSeconds + "§7s"
                 : "§a" + (elapsedSeconds / 60) + "§7m §a" + (elapsedSeconds % 60) + "§7s";

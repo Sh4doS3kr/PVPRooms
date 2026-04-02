@@ -39,9 +39,8 @@ public class QueueModeGUI {
         int playerElo = eloManager.getElo(uuid);
         Tier eloTier = Tier.forPlayer(eloManager, uuid);
         
-        // For TIER queue, use points-based tier (best tier across all kits)
+        // For TIER queue, use manually-assigned tier (best tier across all kits)
         Tier pointsTier = tierManager.getBestTier(uuid);
-        int totalPoints = tierManager.getTotalPoints(uuid);
 
         // ELO button - shows ELO-based tier
         inv.setItem(SLOT_ELO, item(Material.COMPARATOR,
@@ -54,7 +53,7 @@ public class QueueModeGUI {
                         "",
                         "§aClick para seleccionar kit.")));
 
-        // TIER button - shows points-based tier
+        // TIER button - tier assigned manually via tickets
         inv.setItem(SLOT_TIER, item(pointsTier.icon,
                 "§b§l🏆 Cola TIER",
                 List.of("§7Entra en la cola de TIER.",
@@ -62,7 +61,7 @@ public class QueueModeGUI {
                         "§7de tu mismo rango (±1 nivel).",
                         "",
                         "§fTu Tier: " + pointsTier.formatted(),
-                        "§fPuntos:  §e" + totalPoints,
+                        "§7Solicita test: §btiers.mlmc.lat",
                         "",
                         "§aClick para seleccionar kit.")));
 
