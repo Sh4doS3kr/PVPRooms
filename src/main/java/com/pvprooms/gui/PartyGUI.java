@@ -381,6 +381,9 @@ public class PartyGUI implements Listener {
     }
 
     public void openKitSelectMenu(Player player) {
+        // Guarantee required kits exist — installs only if missing (no overwrite)
+        com.pvprooms.util.PresetKits.installMissingPresets(plugin);
+
         Inventory inv = Bukkit.createInventory(null, 36, Component.text(KIT_SELECT_TITLE, NamedTextColor.YELLOW));
 
         ItemStack glass = createItem(Material.GRAY_STAINED_GLASS_PANE, " ", null);
