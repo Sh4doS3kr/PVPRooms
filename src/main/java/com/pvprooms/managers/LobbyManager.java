@@ -23,15 +23,31 @@ public class LobbyManager {
     public static final String LOBBY_ITEM_KEY = "pvprooms_lobby_item";
     public static final int CMI_CREEPER_LAUNCHER = 1006;
     public static final int CMI_GOLDEN_HEAD      = 2001;
+    public static final int MAX_CREEPERS_PER_DUEL = 128;
+
+    private final java.util.Map<java.util.UUID, Integer> creeperLaunchCount = new java.util.HashMap<>();
 
     public LobbyManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+
+    public int getCreeperCount(java.util.UUID uuid) {
+        return creeperLaunchCount.getOrDefault(uuid, 0);
+    }
+
+    public void incrementCreeperCount(java.util.UUID uuid) {
+        creeperLaunchCount.merge(uuid, 1, Integer::sum);
+    }
+
+    public void resetCreeperCount(java.util.UUID uuid) {
+        creeperLaunchCount.remove(uuid);
     }
 
     /**
      * Give lobby items to a player.
      */
     public void giveLobbyItems(Player player) {
+        creeperLaunchCount.remove(player.getUniqueId());
         player.getInventory().clear();
 
         // Slot 0: Queue (Diamond Sword)

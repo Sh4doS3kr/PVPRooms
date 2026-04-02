@@ -308,9 +308,6 @@ public class PlayerListener implements Listener {
 
     // ── Creeper Launcher (explosivo kit only) ────────────────────────────────
 
-    private final Map<UUID, Long> creeperLaunchCooldowns = new HashMap<>();
-    private static final long CREEPER_COOLDOWN_MS = 5000L;
-
     @EventHandler(priority = EventPriority.HIGH)
     public void onCreeperLauncherUse(org.bukkit.event.player.PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
@@ -320,14 +317,13 @@ public class PlayerListener implements Listener {
 
         event.setCancelled(true);
 
-        long now = System.currentTimeMillis();
-        Long last = creeperLaunchCooldowns.get(player.getUniqueId());
-        if (last != null && now - last < CREEPER_COOLDOWN_MS) {
-            long secs = (CREEPER_COOLDOWN_MS - (now - last) + 999) / 1000;
-            player.sendActionBar(net.kyori.adventure.text.Component.text("§c¡Recargando! §7(" + secs + "s)"));
+        int used = plugin.getLobbyManager().getCreeperCount(player.getUniqueId());
+        if (used >= com.pvprooms.managers.LobbyManager.MAX_CREEPERS_PER_DUEL) {
+            player.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "§c¡Límite alcanzado! §7(" + com.pvprooms.managers.LobbyManager.MAX_CREEPERS_PER_DUEL + " creepers máx)"));
             return;
         }
-        creeperLaunchCooldowns.put(player.getUniqueId(), now);
+        plugin.getLobbyManager().incrementCreeperCount(player.getUniqueId());
 
         Vector dir = player.getLocation().getDirection().normalize();
         Location spawnLoc = player.getEyeLocation().clone().add(dir.clone().multiply(1.5));
@@ -335,10 +331,34 @@ public class PlayerListener implements Listener {
         org.bukkit.entity.Creeper creeper = (org.bukkit.entity.Creeper) player.getWorld().spawnEntity(
                 spawnLoc, org.bukkit.entity.EntityType.CREEPER);
         creeper.setPowered(true);
-        creeper.setMaxFuseTicks(40);
-
+        creeper.setMaxFuseTicks(10);
+        creeper.setFuseTicks(10);
         creeper.setVelocity(dir.clone().multiply(1.5));
-        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_CREEPER_HURT, 1.0f, 1.0f);
+
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.2f);
+
+        // Explode on ground contact
+        new org.bukkit.scheduler.BukkitRunnable() {
+            int ticks = 0;
+            @Override
+            public void run() {
+                if (!creeper.isValid() || creeper.isDead()) { cancel(); return; }
+                if (++ticks > 100) {
+                    creeper.getWorld().createExplosion(creeper.getLocation(), 4.0f, false, true);
+                    creeper.remove();
+                    cancel();
+                    return;
+                }
+                if (creeper.isOnGround() || ticks > 2) {
+                    // Only trigger on ground after initial launch arc
+                    if (ticks > 2 && creeper.isOnGround()) {
+                        creeper.getWorld().createExplosion(creeper.getLocation(), 4.0f, false, true);
+                        creeper.remove();
+                        cancel();
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 2L, 1L);
     }
 
     // ── Golden Head consumption ─────────────────────────────────────────────
