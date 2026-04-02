@@ -762,6 +762,8 @@ public class DuelManager {
     private final Map<UUID, String> ffaKits = new ConcurrentHashMap<>();
     /** FFA match ID -> arena template (for block/explosion permissions) */
     private final Map<UUID, ArenaTemplate> ffaTemplates = new ConcurrentHashMap<>();
+    /** Players who died in FFA and are spectating: player UUID -> match ID */
+    private final Map<UUID, UUID> ffaDeadSpectators = new ConcurrentHashMap<>();
     
     /**
      * Starts a FFA match with multiple players.
@@ -889,22 +891,34 @@ public class DuelManager {
         UUID deadUUID = dead.getUniqueId();
         UUID matchId = playerFFAMap.get(deadUUID);
         if (matchId == null) return;
-        
+
         Set<UUID> alive = ffaMatches.get(matchId);
         if (alive == null) return;
-        
+
         alive.remove(deadUUID);
-        playerFFAMap.remove(deadUUID);
-        
-        // Restore and teleport out
-        restorePlayer(dead);
-        dead.teleport(plugin.getLobbySpawn());
-        
-        dead.sendMessage(plugin.prefix() + "§c¡Has sido eliminado del FFA!");
+        // Keep in playerFFAMap — isInFFA() must stay true while spectating
+        ffaDeadSpectators.put(deadUUID, matchId);
+
+        // Switch to spectator so they can watch the rest of the match
+        dead.setGameMode(GameMode.SPECTATOR);
+        dead.setAllowFlight(true);
+        dead.setFlying(true);
+
+        // Teleport back into the arena world to spectate
+        String worldName = ffaWorlds.get(matchId);
+        ArenaTemplate template = ffaTemplates.get(matchId);
+        if (worldName != null && template != null) {
+            World ffaWorld = Bukkit.getWorld(worldName);
+            if (ffaWorld != null) {
+                dead.teleport(template.getSpawn1(ffaWorld).clone().add(0, 5, 0));
+            }
+        }
+
+        dead.sendMessage(plugin.prefix() + "§c¡Has sido eliminado! §7Ahora eres espectador. Usa §f/pvpleave §7para salir.");
         if (killer != null) {
             dead.sendMessage(plugin.prefix() + "§7Eliminado por: §c" + killer.getName());
         }
-        
+
         // Announce to remaining
         for (UUID uuid : alive) {
             Player p = Bukkit.getPlayer(uuid);
@@ -915,7 +929,7 @@ public class DuelManager {
                 }
             }
         }
-        
+
         // Check for winner
         if (alive.size() == 1) {
             UUID winnerUUID = alive.iterator().next();
@@ -929,7 +943,14 @@ public class DuelManager {
         String worldName = ffaWorlds.remove(matchId);
         String kitName = ffaKits.remove(matchId);
         ffaTemplates.remove(matchId);
-        
+
+        // Collect dead spectators watching this match
+        List<UUID> deadSpecs = new ArrayList<>();
+        ffaDeadSpectators.entrySet().removeIf(e -> {
+            if (e.getValue().equals(matchId)) { deadSpecs.add(e.getKey()); return true; }
+            return false;
+        });
+
         if (participants != null) {
             for (UUID uuid : participants) {
                 playerFFAMap.remove(uuid);
@@ -938,7 +959,7 @@ public class DuelManager {
                 if (p != null) {
                     restorePlayer(p);
                     p.teleport(plugin.getLobbySpawn());
-                    
+
                     if (winner != null) {
                         if (p.equals(winner)) {
                             sendTitle(p, "§6§l¡VICTORIA!", "§7¡Has ganado el FFA!");
@@ -951,7 +972,21 @@ public class DuelManager {
                 }
             }
         }
-        
+
+        // Restore dead spectators and send them home
+        for (UUID specUUID : deadSpecs) {
+            playerFFAMap.remove(specUUID);
+            Player spec = Bukkit.getPlayer(specUUID);
+            if (spec != null) {
+                restorePlayer(spec);
+                spec.teleport(plugin.getLobbySpawn());
+                spec.sendMessage(plugin.prefix() + "§7La partida FFA ha terminado.");
+                if (winner != null) {
+                    spec.sendMessage(plugin.prefix() + "§e" + winner.getName() + " §7ha ganado el FFA.");
+                }
+            }
+        }
+
         // Delete world instance
         if (worldName != null) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -960,9 +995,25 @@ public class DuelManager {
         }
     }
     
-    /** Check if player is in a FFA match */
+    /** Check if player is in a FFA match (active fighter or dead spectator) */
     public boolean isInFFA(UUID uuid) {
         return playerFFAMap.containsKey(uuid);
+    }
+
+    /** Returns true if the player died in FFA and is currently spectating */
+    public boolean isFFASpectator(UUID uuid) {
+        return ffaDeadSpectators.containsKey(uuid);
+    }
+
+    /** Removes an FFA dead spectator from the match (e.g. /pvpleave or disconnect) */
+    public void removeFFASpectator(UUID uuid) {
+        ffaDeadSpectators.remove(uuid);
+        playerFFAMap.remove(uuid);
+        Player p = Bukkit.getPlayer(uuid);
+        if (p != null) {
+            restorePlayer(p);
+            p.teleport(plugin.getLobbySpawn());
+        }
     }
     
     /** Get FFA match ID for a player */

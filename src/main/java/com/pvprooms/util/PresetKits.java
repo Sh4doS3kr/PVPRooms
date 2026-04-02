@@ -478,8 +478,23 @@ public class PresetKits {
     }
 
     /**
-     * Installs all preset kits into the KitManager.
+     * Installs only presets that don't already exist in KitManager.
+     * Safe to call on startup — never overwrites customised kits.
      */
+    public static void installMissingPresets(PvPRoomsPro plugin) {
+        var kitManager = plugin.getKitManager();
+        if (kitManager == null) return;
+        boolean saved = false;
+        for (var preset : getAllPresets().values()) {
+            if (!kitManager.kitExists(preset.name())) {
+                kitManager.createKit(preset.name(), preset.armor(), preset.inventory(), preset.icon());
+                saved = true;
+                plugin.getLogger().info("[PvPRooms] Preset kit auto-instalado: " + preset.name());
+            }
+        }
+        if (saved) kitManager.saveKits();
+    }
+
     public static int installAllPresets(PvPRoomsPro plugin) {
         int count = 0;
         var kitManager = plugin.getKitManager();

@@ -34,6 +34,14 @@ public class LeaveCommand implements CommandExecutor {
 
         UUID uuid = player.getUniqueId();
 
+        // FFA dead spectator
+        if (plugin.getDuelManager().isFFASpectator(uuid)) {
+            plugin.getDuelManager().removeFFASpectator(uuid);
+            plugin.getScoreboardManager().restoreLobbyScoreboard(player);
+            player.sendMessage(plugin.prefix() + "§aHas salido del FFA.");
+            return true;
+        }
+
         Duel spectatedDuel = findSpectatedDuel(uuid);
         if (spectatedDuel != null) {
             plugin.getDuelManager().removeSpectatorFromDuel(player, spectatedDuel);

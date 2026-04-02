@@ -147,6 +147,13 @@ public class PlayerListener implements Listener {
             }
         }
 
+        // Clean up FFA: dead spectators just get removed; active fighters trigger endFFAMatch logic
+        if (plugin.getDuelManager().isFFASpectator(uuid)) {
+            plugin.getDuelManager().removeFFASpectator(uuid);
+        } else if (plugin.getDuelManager().isInFFA(uuid)) {
+            plugin.getDuelManager().handleFFADeath(player, null);
+        }
+
         // Handle party disconnect
         plugin.getPartyManager().handleDisconnect(uuid);
 
@@ -211,9 +218,14 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        // FFA active fighters: let handleFFADeath teleport them as spectators — don't redirect to lobby
+        if (plugin.getDuelManager().isInFFA(uuid) && !plugin.getDuelManager().isFFASpectator(uuid)) {
+            return;
+        }
         // If they just died in a duel, respawn at lobby
         // The endDuel method will also teleport them, but just in case:
-        Duel duel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
+        Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
         if (duel == null || duel.getState() == Duel.State.ENDED) {
             event.setRespawnLocation(plugin.getLobbySpawn());
         }

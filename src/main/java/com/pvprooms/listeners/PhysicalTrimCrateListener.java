@@ -126,13 +126,17 @@ public class PhysicalTrimCrateListener implements Listener {
             return;
         }
         
-        // Check if key matches crate piece
-        ArmorPiece keyPiece = PhysicalCrateCommand.getKeyPiece(itemInHand);
-        if (keyPiece == null || keyPiece != piece) {
-            String keyPieceName = keyPiece != null ? keyPiece.getDisplayName() : "desconocida";
-            player.sendMessage(plugin.prefix() + "§cEsta llave es de §6" + keyPieceName + "§c, necesitas una §6" + piece.getDisplayName() + " Key§c.");
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
-            return;
+        // Generic TrimCrate keys (e.g. from ELO rewards) work on any crate piece
+        boolean isGenericKey = TrimCrate.isKey(itemInHand);
+        if (!isGenericKey) {
+            // Piece-specific key: must match the crate's armor piece
+            ArmorPiece keyPiece = PhysicalCrateCommand.getKeyPiece(itemInHand);
+            if (keyPiece == null || keyPiece != piece) {
+                String keyPieceName = keyPiece != null ? keyPiece.getDisplayName() : "desconocida";
+                player.sendMessage(plugin.prefix() + "§cEsta llave es de §6" + keyPieceName + "§c, necesitas una §6" + piece.getDisplayName() + " Key§c.");
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
+                return;
+            }
         }
 
         // Consume one key from hand

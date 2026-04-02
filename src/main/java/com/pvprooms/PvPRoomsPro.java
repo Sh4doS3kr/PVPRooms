@@ -116,6 +116,7 @@ public class PvPRoomsPro extends JavaPlugin {
         trimManager          = new TrimManager(this);
         TrimCrate.init(this);
         kitManager           = new KitManager(this);
+        com.pvprooms.util.PresetKits.installMissingPresets(this);
         arenaManager         = new ArenaManager(this);
         arenaInstanceManager = new ArenaInstanceManager(this);
         eloManager           = new EloManager(this);
