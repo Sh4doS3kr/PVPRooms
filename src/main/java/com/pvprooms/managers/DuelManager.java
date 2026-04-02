@@ -1023,6 +1023,13 @@ public class DuelManager {
     public UUID getFFAMatchId(UUID uuid) {
         return playerFFAMap.get(uuid);
     }
+
+    /** Get the kit name for the FFA match a player is in, or null if not in FFA */
+    public String getFFAKit(UUID uuid) {
+        UUID matchId = playerFFAMap.get(uuid);
+        if (matchId == null) return null;
+        return ffaKits.get(matchId);
+    }
     
     /** Get ArenaTemplate for a FFA match by world name */
     public ArenaTemplate getFFATemplateByWorldName(String worldName) {

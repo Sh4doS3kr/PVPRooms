@@ -120,6 +120,13 @@ public class PlayerListener implements Listener {
         
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             plugin.getScoreboardManager().showLobbyScoreboard(player);
+            // Fix stale spectator state from FFA disconnect
+            if (player.getGameMode() == GameMode.SPECTATOR) {
+                player.setGameMode(GameMode.SURVIVAL);
+                player.teleport(plugin.getLobbySpawn());
+                plugin.getLobbyManager().giveLobbyItems(player);
+                return;
+            }
             // Give lobby items if in lobby world
             if (plugin.getLobbyManager().isInLobby(player)) {
                 plugin.getLobbyManager().giveLobbyItems(player);
@@ -155,6 +162,25 @@ public class PlayerListener implements Listener {
                 conn.disconnect();
             } catch (Exception ignored) {}
         });
+    }
+
+    // ── World change → lobby ────────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        // Only act when the player ARRIVES in the lobby world
+        if (!plugin.getLobbyManager().isInLobby(player)) return;
+        // Skip if still in an active duel (endDuel teleports before world change fires)
+        if (plugin.getDuelManager().getDuelByPlayer(uuid) != null) return;
+        if (plugin.getDuelManager().isInFFA(uuid)) return;
+
+        if (player.getGameMode() != GameMode.CREATIVE) {
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+        plugin.getLobbyManager().giveLobbyItems(player);
+        plugin.getScoreboardManager().restoreLobbyScoreboard(player);
     }
 
     // ── Disconnect ─────────────────────────────────────────────────────────

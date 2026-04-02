@@ -54,8 +54,11 @@ public class CombatListener implements Listener {
                 && "crystal".equalsIgnoreCase(plugin.getBotManager().getBotDuel(player.getUniqueId()) != null
                 ? plugin.getBotManager().getBotDuel(player.getUniqueId()).kitName : "");
 
+        String ffaKit = plugin.getDuelManager().getFFAKit(player.getUniqueId());
+        boolean inFfaCrystal = "crystal".equalsIgnoreCase(ffaKit);
+
         boolean inCrystalDuel = (duel != null && "crystal".equalsIgnoreCase(duel.getKitName()))
-                || inBotCrystal;
+                || inBotCrystal || inFfaCrystal;
         if (!inCrystalDuel) return;
 
         var atkSpeed = player.getAttribute(Attribute.ATTACK_SPEED);
