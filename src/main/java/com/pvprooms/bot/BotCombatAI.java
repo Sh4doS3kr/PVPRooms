@@ -56,6 +56,9 @@ public class BotCombatAI {
     private long lastPotionTime = 0;
     private long lastBlockPlace = 0;
     private long lastBowShot = 0;
+    private long lastCrossbowShot = 0;
+    private boolean isBowDrawing = false;
+    private boolean isCrossbowLoading = false;
     private long lastMaceJump = 0;
     private long lastSpearThrow = 0;
     private long lastElytraUse = 0;
@@ -86,6 +89,15 @@ public class BotCombatAI {
     // Weapon detection cache
     private WeaponType currentWeapon = WeaponType.SWORD;
     private long lastWeaponCheck = 0;
+    
+    // Ender pearl tracking
+    private long lastPearlThrow = 0;
+    
+    // Opponent state tracking (smarter AI)
+    private double lastTargetHealth = 20.0;
+    private int targetHitStreak = 0;
+    private long lastTargetDamageTime = 0;
+    private boolean targetIsAggressive = false;
     
     // Constants based on difficulty
     private final int tickRate;
@@ -212,11 +224,20 @@ public class BotCombatAI {
                 // Update weapon type periodically
                 updateWeaponType(bot);
                 
+                // Track opponent state for smarter decisions
+                trackOpponentState(bot);
+                
                 // Decision making based on situation
-                if (isEating) return; // Don't interrupt eating
+                if (isEating || isBowDrawing || isCrossbowLoading) return; // Don't interrupt eating/aiming
                 
                 // Shield management (raise/lower reactively)
                 handleShieldLogic(bot, distance);
+                
+                // Ender pearl to close gap if far + have pearls (smart gap close)
+                if (distance > 10 && distance <= 40 && shouldThrowPearl(bot, distance)) {
+                    throwEnderPearl(bot, distance);
+                    return;
+                }
                 
                 // Combat decisions based on distance and weapon
                 if (distance <= 4.0) {
@@ -267,6 +288,122 @@ public class BotCombatAI {
             case TRIDENT, SPEAR -> handleSpearMelee(bot, distance);
             default -> handleSwordAttack(bot, distance);
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // OPPONENT STATE TRACKING (Smarter AI)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void trackOpponentState(Player bot) {
+        double currentTargetHealth = target.getHealth();
+        long now = System.currentTimeMillis();
+
+        // Detect if target just took damage (we hit them or they took environmental dmg)
+        if (currentTargetHealth < lastTargetHealth - 0.5) {
+            lastTargetDamageTime = now;
+        }
+
+        // Detect if WE are being hit a lot (target is aggressive)
+        double botHealth = bot.getHealth();
+        targetIsAggressive = (now - lastTargetDamageTime < 2000) || target.isSprinting();
+
+        // Track how many consecutive hits target is landing on us
+        // (used to decide when to block, retreat, or pearl away)
+        if (botHealth < bot.getMaxHealth() * 0.4 && targetIsAggressive) {
+            targetHitStreak++;
+        } else {
+            targetHitStreak = Math.max(0, targetHitStreak - 1);
+        }
+
+        lastTargetHealth = currentTargetHealth;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // ENDER PEARL COMBAT
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private boolean shouldThrowPearl(Player bot, double distance) {
+        long now = System.currentTimeMillis();
+        if (now - lastPearlThrow < 5000) return false; // 5s cooldown
+        if (findItem(bot.getInventory(), Material.ENDER_PEARL) == -1) return false;
+
+        // Higher difficulty = more likely to pearl
+        double pearlChance = switch (difficulty) {
+            case EASY     -> 0.02;
+            case MEDIUM   -> 0.06;
+            case HARD     -> 0.12;
+            case HACKER   -> 0.25;
+            case ADAPTIVE -> 0.10;
+        };
+
+        // More likely to pearl if target is running away or is low health
+        if (target.getHealth() < target.getMaxHealth() * 0.3) pearlChance *= 2.0;
+        if (distance > 20) pearlChance *= 1.5;
+
+        return random.nextDouble() < pearlChance;
+    }
+
+    private void throwEnderPearl(Player bot, double distance) {
+        int pearlSlot = findItem(bot.getInventory(), Material.ENDER_PEARL);
+        if (pearlSlot == -1) return;
+
+        pearlSlot = hotbarSlot(bot.getInventory(), pearlSlot);
+        if (pearlSlot == -1) return;
+
+        int originalSlot = bot.getInventory().getHeldItemSlot();
+        bot.getInventory().setHeldItemSlot(pearlSlot);
+
+        // Aim at target with slight upward arc
+        Location predicted = predictTargetLocation(target, distance);
+        Vector direction = predicted.toVector().subtract(bot.getEyeLocation().toVector()).normalize();
+
+        // Add arc for distance (pearls are affected by gravity)
+        double arcCompensation = Math.min(distance * 0.02, 0.4);
+        direction.setY(direction.getY() + arcCompensation);
+        direction.normalize();
+
+        // Accuracy jitter
+        double jitter = switch (difficulty) {
+            case EASY     -> 0.15;
+            case MEDIUM   -> 0.08;
+            case HARD     -> 0.03;
+            case HACKER   -> 0.01;
+            case ADAPTIVE -> 0.05;
+        };
+        direction.add(new Vector(
+            (random.nextDouble() - 0.5) * jitter,
+            (random.nextDouble() - 0.5) * jitter * 0.3,
+            (random.nextDouble() - 0.5) * jitter
+        )).normalize();
+
+        // Look at throw direction
+        float yaw   = (float) Math.toDegrees(Math.atan2(-direction.getX(), direction.getZ()));
+        float pitch = (float) Math.toDegrees(Math.atan2(-direction.getY(),
+                Math.sqrt(direction.getX() * direction.getX() + direction.getZ() * direction.getZ())));
+        bot.setRotation(yaw, pitch);
+        currentBotYaw = yaw;
+        currentBotPitch = pitch;
+
+        // Throw the pearl
+        org.bukkit.entity.EnderPearl pearl = bot.getWorld().spawn(
+                bot.getEyeLocation(), org.bukkit.entity.EnderPearl.class);
+        pearl.setVelocity(direction.multiply(2.0));
+        pearl.setShooter(bot);
+
+        // Consume pearl
+        ItemStack pearlItem = bot.getInventory().getItem(bot.getInventory().getHeldItemSlot());
+        if (pearlItem != null) pearlItem.setAmount(pearlItem.getAmount() - 1);
+
+        bot.swingMainHand();
+        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_ENDER_PEARL_THROW, 1.0f, 1.0f);
+
+        lastPearlThrow = System.currentTimeMillis();
+
+        // Switch back to weapon
+        final int fOriginalSlot = originalSlot;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (isValid()) getBotPlayer().getInventory().setHeldItemSlot(fOriginalSlot);
+        }, 2L);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -778,83 +915,156 @@ public class BotCombatAI {
     }
 
     /**
-     * Elytra + Mace combo - fly up high and smash down for massive damage!
+     * Elytra + Mace combo — pro-level dive attack:
+     * 1. Save current chestplate, equip elytra
+     * 2. Jump → start gliding
+     * 3. Firework boost straight UP for height
+     * 4. At peak, aim at target and dive with mace
+     * 5. Smash on landing, re-equip chestplate
      */
+    private ItemStack savedChestplate = null;
+
     private void handleElytraMaceCombo(Player bot) {
-        // Equip elytra if not wearing
-        ItemStack chestplate = bot.getInventory().getChestplate();
-        if (chestplate == null || chestplate.getType() != Material.ELYTRA) {
+        // Step 1 — Equip elytra (save current chestplate)
+        ItemStack chest = bot.getInventory().getChestplate();
+        if (chest == null || chest.getType() != Material.ELYTRA) {
             int elytraSlot = findItem(bot.getInventory(), Material.ELYTRA);
-            if (elytraSlot != -1) {
-                ItemStack elytra = bot.getInventory().getItem(elytraSlot);
-                bot.getInventory().setItem(elytraSlot, chestplate);
-                bot.getInventory().setChestplate(elytra);
-            } else {
-                return;
-            }
+            if (elytraSlot == -1) return;
+            ItemStack elytra = bot.getInventory().getItem(elytraSlot);
+            savedChestplate = chest; // save for re-equip
+            bot.getInventory().setItem(elytraSlot, null);
+            bot.getInventory().setChestplate(elytra);
+        } else {
+            savedChestplate = null; // already wearing elytra
         }
-        
-        // Make sure we have mace equipped
-        int maceSlot = findItem(bot.getInventory(), Material.MACE);
-        if (maceSlot != -1 && maceSlot < 9) {
-            bot.getInventory().setHeldItemSlot(maceSlot);
+
+        // Step 2 — Equip mace in hand
+        int maceSlot = findMace(bot.getInventory());
+        if (maceSlot != -1) {
+            maceSlot = hotbarSlot(bot.getInventory(), maceSlot);
+            if (maceSlot != -1) bot.getInventory().setHeldItemSlot(maceSlot);
         }
-        
-        // Launch upward
-        Vector launchVel = new Vector(0, 1.5, 0);
-        bot.setVelocity(launchVel);
-        
-        // Start gliding after jump
+
+        // Step 3 — Jump upward
+        bot.setVelocity(new Vector(0, 0.42, 0));
+        isUsingElytra = true;
+
+        // Step 4 — Start gliding 3 ticks after jump (player must be falling)
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) return;
+            if (!isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
-            if (b == null) return;
-            
+            if (b == null) { finishElytraCombo(); return; }
+
             b.setGliding(true);
-            isUsingElytra = true;
-            
-            // Boost UP with firework for height
-            int fwSlot = findItem(b.getInventory(), Material.FIREWORK_ROCKET);
-            if (fwSlot != -1) {
-                ItemStack fw = b.getInventory().getItem(fwSlot);
-                if (fw != null) {
-                    // Boost upward
-                    b.setVelocity(new Vector(0, 2.5, 0));
-                    fw.setAmount(fw.getAmount() - 1);
-                    b.getWorld().playSound(b.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 1.0f);
-                    b.getWorld().spawn(b.getLocation(), Firework.class, f -> f.detonate());
-                }
+
+            // Firework boost #1 — straight UP for altitude
+            if (hasFireworks(b)) {
+                boostElytra(b, new Vector(0, 3.0, 0));
             }
-        }, 3L);
-        
-        // After reaching height, dive down towards target
+        }, 4L);
+
+        // Step 5 — Second firework boost at peak (more height)
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) return;
+            if (!isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
-            if (b == null) return;
-            
-            // Stop gliding and dive
+            if (b == null || !b.isGliding()) { finishElytraCombo(); return; }
+
+            if (hasFireworks(b)) {
+                // Slight forward component towards target so we don't overshoot vertically
+                Vector toTarget = target.getLocation().toVector()
+                        .subtract(b.getLocation().toVector()).normalize();
+                Vector boost = toTarget.multiply(0.5).setY(2.5);
+                boostElytra(b, boost);
+            }
+        }, 14L);
+
+        // Step 6 — At peak, stop gliding and DIVE towards target
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) { finishElytraCombo(); return; }
+            Player b = getBotPlayer();
+            if (b == null) { finishElytraCombo(); return; }
+
             b.setGliding(false);
-            isUsingElytra = false;
-            
-            // Calculate dive vector towards target
+
+            // Aim mace at target and dive
+            lookAt(b, target.getLocation());
+
             Vector dive = target.getLocation().toVector()
-                    .subtract(b.getLocation().toVector())
-                    .normalize();
-            dive.setY(-1.5); // Strong downward component
-            dive.multiply(1.5);
+                    .subtract(b.getLocation().toVector()).normalize();
+            // Strong downward + forward momentum for maximum fall distance
+            double height = b.getLocation().getY() - target.getLocation().getY();
+            double diveSpeed = Math.max(1.5, Math.min(height * 0.3, 3.0));
+            dive.multiply(diveSpeed);
+            if (dive.getY() > -0.5) dive.setY(-1.0); // Ensure downward
             b.setVelocity(dive);
-            
-            // Smash when landing
+        }, 28L);
+
+        // Step 7 — Check for smash every 2 ticks during dive
+        for (int tick = 30; tick <= 60; tick += 2) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (isValid()) {
-                    Player bb = getBotPlayer();
-                    if (bb != null && bb.getFallDistance() > 1.0) {
-                        performMaceSmash(bb);
-                    }
+                if (!isValid() || !isUsingElytra) return;
+                Player b = getBotPlayer();
+                if (b == null) return;
+
+                // Keep aiming at target during dive
+                lookAt(b, target.getLocation());
+
+                double dist = b.getLocation().distance(target.getLocation());
+                if (dist <= 4.5 && b.getFallDistance() > 1.5) {
+                    performMaceSmash(b);
+                    finishElytraCombo();
                 }
-            }, 15L);
-        }, 25L);
+            }, tick);
+        }
+
+        // Step 8 — Safety timeout: re-equip chestplate after max dive time
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            finishElytraCombo();
+        }, 65L);
+    }
+
+    /** Boost elytra flight with a firework (consume + velocity + visual). */
+    private void boostElytra(Player bot, Vector direction) {
+        int fwSlot = findItem(bot.getInventory(), Material.FIREWORK_ROCKET);
+        if (fwSlot == -1) return;
+        ItemStack fw = bot.getInventory().getItem(fwSlot);
+        if (fw == null) return;
+
+        bot.setVelocity(direction);
+        fw.setAmount(fw.getAmount() - 1);
+        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 1.0f);
+        bot.getWorld().spawn(bot.getLocation(), Firework.class, f -> f.detonate());
+    }
+
+    /** Clean up after elytra combo: stop gliding, re-equip chestplate. */
+    private void finishElytraCombo() {
+        isUsingElytra = false;
+        Player b = getBotPlayer();
+        if (b == null) return;
+
+        if (b.isGliding()) b.setGliding(false);
+
+        // Re-equip saved chestplate (swap elytra back to inventory)
+        if (savedChestplate != null) {
+            ItemStack elytra = b.getInventory().getChestplate();
+            b.getInventory().setChestplate(savedChestplate);
+            // Put elytra back in inventory
+            if (elytra != null && elytra.getType() == Material.ELYTRA) {
+                b.getInventory().addItem(elytra);
+            }
+            savedChestplate = null;
+        }
+
+        // Switch back to melee weapon
+        selectBestWeapon(b);
+    }
+
+    private int findMace(PlayerInventory inv) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == Material.MACE) return i;
+        }
+        return -1;
     }
 
     private void performMaceSmash(Player bot) {
@@ -1027,21 +1237,33 @@ public class BotCombatAI {
     // ══════════════════════════════════════════════════════════════════════════
 
     private void handleMidRangeCombat(Player bot, double distance) {
-        // Options: chase, throw potions, throw spear, use bow
-        
-        // Check for throwables first
+        // Priority: spear throw > damage potion > crossbow quick shot > chase
+
+        // Spear throw at mid-range — best mid-range weapon
         if (hasSpear(bot) && shouldThrowSpear()) {
             handleSpearThrow(bot, distance);
             return;
         }
-        
+
+        // Damage potions (splash)
         if (hasSplashPotions(bot) && shouldThrowPotion()) {
             throwPotion(bot);
             return;
         }
-        
+
+        // Crossbow quick shot at mid range if we have one loaded
+        if (hasCrossbow(bot) && shouldShootCrossbow() && distance > 5) {
+            handleCrossbowShot(bot, distance);
+            return;
+        }
+
+        // Bow snap shot if target is retreating
+        if (hasOnlyBow(bot) && shouldShootBow() && distance > 5 && !target.isSprinting()) {
+            handleBowShot(bot, distance);
+            return;
+        }
+
         // Chase to melee range - movement handled by startMovementLoop()
-        // NO Navigator - causes teleporting
         bot.setSprinting(true);
     }
 
@@ -1100,9 +1322,15 @@ public class BotCombatAI {
     // ══════════════════════════════════════════════════════════════════════════
 
     private void handleLongRangeCombat(Player bot, double distance) {
-        // Options: bow, crossbow, elytra approach, chase
+        // Options: crossbow, bow, elytra approach, chase
         
-        if (hasBow(bot) && shouldShootBow()) {
+        // Prefer crossbow (higher damage per shot, can be pre-loaded)
+        if (hasCrossbow(bot) && shouldShootCrossbow()) {
+            handleCrossbowShot(bot, distance);
+            return;
+        }
+        
+        if (hasOnlyBow(bot) && shouldShootBow()) {
             handleBowShot(bot, distance);
             return;
         }
@@ -1115,6 +1343,74 @@ public class BotCombatAI {
         // Default: chase - movement handled by startMovementLoop()
         // NO Navigator - causes teleporting
         bot.setSprinting(true);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // CROSSBOW COMBAT
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void handleCrossbowShot(Player bot, double distance) {
+        long now = System.currentTimeMillis();
+        if (now - lastCrossbowShot < 2500) return; // Crossbow has longer cycle
+
+        int cbSlot = findCrossbow(bot.getInventory());
+        if (cbSlot == -1) return;
+        if (!hasArrows(bot)) return;
+        if (random.nextDouble() > accuracy * 0.85) return;
+
+        cbSlot = hotbarSlot(bot.getInventory(), cbSlot);
+        if (cbSlot == -1) return;
+        bot.getInventory().setHeldItemSlot(cbSlot);
+
+        isCrossbowLoading = true;
+
+        // Crossbow load time (vanilla = 25 ticks, Quick Charge reduces)
+        int loadTime = switch (difficulty) {
+            case EASY -> 30;
+            case MEDIUM -> 25;
+            case HARD -> 20;
+            case HACKER -> 12;
+            case ADAPTIVE -> 22;
+        };
+
+        // Loading phase — bot aims at target while loading
+        final int fCbSlot = cbSlot;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) { isCrossbowLoading = false; return; }
+
+            // Aim at predicted position
+            double dist2 = bot.getLocation().distance(target.getLocation());
+            Location predicted = predictTargetLocation(target, dist2);
+            Vector velocity = calculateArrowVelocity(bot.getEyeLocation(), predicted, dist2);
+
+            // Rotation only — NO teleport
+            double dx = velocity.getX(), dy = velocity.getY(), dz = velocity.getZ();
+            float yaw   = (float) Math.toDegrees(Math.atan2(-dx, dz));
+            float pitch = (float) Math.toDegrees(Math.atan2(-dy, Math.sqrt(dx * dx + dz * dz)));
+            bot.setRotation(yaw, pitch);
+            currentBotYaw = yaw;
+            currentBotPitch = pitch;
+
+            // Fire!
+            Arrow arrow = bot.getWorld().spawn(bot.getEyeLocation(), Arrow.class);
+            arrow.setVelocity(velocity);
+            arrow.setShooter(bot);
+            arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+            arrow.setDamage(11.0); // Crossbow does more per-shot than bow
+            arrow.setCritical(true);
+
+            consumeArrow(bot);
+            bot.getWorld().playSound(bot.getLocation(), Sound.ITEM_CROSSBOW_SHOOT, 1.0f, 1.0f);
+            bot.swingMainHand();
+
+            isCrossbowLoading = false;
+            lastCrossbowShot = System.currentTimeMillis();
+
+            // Switch back to melee weapon after shooting
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (isValid()) selectBestWeapon(getBotPlayer());
+            }, 5L);
+        }, loadTime);
     }
 
     private void handleBowShot(Player bot, double distance) {
@@ -1141,10 +1437,13 @@ public class BotCombatAI {
         // Pre-calculate the gravity-compensated velocity so bot looks where it will actually shoot
         Vector aimVelocity = calculateArrowVelocity(bot.getEyeLocation(), predictedLoc, distance);
 
-        // Make bot face the gravity-corrected aim direction (looks like a real player aiming up for range)
-        Location aimLook = bot.getEyeLocation().clone();
-        aimLook.setDirection(aimVelocity);
-        bot.teleport(aimLook);
+        // Make bot face the gravity-corrected aim direction (rotation only — no teleport!)
+        double aimDx = aimVelocity.getX(), aimDy = aimVelocity.getY(), aimDz = aimVelocity.getZ();
+        float aimYaw   = (float) Math.toDegrees(Math.atan2(-aimDx, aimDz));
+        float aimPitch = (float) Math.toDegrees(Math.atan2(-aimDy, Math.sqrt(aimDx * aimDx + aimDz * aimDz)));
+        bot.setRotation(aimYaw, aimPitch);
+        currentBotYaw = aimYaw;
+        currentBotPitch = aimPitch;
 
         // Charge time based on difficulty (full charge = 20 ticks)
         int chargeTime = switch(difficulty) {
@@ -1155,13 +1454,24 @@ public class BotCombatAI {
             case ADAPTIVE -> 18;
         };
         
+        isBowDrawing = true;
+
         // Simulate bow draw and release
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) return;
+            if (!isValid()) { isBowDrawing = false; return; }
             
             // Recalculate at release time in case target moved
-            Location releasedPredicted = predictTargetLocation(target, bot.getLocation().distance(target.getLocation()));
-            Vector velocity = calculateArrowVelocity(bot.getEyeLocation(), releasedPredicted, distance);
+            double dist2 = bot.getLocation().distance(target.getLocation());
+            Location releasedPredicted = predictTargetLocation(target, dist2);
+            Vector velocity = calculateArrowVelocity(bot.getEyeLocation(), releasedPredicted, dist2);
+
+            // Update aim at release (rotation only)
+            double rdx = velocity.getX(), rdy = velocity.getY(), rdz = velocity.getZ();
+            float rYaw   = (float) Math.toDegrees(Math.atan2(-rdx, rdz));
+            float rPitch = (float) Math.toDegrees(Math.atan2(-rdy, Math.sqrt(rdx * rdx + rdz * rdz)));
+            bot.setRotation(rYaw, rPitch);
+            currentBotYaw = rYaw;
+            currentBotPitch = rPitch;
 
             Arrow arrow = bot.getWorld().spawn(bot.getEyeLocation(), Arrow.class);
             arrow.setVelocity(velocity);
@@ -1173,7 +1483,13 @@ public class BotCombatAI {
             consumeArrow(bot);
             
             bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_ARROW_SHOOT, 1.0f, 1.0f);
+            isBowDrawing = false;
             lastBowShot = System.currentTimeMillis();
+
+            // Switch back to melee weapon
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (isValid()) selectBestWeapon(getBotPlayer());
+            }, 5L);
         }, chargeTime);
     }
 
@@ -1221,114 +1537,71 @@ public class BotCombatAI {
 
     private void handleElytraApproach(Player bot) {
         long now = System.currentTimeMillis();
-        if (now - lastElytraUse < 2000) return;
-        
-        // Check if wearing elytra
-        ItemStack chestplate = bot.getInventory().getChestplate();
-        if (chestplate == null || chestplate.getType() != Material.ELYTRA) {
-            // Try to equip elytra from inventory
-            int elytraSlot = findItem(bot.getInventory(), Material.ELYTRA);
-            if (elytraSlot != -1) {
-                ItemStack elytra = bot.getInventory().getItem(elytraSlot);
-                ItemStack currentChest = bot.getInventory().getChestplate();
-                bot.getInventory().setChestplate(elytra);
-                bot.getInventory().setItem(elytraSlot, currentChest);
-            } else {
-                return;
-            }
-        }
-        
-        // Jump and glide towards target
-        if (bot.isOnGround()) {
-            // Launch upward first
-            Vector direction = target.getLocation().toVector()
-                    .subtract(bot.getLocation().toVector())
-                    .normalize();
-            direction.setY(1.0);
-            direction.multiply(1.2);
-            bot.setVelocity(direction);
-            
-            // Start gliding after jump
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (isValid()) {
-                    Player b = getBotPlayer();
-                    if (b == null) return;
-                    b.setGliding(true);
-                    isUsingElytra = true;
-                    
-                    // Boost with firework
-                    if (hasFireworks(b)) {
-                        useFireworkBoost(b);
-                    }
-                }
-            }, 4L);
-            
-            lastElytraUse = now;
-            
-            // Continue boosting with fireworks while gliding
-            for (int i = 1; i <= 3; i++) {
-                final int delay = i;
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (isValid() && isUsingElytra) {
-                        Player b = getBotPlayer();
-                        if (b != null && b.isGliding() && hasFireworks(b)) {
-                            useFireworkBoost(b);
-                        }
-                    }
-                }, 10L * delay);
-            }
-            
-            // Stop gliding when close or after timeout
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (isValid()) {
-                    Player b = getBotPlayer();
-                    if (b != null) {
-                        b.setGliding(false);
-                        isUsingElytra = false;
-                    }
-                }
-            }, 60L);
-        }
-    }
+        if (now - lastElytraUse < 3000) return;
+        if (!bot.isOnGround()) return;
 
-    private void useFireworkBoost(Player bot) {
-        int slot = findItem(bot.getInventory(), Material.FIREWORK_ROCKET);
-        if (slot == -1) return;
-        
-        ItemStack firework = bot.getInventory().getItem(slot);
-        if (firework == null) return;
-        
-        // Switch to firework briefly to use it
-        slot = hotbarSlot(bot.getInventory(), slot);
-        if (slot == -1) return;
-        int originalSlot = bot.getInventory().getHeldItemSlot();
-        bot.getInventory().setHeldItemSlot(slot);
-        
-        // Calculate boost direction towards target
-        Vector toTarget = target.getLocation().toVector()
-                .subtract(bot.getLocation().toVector())
-                .normalize();
-        
-        // Apply strong boost velocity
-        Vector boost = toTarget.multiply(2.0);
-        if (boost.getY() < 0.3) boost.setY(0.3); // Keep some lift
-        bot.setVelocity(boost);
-        
-        // Spawn firework entity for visual effect
-        bot.getWorld().spawn(bot.getLocation(), Firework.class, fw -> {
-            fw.detonate();
-        });
-        
-        // Consume firework
-        firework.setAmount(firework.getAmount() - 1);
-        
-        // Sound
-        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 1.0f);
-        
-        // Switch back
+        // Equip elytra (save chestplate)
+        ItemStack chest = bot.getInventory().getChestplate();
+        if (chest == null || chest.getType() != Material.ELYTRA) {
+            int elytraSlot = findItem(bot.getInventory(), Material.ELYTRA);
+            if (elytraSlot == -1) return;
+            ItemStack elytra = bot.getInventory().getItem(elytraSlot);
+            savedChestplate = chest;
+            bot.getInventory().setItem(elytraSlot, null);
+            bot.getInventory().setChestplate(elytra);
+        }
+
+        // Jump
+        bot.setVelocity(new Vector(0, 0.42, 0));
+        isUsingElytra = true;
+        lastElytraUse = now;
+
+        // Start gliding + first boost towards target
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (isValid()) getBotPlayer().getInventory().setHeldItemSlot(originalSlot);
-        }, 2L);
+            if (!isValid()) { finishElytraCombo(); return; }
+            Player b = getBotPlayer();
+            if (b == null) { finishElytraCombo(); return; }
+
+            b.setGliding(true);
+
+            if (hasFireworks(b)) {
+                Vector toTarget = target.getLocation().toVector()
+                        .subtract(b.getLocation().toVector()).normalize();
+                toTarget.setY(Math.max(toTarget.getY(), 0.3)); // Keep some lift
+                boostElytra(b, toTarget.multiply(2.5));
+            }
+        }, 4L);
+
+        // Additional boosts every ~10 ticks, aimed at target
+        for (int i = 1; i <= 4; i++) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!isValid() || !isUsingElytra) return;
+                Player b = getBotPlayer();
+                if (b == null || !b.isGliding()) return;
+
+                double dist = b.getLocation().distance(target.getLocation());
+                // Stop gliding if close enough
+                if (dist < 5) {
+                    finishElytraCombo();
+                    return;
+                }
+
+                if (hasFireworks(b)) {
+                    Vector toTarget = target.getLocation().toVector()
+                            .subtract(b.getLocation().toVector()).normalize();
+                    // Descend as we approach
+                    if (dist < 15) toTarget.setY(Math.min(toTarget.getY(), -0.2));
+                    else toTarget.setY(Math.max(toTarget.getY(), 0.15));
+                    boostElytra(b, toTarget.multiply(2.2));
+                }
+
+                // Keep looking at target
+                lookAt(b, target.getLocation());
+            }, 4L + 12L * i);
+        }
+
+        // Safety timeout
+        Bukkit.getScheduler().runTaskLater(plugin, this::finishElytraCombo, 70L);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -2081,10 +2354,10 @@ public class BotCombatAI {
     }
 
     private void selectBestWeapon(Player bot) {
-        // Select best weapon from hotbar for current situation
         PlayerInventory inv = bot.getInventory();
-        
-        // Priority: Mace (if can crit) > Axe (if target blocking) > Sword
+        double distance = bot.getLocation().distance(target.getLocation());
+
+        // 1. Target blocking with shield → AXE to break it
         if (target.isBlocking()) {
             int axeSlot = findAxe(inv);
             if (axeSlot != -1) {
@@ -2093,14 +2366,57 @@ public class BotCombatAI {
                 return;
             }
         }
-        
-        // Default to first weapon found
+
+        // 2. Have mace + elytra + fireworks → MACE for dive attacks (far range only)
+        if (distance > 6 && findMace(inv) != -1 && hasElytra(bot) && hasFireworks(bot)) {
+            int maceSlot = hotbarSlot(inv, findMace(inv));
+            if (maceSlot != -1) {
+                inv.setHeldItemSlot(maceSlot);
+                currentWeapon = WeaponType.MACE;
+                return;
+            }
+        }
+
+        // 3. Have mace + on ground + can jump → MACE for jump crits
+        if (distance <= 4 && bot.isOnGround() && findMace(inv) != -1 
+                && System.currentTimeMillis() - lastMaceJump > 3000) {
+            int maceSlot = hotbarSlot(inv, findMace(inv));
+            if (maceSlot != -1) {
+                inv.setHeldItemSlot(maceSlot);
+                currentWeapon = WeaponType.MACE;
+                return;
+            }
+        }
+
+        // 4. Mid-range with trident → SPEAR for throwing
+        if (distance > 4 && distance <= 8) {
+            int tridentSlot = findTrident(inv);
+            if (tridentSlot != -1) {
+                tridentSlot = hotbarSlot(inv, tridentSlot);
+                if (tridentSlot != -1) {
+                    inv.setHeldItemSlot(tridentSlot);
+                    currentWeapon = WeaponType.TRIDENT;
+                    return;
+                }
+            }
+        }
+
+        // 5. Default: SWORD (best for combos and consistent DPS)
+        for (int i = 0; i < 9; i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && isSword(item.getType())) {
+                inv.setHeldItemSlot(i);
+                currentWeapon = WeaponType.SWORD;
+                return;
+            }
+        }
+
+        // 6. Fallback: any melee weapon
         for (int i = 0; i < 9; i++) {
             ItemStack item = inv.getItem(i);
             if (item == null) continue;
-            
             Material type = item.getType();
-            if (type.name().contains("SWORD") || type.name().contains("AXE") 
+            if (type.name().contains("SWORD") || type.name().contains("AXE")
                     || type == Material.MACE || type == Material.TRIDENT) {
                 inv.setHeldItemSlot(i);
                 return;
@@ -2193,9 +2509,17 @@ public class BotCombatAI {
     }
 
     private int findBow(PlayerInventory inv) {
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < inv.getSize(); i++) {
             ItemStack item = inv.getItem(i);
-            if (item != null && (item.getType() == Material.BOW || item.getType() == Material.CROSSBOW)) return i;
+            if (item != null && item.getType() == Material.BOW) return i;
+        }
+        return -1;
+    }
+
+    private int findCrossbow(PlayerInventory inv) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == Material.CROSSBOW) return i;
         }
         return -1;
     }
@@ -2251,14 +2575,17 @@ public class BotCombatAI {
     // ══════════════════════════════════════════════════════════════════════════
 
     private boolean hasSpear(Player bot) { return findTrident(bot.getInventory()) != -1; }
-    private boolean hasBow(Player bot) { return findBow(bot.getInventory()) != -1; }
+    private boolean hasBow(Player bot) { return findBow(bot.getInventory()) != -1 || findCrossbow(bot.getInventory()) != -1; }
+    private boolean hasOnlyBow(Player bot) { return findBow(bot.getInventory()) != -1; }
+    private boolean hasCrossbow(Player bot) { return findCrossbow(bot.getInventory()) != -1; }
     private boolean hasBlocks(Player bot) { return findBuildingBlock(bot.getInventory()) != -1; }
     private boolean hasSplashPotions(Player bot) {
         return findItem(bot.getInventory(), Material.SPLASH_POTION) != -1;
     }
     private boolean hasElytra(Player bot) {
         ItemStack chest = bot.getInventory().getChestplate();
-        return chest != null && chest.getType() == Material.ELYTRA;
+        if (chest != null && chest.getType() == Material.ELYTRA) return true;
+        return findItem(bot.getInventory(), Material.ELYTRA) != -1;
     }
     private boolean hasFireworks(Player bot) {
         return findItem(bot.getInventory(), Material.FIREWORK_ROCKET) != -1;
@@ -2296,6 +2623,11 @@ public class BotCombatAI {
     private boolean shouldShootBow() {
         return random.nextDouble() < accuracy * 0.7 
                 && System.currentTimeMillis() - lastBowShot > 1500;
+    }
+
+    private boolean shouldShootCrossbow() {
+        return random.nextDouble() < accuracy * 0.8
+                && System.currentTimeMillis() - lastCrossbowShot > 2500;
     }
 
     private boolean shouldUseElytra(double distance) {

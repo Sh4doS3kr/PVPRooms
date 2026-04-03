@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -96,6 +97,87 @@ public class BotListener implements Listener {
         // If bot despawns unexpectedly, end the duel
         NPC npc = event.getNPC();
         plugin.getBotManager().onBotDeath(npc);
+    }
+
+    /**
+     * Handle ANY damage to bot NPCs — totem pop for non-player damage sources
+     * (explosions, fire, lava, void, fall damage, etc.).
+     * Player-sourced totem pops are handled in onEntityDamage(EntityDamageByEntityEvent).
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBotTakeDamage(EntityDamageEvent event) {
+        if (event instanceof EntityDamageByEntityEvent) return; // Already handled separately
+        if (!(event.getEntity() instanceof LivingEntity entity)) return;
+
+        if (CitizensAPI.getNPCRegistry() == null) return;
+        NPC npc = CitizensAPI.getNPCRegistry().getNPC(entity);
+        if (npc == null) return;
+
+        BotManager.BotDuel duel = plugin.getBotManager().getBotDuelByBot(npc);
+        if (duel == null || !duel.active) return;
+
+        double finalDamage = event.getFinalDamage();
+        double currentHealth = entity.getHealth();
+
+        if (currentHealth - finalDamage <= 0) {
+            // Check for totem: offhand first, then inventory
+            ItemStack foundTotem = null;
+            int totemInvSlot = -1;
+            ItemStack offhand = entity.getEquipment().getItemInOffHand();
+            if (offhand != null && offhand.getType() == org.bukkit.Material.TOTEM_OF_UNDYING) {
+                foundTotem = offhand;
+            } else if (entity instanceof Player botInvPlayer) {
+                for (int si = 0; si < botInvPlayer.getInventory().getSize(); si++) {
+                    ItemStack slot = botInvPlayer.getInventory().getItem(si);
+                    if (slot != null && slot.getType() == org.bukkit.Material.TOTEM_OF_UNDYING) {
+                        foundTotem = slot;
+                        totemInvSlot = si;
+                        break;
+                    }
+                }
+            }
+
+            if (foundTotem != null) {
+                event.setCancelled(true);
+
+                // Consume totem
+                if (totemInvSlot == -1) {
+                    int amt = foundTotem.getAmount();
+                    if (amt <= 1) {
+                        entity.getEquipment().setItemInOffHand(new ItemStack(org.bukkit.Material.AIR));
+                    } else {
+                        foundTotem.setAmount(amt - 1);
+                        entity.getEquipment().setItemInOffHand(foundTotem);
+                    }
+                } else {
+                    int amt = foundTotem.getAmount();
+                    if (amt <= 1) {
+                        ((Player) entity).getInventory().setItem(totemInvSlot, null);
+                    } else {
+                        foundTotem.setAmount(amt - 1);
+                    }
+                }
+
+                // Apply vanilla totem effects
+                entity.setHealth(1.0);
+                entity.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                    org.bukkit.potion.PotionEffectType.REGENERATION, 900, 1));
+                entity.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                    org.bukkit.potion.PotionEffectType.ABSORPTION, 100, 1));
+                entity.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                    org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, 800, 0));
+
+                entity.getWorld().playSound(entity.getLocation(),
+                    org.bukkit.Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
+                entity.getWorld().spawnParticle(
+                    org.bukkit.Particle.TOTEM_OF_UNDYING,
+                    entity.getLocation().add(0, 1, 0), 100, 0.5, 1, 0.5, 0.5);
+
+                // Clear fire if on fire
+                entity.setFireTicks(0);
+                return;
+            }
+        }
     }
 
     /**
