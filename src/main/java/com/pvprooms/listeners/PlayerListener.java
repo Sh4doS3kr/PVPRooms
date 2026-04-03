@@ -63,6 +63,8 @@ public class PlayerListener implements Listener {
 
     /** Last known safe (non-solid) location per dueling player for wall-clip rollback */
     private final Map<UUID, Location> lastSafeLoc = new HashMap<>();
+    /** Death locations for spectator cam — player sees the lightning before being teleported */
+    private final Map<UUID, Location> deathSpectatorLoc = new HashMap<>();
     /** Anti-clip scheduler task ID */
     private int antiClipTaskId = -1;
 
@@ -87,6 +89,8 @@ public class PlayerListener implements Listener {
                     inActiveDuel = true;
                 }
                 if (!inActiveDuel) continue;
+                // Skip death-cam spectators (combatants temporarily in spectator mode)
+                if (p.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
 
                 Location loc = p.getLocation();
                 if (isInsideWall(loc)) {
@@ -226,11 +230,16 @@ public class PlayerListener implements Listener {
             }
         }
 
-        // Clean up FFA: dead spectators just get removed; active fighters trigger endFFAMatch logic
+        // Clean up FFA/2v2: dead spectators just get removed; active fighters trigger death logic
         if (plugin.getDuelManager().isFFASpectator(uuid)) {
             plugin.getDuelManager().removeFFASpectator(uuid);
         } else if (plugin.getDuelManager().isInFFA(uuid)) {
-            plugin.getDuelManager().handleFFADeath(player, null);
+            UUID ffaMatchId = plugin.getDuelManager().getFFAMatchId(uuid);
+            if (plugin.getDuelManager().is2v2(ffaMatchId)) {
+                plugin.getDuelManager().handle2v2Death(player, null);
+            } else {
+                plugin.getDuelManager().handleFFADeath(player, null);
+            }
         }
 
         // Handle party disconnect
@@ -256,11 +265,17 @@ public class PlayerListener implements Listener {
             event.setKeepLevel(true);
             
             Player killer = dead.getKiller();
+            UUID ffaMatchId = plugin.getDuelManager().getFFAMatchId(uuid);
+            boolean is2v2 = plugin.getDuelManager().is2v2(ffaMatchId);
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                 if (dead.isDead()) {
                     dead.spigot().respawn();
                 }
-                plugin.getDuelManager().handleFFADeath(dead, killer);
+                if (is2v2) {
+                    plugin.getDuelManager().handle2v2Death(dead, killer);
+                } else {
+                    plugin.getDuelManager().handleFFADeath(dead, killer);
+                }
             }, 1L);
             return;
         }
@@ -276,18 +291,31 @@ public class PlayerListener implements Listener {
         event.setKeepLevel(true);
 
         // Cosmetic lightning at death location
-        dead.getWorld().strikeLightningEffect(dead.getLocation());
+        Location deathLoc = dead.getLocation().clone();
+        dead.getWorld().strikeLightningEffect(deathLoc);
 
         // Determine winner
         UUID winnerUUID = duel.getOpponent(uuid);
+
+        // Save death location — onPlayerRespawn will place them here
+        deathSpectatorLoc.put(uuid, deathLoc);
 
         // Respawn dead player on next tick (death screen must clear first)
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (dead.isDead()) dead.spigot().respawn();
         }, 1L);
 
+        // 2 ticks later: put in spectator mode so they float and watch the kill
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (dead.isOnline() && deathSpectatorLoc.containsKey(uuid)) {
+                dead.setGameMode(org.bukkit.GameMode.SPECTATOR);
+                dead.teleport(deathLoc.clone().add(0, 1.5, 0));
+            }
+        }, 2L);
+
         // End duel after 1.5s so winner can see the kill before being teleported out
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            deathSpectatorLoc.remove(uuid);
             plugin.getDuelManager().endDuel(duel, winnerUUID, "death");
         }, 30L);
     }
@@ -302,8 +330,14 @@ public class PlayerListener implements Listener {
         if (plugin.getDuelManager().isInFFA(uuid) && !plugin.getDuelManager().isFFASpectator(uuid)) {
             return;
         }
-        // If they just died in a duel, respawn at lobby
-        // The endDuel method will also teleport them, but just in case:
+        // If the player died in a duel, respawn at death location (spectator cam)
+        Location deathLoc = deathSpectatorLoc.get(uuid);
+        if (deathLoc != null) {
+            event.setRespawnLocation(deathLoc);
+            return;
+        }
+
+        // Otherwise, respawn at lobby
         Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
         if (duel == null || duel.getState() == Duel.State.ENDED) {
             event.setRespawnLocation(plugin.getLobbySpawn());
@@ -341,6 +375,8 @@ public class PlayerListener implements Listener {
             active = true;
         }
         if (!active) return;
+        // Skip death-cam spectators
+        if (player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
 
         Location to = event.getTo();
         if (to == null) return;

@@ -338,7 +338,7 @@ public class ScoreboardManager {
 
         int w1 = duel.getWins1();
         int w2 = duel.getWins2();
-        int target = duel.isBo3() ? 10 : 1;
+        int target = duel.getWinsNeeded();
         String scoreStr = "§a" + w1 + " §7- §c" + w2 + " §8(a " + target + ")";
 
         // Health info
@@ -351,7 +351,7 @@ public class ScoreboardManager {
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
         tl(obj, s++, " ", 14);
         tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), 13);
-        tl(obj, s++, leg("&e⏱ &fModo: " + (duel.isBo3() ? "&6Tier (a 10)" : "&aELO")), 12);
+        tl(obj, s++, leg("&e⏱ &fModo: " + (duel.isBo3() ? "&6Tier (BO7)" : "&aELO")), 12);
         tl(obj, s++, " ", 11);
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 10);
         tl(obj, s++, " ", 9);

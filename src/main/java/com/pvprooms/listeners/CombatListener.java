@@ -174,7 +174,12 @@ public class CombatListener implements Listener {
                         event.setCancelled(true);
                         return;
                     }
-                    // Allow FFA damage
+                    // 2v2 friendly fire prevention — teammates can't hurt each other
+                    if (plugin.getDuelManager().areTeammates(attacker.getUniqueId(), victim.getUniqueId())) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                    // Allow FFA/2v2 damage
                     return;
                 }
             }

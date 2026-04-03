@@ -384,14 +384,14 @@ public class PartyGUI implements Listener {
         // Guarantee required kits exist — installs only if missing (no overwrite)
         com.pvprooms.util.PresetKits.installMissingPresets(plugin);
 
-        Inventory inv = Bukkit.createInventory(null, 36, Component.text(KIT_SELECT_TITLE, NamedTextColor.YELLOW));
+        Inventory inv = Bukkit.createInventory(null, 54, Component.text(KIT_SELECT_TITLE, NamedTextColor.YELLOW));
 
         ItemStack glass = createItem(Material.GRAY_STAINED_GLASS_PANE, " ", null);
-        for (int i = 0; i < 36; i++) inv.setItem(i, glass);
+        for (int i = 0; i < 54; i++) inv.setItem(i, glass);
 
         int slot = 10;
         for (String kitName : plugin.getKitManager().getKitNames()) {
-            if (slot > 25) break;
+            if (slot > 43) break;
             if (slot % 9 == 0 || slot % 9 == 8) { slot++; continue; }
 
             var kit = plugin.getKitManager().getKit(kitName);
@@ -400,7 +400,7 @@ public class PartyGUI implements Listener {
                     List.of("", "§aClick para seleccionar")));
         }
 
-        inv.setItem(31, createItem(Material.ARROW, "Volver", List.of("", "§7Volver")));
+        inv.setItem(49, createItem(Material.ARROW, "Volver", List.of("", "§7Volver")));
         player.openInventory(inv);
     }
 
@@ -612,12 +612,7 @@ public class PartyGUI implements Listener {
                 plugin.getDuelManager().startDuel(participants.get(0).getUniqueId(), participants.get(1).getUniqueId(), kitName);
             }
             case "2v2" -> {
-                // For now, 2v2 uses FFA (teams not implemented yet)
-                // TODO: Implement team-based matches
-                plugin.getDuelManager().startFFAMatch(participants, kitName, finalArena);
-                for (Player p : participants) {
-                    p.sendMessage(plugin.prefix() + "§e2v2 en desarrollo - jugando como FFA por ahora.");
-                }
+                plugin.getDuelManager().start2v2Match(participants, kitName, finalArena);
             }
             default -> {
                 // FFA mode

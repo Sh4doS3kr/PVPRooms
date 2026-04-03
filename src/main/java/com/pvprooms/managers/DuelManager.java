@@ -104,7 +104,7 @@ public class DuelManager {
 
         Duel duel = new Duel(uuid1, uuid2, kitName, instanceWorldName, template);
         duel.setRanked(bo3);
-        duel.setWinsNeeded(bo3 ? 10 : 1); // Tier: first to 10, ELO: single round
+        duel.setWinsNeeded(bo3 ? 4 : 1); // Tier: BO7 (first to 4), ELO: single round
         activeDuels.put(duel.getId(), duel);
         playerDuelMap.put(uuid1, duel.getId());
         playerDuelMap.put(uuid2, duel.getId());
@@ -118,7 +118,7 @@ public class DuelManager {
         preparePlayer(p2);
 
         // Notify match found & clear queue scoreboard before teleport
-        String modeTag = bo3 ? " §8[§bBO10§8]" : "";
+        String modeTag = bo3 ? " §8[§bBO7§8]" : "";
         p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         plugin.getScoreboardManager().clearScoreboard(p1);
@@ -375,7 +375,7 @@ public class DuelManager {
      * Called after a round ends in a ranked (Tier) duel.
      * Increments the winner's round count, then either starts the next round
      * or finalises the match if someone has reached the required wins.
-     * Tier matches: first to 10 wins
+     * Tier matches: BO7 (first to 4 wins)
      */
     private void handleBo3Round(Duel duel, UUID roundWinnerUUID) {
         duel.addWin(roundWinnerUUID);
@@ -406,7 +406,9 @@ public class DuelManager {
         if (p1 != null) p1.sendMessage(roundMsg);
         if (p2 != null) p2.sendMessage(roundMsg);
 
-        // Step 1: teleport both players to their spawns immediately
+        // Step 1: clear death-cam spectator mode, then teleport to spawns
+        if (p1 != null && p1.getGameMode() == GameMode.SPECTATOR) p1.setGameMode(GameMode.SURVIVAL);
+        if (p2 != null && p2.getGameMode() == GameMode.SPECTATOR) p2.setGameMode(GameMode.SURVIVAL);
         World worldNow = Bukkit.getWorld(duel.getInstanceWorldName());
         if (worldNow != null) {
             if (p1 != null) p1.teleport(duel.getArenaTemplate().getSpawn1(worldNow));
@@ -599,6 +601,10 @@ public class DuelManager {
         if (player.isDead()) {
             try { player.spigot().respawn(); } catch (Exception ignored) {}
         }
+        // Clear spectator mode from death cam
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            player.setGameMode(GameMode.SURVIVAL);
+        }
         restorePlayer(player);
         player.teleport(lobby);
     }
@@ -623,6 +629,9 @@ public class DuelManager {
         if (!playerWorld.equals(lobbyWorld)) {
             if (p.isDead()) {
                 try { p.spigot().respawn(); } catch (Exception ignored) {}
+            }
+            if (p.getGameMode() == GameMode.SPECTATOR) {
+                p.setGameMode(GameMode.SURVIVAL);
             }
             restorePlayer(p);
             p.teleport(lobby);
@@ -1094,6 +1103,333 @@ public class DuelManager {
             }
         }
         return null;
+    }
+
+    // ── 2v2 Team Duel ──────────────────────────────────────────────────────
+
+    /** 2v2 match ID -> Team A (set of 2 UUIDs) */
+    private final Map<UUID, Set<UUID>> teamAMap = new ConcurrentHashMap<>();
+    /** 2v2 match ID -> Team B (set of 2 UUIDs) */
+    private final Map<UUID, Set<UUID>> teamBMap = new ConcurrentHashMap<>();
+    /** Tracks which FFA matches are actually 2v2 (match ID set) */
+    private final Set<UUID> is2v2Match = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Starts a 2v2 team duel. Players are split into two teams of 2.
+     * Team A = participants[0,1], Team B = participants[2,3].
+     * Uses the FFA infrastructure for world/tracking, with team overlay.
+     */
+    public void start2v2Match(List<Player> participants, String kitName, ArenaTemplate arena) {
+        if (participants.size() != 4) {
+            for (Player p : participants)
+                p.sendMessage(plugin.prefix() + "§cEl modo 2v2 requiere exactamente 4 jugadores.");
+            return;
+        }
+
+        UUID matchId = UUID.randomUUID();
+        String matchIdShort = matchId.toString().replace("-", "").substring(0, 10);
+        String instanceWorldName = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_") + matchIdShort;
+
+        // Create world instance
+        World instanceWorld = plugin.getArenaInstanceManager().createInstance(arena, matchIdShort);
+        if (instanceWorld == null) {
+            for (Player p : participants)
+                p.sendMessage(plugin.prefix() + "§cError al crear la arena. Contacta a un admin.");
+            return;
+        }
+
+        // Register match using FFA maps (2v2 piggybacks on FFA tracking)
+        Set<UUID> participantUUIDs = ConcurrentHashMap.newKeySet();
+        for (Player p : participants) {
+            participantUUIDs.add(p.getUniqueId());
+            playerFFAMap.put(p.getUniqueId(), matchId);
+        }
+        ffaMatches.put(matchId, participantUUIDs);
+        ffaWorlds.put(matchId, instanceWorldName);
+        ffaKits.put(matchId, kitName);
+        ffaTemplates.put(matchId, arena);
+
+        // Register teams
+        Set<UUID> teamA = ConcurrentHashMap.newKeySet();
+        teamA.add(participants.get(0).getUniqueId());
+        teamA.add(participants.get(1).getUniqueId());
+        Set<UUID> teamB = ConcurrentHashMap.newKeySet();
+        teamB.add(participants.get(2).getUniqueId());
+        teamB.add(participants.get(3).getUniqueId());
+        teamAMap.put(matchId, teamA);
+        teamBMap.put(matchId, teamB);
+        is2v2Match.add(matchId);
+
+        // Teleport teams: Team A near spawn1, Team B near spawn2
+        Location spawn1 = arena.getSpawn1(instanceWorld);
+        Location spawn2 = arena.getSpawn2(instanceWorld);
+
+        // Team A: spread around spawn1
+        teleportTeam(participants.get(0), participants.get(1), spawn1);
+        // Team B: spread around spawn2
+        teleportTeam(participants.get(2), participants.get(3), spawn2);
+
+        // Prepare all players
+        for (Player p : participants) {
+            saveSnapshot(p);
+            preparePlayer(p);
+        }
+        // Teleport AFTER prepare (prepare clears inventory)
+        teleportTeam(participants.get(0), participants.get(1), spawn1);
+        teleportTeam(participants.get(2), participants.get(3), spawn2);
+        for (Player p : participants) {
+            plugin.getKitManager().applyKit(p, kitName);
+            plugin.getScoreboardManager().clearScoreboard(p);
+        }
+
+        // Team name colors
+        String teamANames = "§a" + participants.get(0).getName() + " §7& §a" + participants.get(1).getName();
+        String teamBNames = "§c" + participants.get(2).getName() + " §7& §c" + participants.get(3).getName();
+
+        // Announce
+        for (Player p : participants) {
+            p.sendMessage(plugin.prefix() + "§6§l¡2v2 INICIADO! §7Kit: §e" + kitName);
+            p.sendMessage(plugin.prefix() + "§aEquipo 1: " + teamANames);
+            p.sendMessage(plugin.prefix() + "§cEquipo 2: " + teamBNames);
+
+            // Tell each player their teammate
+            UUID pUUID = p.getUniqueId();
+            UUID teammateUUID = getTeammate(matchId, pUUID);
+            Player teammate = teammateUUID != null ? Bukkit.getPlayer(teammateUUID) : null;
+            if (teammate != null) {
+                p.sendMessage(plugin.prefix() + "§7Tu compañero: §e" + teammate.getName());
+            }
+        }
+
+        // Start countdown (reuses FFA countdown with custom title)
+        start2v2Countdown(matchId, participants, instanceWorld, arena);
+    }
+
+    private void teleportTeam(Player p1, Player p2, Location spawn) {
+        // Offset players slightly so they don't overlap
+        Location loc1 = spawn.clone().add(1.5, 0, 0);
+        Location loc2 = spawn.clone().add(-1.5, 0, 0);
+        loc1.setYaw(spawn.getYaw());
+        loc1.setPitch(spawn.getPitch());
+        loc2.setYaw(spawn.getYaw());
+        loc2.setPitch(spawn.getPitch());
+        p1.teleport(loc1);
+        p2.teleport(loc2);
+    }
+
+    private void start2v2Countdown(UUID matchId, List<Player> participants, World world, ArenaTemplate arena) {
+        int seconds = plugin.getConfig().getInt("duels.countdown", 5);
+        for (Player p : participants) frozenPlayers.add(p.getUniqueId());
+
+        new BukkitRunnable() {
+            int remaining = seconds;
+
+            @Override
+            public void run() {
+                Set<UUID> alive = ffaMatches.get(matchId);
+                if (alive == null) { cancel(); return; }
+
+                List<Player> online = new ArrayList<>();
+                for (UUID uuid : alive) {
+                    Player p = Bukkit.getPlayer(uuid);
+                    if (p != null && p.isOnline()) online.add(p);
+                }
+
+                if (online.size() < 2) {
+                    for (UUID uuid : alive) frozenPlayers.remove(uuid);
+                    cancel();
+                    end2v2Match(matchId, null);
+                    return;
+                }
+
+                if (remaining > 0) {
+                    for (Player p : online) {
+                        sendTitle(p, "§e§l" + remaining, "§7¡Prepárate para el 2v2!");
+                        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.8f + (1.0f / seconds) * (seconds - remaining));
+                    }
+                    remaining--;
+                } else {
+                    for (UUID uuid : alive) frozenPlayers.remove(uuid);
+                    for (Player p : online) {
+                        sendTitle(p, "§c§l¡PELEA!", "§7¡2v2 — Elimina al equipo rival!");
+                        p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.2f);
+                        p.sendMessage(plugin.prefix() + "§c§l¡COMIENZA EL 2v2!");
+                    }
+                    plugin.getWallManager().animateOpen(arena.getName(), world);
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    /**
+     * Called when a player dies in a 2v2 match.
+     * If both teammates are dead, the other team wins.
+     */
+    public void handle2v2Death(Player dead, Player killer) {
+        UUID deadUUID = dead.getUniqueId();
+        UUID matchId = playerFFAMap.get(deadUUID);
+        if (matchId == null) return;
+
+        Set<UUID> alive = ffaMatches.get(matchId);
+        if (alive == null) return;
+
+        alive.remove(deadUUID);
+        ffaDeadSpectators.put(deadUUID, matchId);
+
+        // Switch to spectator
+        dead.setGameMode(GameMode.SPECTATOR);
+        dead.setAllowFlight(true);
+        dead.setFlying(true);
+
+        String worldName = ffaWorlds.get(matchId);
+        ArenaTemplate template = ffaTemplates.get(matchId);
+        if (worldName != null && template != null) {
+            World w = Bukkit.getWorld(worldName);
+            if (w != null) dead.teleport(template.getSpawn1(w).clone().add(0, 5, 0));
+        }
+
+        dead.sendMessage(plugin.prefix() + "§c¡Has sido eliminado! §7Observando a tu equipo...");
+        if (killer != null) {
+            dead.sendMessage(plugin.prefix() + "§7Eliminado por: §c" + killer.getName());
+        }
+
+        // Announce
+        for (UUID uuid : alive) {
+            Player p = Bukkit.getPlayer(uuid);
+            if (p != null) {
+                p.sendMessage(plugin.prefix() + "§c" + dead.getName() + " §7ha sido eliminado.");
+                if (killer != null && p.equals(killer)) {
+                    p.sendMessage(plugin.prefix() + "§a+1 Kill §7- Eliminaste a §c" + dead.getName());
+                }
+            }
+        }
+
+        // Check if an entire team is eliminated
+        Set<UUID> teamA = teamAMap.get(matchId);
+        Set<UUID> teamB = teamBMap.get(matchId);
+        if (teamA == null || teamB == null) return;
+
+        boolean teamAAlive = false, teamBAlive = false;
+        for (UUID uuid : teamA) { if (alive.contains(uuid)) { teamAAlive = true; break; } }
+        for (UUID uuid : teamB) { if (alive.contains(uuid)) { teamBAlive = true; break; } }
+
+        if (!teamAAlive) {
+            // Team A eliminated → Team B wins
+            end2v2Match(matchId, teamB);
+        } else if (!teamBAlive) {
+            // Team B eliminated → Team A wins
+            end2v2Match(matchId, teamA);
+        }
+    }
+
+    private void end2v2Match(UUID matchId, Set<UUID> winningTeam) {
+        Set<UUID> participants = ffaMatches.remove(matchId);
+        String worldName = ffaWorlds.remove(matchId);
+        ffaKits.remove(matchId);
+        ffaTemplates.remove(matchId);
+        Set<UUID> teamA = teamAMap.remove(matchId);
+        Set<UUID> teamB = teamBMap.remove(matchId);
+        is2v2Match.remove(matchId);
+
+        // Collect dead spectators
+        List<UUID> deadSpecs = new ArrayList<>();
+        ffaDeadSpectators.entrySet().removeIf(e -> {
+            if (e.getValue().equals(matchId)) { deadSpecs.add(e.getKey()); return true; }
+            return false;
+        });
+
+        // Build winner names for display
+        String winnerNames = "???";
+        if (winningTeam != null) {
+            StringBuilder sb = new StringBuilder();
+            for (UUID uuid : winningTeam) {
+                Player p = Bukkit.getPlayer(uuid);
+                if (sb.length() > 0) sb.append(" §7& §e");
+                sb.append(p != null ? p.getName() : uuid.toString().substring(0, 8));
+            }
+            winnerNames = sb.toString();
+        }
+
+        // Restore all living participants
+        if (participants != null) {
+            for (UUID uuid : participants) {
+                playerFFAMap.remove(uuid);
+                frozenPlayers.remove(uuid);
+                Player p = Bukkit.getPlayer(uuid);
+                if (p != null) {
+                    restorePlayer(p);
+                    p.teleport(plugin.getLobbySpawn());
+                    plugin.getScoreboardManager().restoreLobbyScoreboard(p);
+
+                    if (winningTeam != null) {
+                        if (winningTeam.contains(uuid)) {
+                            sendTitle(p, "§6§l¡VICTORIA!", "§7¡Tu equipo ha ganado el 2v2!");
+                            p.sendMessage(plugin.prefix() + "§6§l¡GANASTE EL 2v2! §a¡Felicidades!");
+                            p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+                        } else {
+                            p.sendMessage(plugin.prefix() + "§e" + winnerNames + " §7ha ganado el 2v2.");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Restore dead spectators
+        for (UUID specUUID : deadSpecs) {
+            playerFFAMap.remove(specUUID);
+            Player spec = Bukkit.getPlayer(specUUID);
+            if (spec != null) {
+                restorePlayer(spec);
+                spec.teleport(plugin.getLobbySpawn());
+                plugin.getScoreboardManager().restoreLobbyScoreboard(spec);
+                if (winningTeam != null) {
+                    if (winningTeam.contains(specUUID)) {
+                        sendTitle(spec, "§6§l¡VICTORIA!", "§7¡Tu equipo ha ganado el 2v2!");
+                        spec.sendMessage(plugin.prefix() + "§6§l¡GANASTE EL 2v2! §a¡Felicidades!");
+                        spec.playSound(spec.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+                    } else {
+                        spec.sendMessage(plugin.prefix() + "§e" + winnerNames + " §7ha ganado el 2v2.");
+                    }
+                }
+            }
+        }
+
+        // Destroy world
+        if (worldName != null) {
+            Bukkit.getScheduler().runTaskLater(plugin, () ->
+                    plugin.getArenaInstanceManager().destroyInstance(worldName), 60L);
+        }
+    }
+
+    /** Returns true if the given FFA match is actually a 2v2 */
+    public boolean is2v2(UUID matchId) {
+        return matchId != null && is2v2Match.contains(matchId);
+    }
+
+    /** Returns the teammate UUID of a player in a 2v2 match, or null */
+    public UUID getTeammate(UUID matchId, UUID playerUUID) {
+        if (matchId == null) return null;
+        Set<UUID> teamA = teamAMap.get(matchId);
+        Set<UUID> teamB = teamBMap.get(matchId);
+        if (teamA != null && teamA.contains(playerUUID)) {
+            for (UUID u : teamA) { if (!u.equals(playerUUID)) return u; }
+        }
+        if (teamB != null && teamB.contains(playerUUID)) {
+            for (UUID u : teamB) { if (!u.equals(playerUUID)) return u; }
+        }
+        return null;
+    }
+
+    /** Returns true if two players are on the same team in a 2v2 match */
+    public boolean areTeammates(UUID uuid1, UUID uuid2) {
+        UUID matchId = playerFFAMap.get(uuid1);
+        if (matchId == null || !is2v2Match.contains(matchId)) return false;
+        Set<UUID> teamA = teamAMap.get(matchId);
+        Set<UUID> teamB = teamBMap.get(matchId);
+        if (teamA != null && teamA.contains(uuid1) && teamA.contains(uuid2)) return true;
+        if (teamB != null && teamB.contains(uuid1) && teamB.contains(uuid2)) return true;
+        return false;
     }
 
     // ── Inner class: Player snapshot ───────────────────────────────────────
