@@ -1030,8 +1030,8 @@ public class BotCombatAI {
         ItemStack windItem = bot.getInventory().getItem(windSlot);
         if (windItem != null) windItem.setAmount(windItem.getAmount() - 1);
 
-        // ── Spawn a REAL WindCharge entity at the bot's feet ──
-        // This creates the actual wind charge explosion that launches the bot naturally
+        // ── Spawn a REAL WindCharge entity at the bot's feet for visuals ──
+        // BUT also apply manual velocity since explosions don't affect Citizens NPCs properly
         Location feetLoc = bot.getLocation().clone();
         try {
             org.bukkit.entity.WindCharge windCharge = bot.getWorld().spawn(
@@ -1043,15 +1043,31 @@ public class BotCombatAI {
             // Detonate after 1 tick so it explodes at the bot's feet
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (windCharge.isValid()) {
-                    // Explode at bot's feet — the natural explosion launches the bot upward
+                    // Explode at bot's feet — visual effect only
                     windCharge.explode();
                 }
             }, 1L);
         } catch (Exception e) {
-            // Fallback if WindCharge entity not available: manual launch
-            bot.setVelocity(new Vector(0, 1.4, 0));
+            // WindCharge entity not available - just use sound
             bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 1.0f, 1.0f);
         }
+
+        // ALWAYS apply manual launch since Citizens NPCs don't get launched by explosions
+        // Wind charge launches ~7-8 blocks upward
+        Vector launch = new Vector(0, 1.4, 0); // Strong upward velocity
+        // Slight horizontal toward target so we land near them
+        Vector toTarget = target.getLocation().toVector()
+                .subtract(bot.getLocation().toVector());
+        toTarget.setY(0);
+        if (toTarget.lengthSquared() > 0.01) {
+            toTarget.normalize().multiply(0.3);
+            launch.add(toTarget);
+        }
+        bot.setVelocity(launch);
+        
+        // Wind charge visual + sound
+        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 1.0f, 1.0f);
+        bot.getWorld().spawnParticle(Particle.CLOUD, bot.getLocation(), 20, 0.3, 0.1, 0.3, 0.05);
 
         // Track the peak Y for manual fall distance
         manualFallStartY = bot.getLocation().getY();
