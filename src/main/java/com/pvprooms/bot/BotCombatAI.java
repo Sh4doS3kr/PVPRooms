@@ -210,49 +210,62 @@ public class BotCombatAI {
     // MAIN COMBAT LOOP
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** Bot combat state — prevents conflicting actions */
+    private enum CombatState {
+        IDLE,           // Free to make decisions
+        MELEE,          // In melee range, swinging
+        ELYTRA_FLIGHT,  // Elytra dive/approach in progress — DO NOT INTERRUPT
+        BOW_DRAW,       // Drawing bow
+        CROSSBOW_LOAD,  // Loading crossbow
+        EATING,         // Eating golden apple
+        PEARL_THROW     // Pearl just thrown, brief cooldown
+    }
+    private CombatState combatState = CombatState.IDLE;
+
     private void startMainLoop() {
         mainTask = new BukkitRunnable() {
             @Override
             public void run() {
                 if (!isValid()) { stop(); return; }
-                
+
                 Player bot = getBotPlayer();
                 if (bot == null) return;
-                
+
                 double distance = bot.getLocation().distance(target.getLocation());
-                
-                // Update weapon type periodically
+
+                // ── NEVER interrupt these states ──
+                if (combatState == CombatState.ELYTRA_FLIGHT) return; // Elytra dive in progress
+                if (combatState == CombatState.BOW_DRAW)      return; // Drawing bow
+                if (combatState == CombatState.CROSSBOW_LOAD)  return; // Loading crossbow
+                if (combatState == CombatState.EATING)          return; // Eating
+                if (isEating || isBowDrawing || isCrossbowLoading || isUsingElytra) return;
+
+                // Update weapon type + track opponent
                 updateWeaponType(bot);
-                
-                // Track opponent state for smarter decisions
                 trackOpponentState(bot);
-                
-                // Decision making based on situation
-                if (isEating || isBowDrawing || isCrossbowLoading) return; // Don't interrupt eating/aiming
-                
-                // Shield management (raise/lower reactively)
+
+                // Shield logic (reactive — only in close combat)
                 handleShieldLogic(bot, distance);
-                
-                // Ender pearl to close gap if far + have pearls (smart gap close)
-                if (distance > 10 && distance <= 40 && shouldThrowPearl(bot, distance)) {
-                    throwEnderPearl(bot, distance);
-                    return;
-                }
-                
-                // Combat decisions based on distance and weapon
+
+                // ── Distance-based combat decisions ──
                 if (distance <= 4.0) {
                     handleMeleeCombat(bot, distance);
                 } else if (distance <= 8.0) {
                     handleMidRangeCombat(bot, distance);
-                } else if (distance <= 30.0) {
+                } else if (distance <= 50.0) {
+                    // Long range: elytra approach or pearl to close gap, then ranged
+                    // Pearl ONLY when not using elytra and with tight cooldowns
+                    if (!isUsingElytra && distance > 15 && distance <= 40
+                            && shouldThrowPearl(bot, distance)) {
+                        throwEnderPearl(bot, distance);
+                        return;
+                    }
                     handleLongRangeCombat(bot, distance);
                 } else {
-                    // Far away (>30 blocks) - use elytra if available, otherwise just sprint
-                    // NO TELEPORTING - bot walks/runs like a human
-                    if (hasElytra(bot) && hasFireworks(bot)) {
+                    // Very far (>50 blocks) — elytra approach or sprint
+                    if (hasElytra(bot) && hasFireworks(bot) && !isUsingElytra) {
                         handleElytraApproach(bot);
                     }
-                    // Movement is handled by startMovementLoop() with velocity
                 }
             }
         }.runTaskTimer(plugin, 1L, tickRate);
@@ -323,22 +336,25 @@ public class BotCombatAI {
     // ══════════════════════════════════════════════════════════════════════════
 
     private boolean shouldThrowPearl(Player bot, double distance) {
+        // NEVER pearl during elytra flight or any special state
+        if (isUsingElytra || elytraDiveActive) return false;
+        if (combatState != CombatState.IDLE) return false;
+
         long now = System.currentTimeMillis();
-        if (now - lastPearlThrow < 5000) return false; // 5s cooldown
+        if (now - lastPearlThrow < 8000) return false; // 8s cooldown (pearls are precious)
         if (findItem(bot.getInventory(), Material.ENDER_PEARL) == -1) return false;
 
-        // Higher difficulty = more likely to pearl
+        // Low chance — pro players don't spam pearls
         double pearlChance = switch (difficulty) {
-            case EASY     -> 0.02;
-            case MEDIUM   -> 0.06;
-            case HARD     -> 0.12;
-            case HACKER   -> 0.25;
-            case ADAPTIVE -> 0.10;
+            case EASY     -> 0.005;
+            case MEDIUM   -> 0.015;
+            case HARD     -> 0.04;
+            case HACKER   -> 0.08;
+            case ADAPTIVE -> 0.03;
         };
 
-        // More likely to pearl if target is running away or is low health
-        if (target.getHealth() < target.getMaxHealth() * 0.3) pearlChance *= 2.0;
-        if (distance > 20) pearlChance *= 1.5;
+        // Only pearl if target is running away AND far
+        if (distance > 25 && target.isSprinting()) pearlChance *= 2.0;
 
         return random.nextDouble() < pearlChance;
     }
@@ -914,116 +930,161 @@ public class BotCombatAI {
         }
     }
 
-    /**
-     * Elytra + Mace combo — pro-level dive attack:
-     * 1. Save current chestplate, equip elytra
-     * 2. Jump → start gliding
-     * 3. Firework boost straight UP for height
-     * 4. At peak, aim at target and dive with mace
-     * 5. Smash on landing, re-equip chestplate
-     */
+    // ══════════════════════════════════════════════════════════════════════════
+    // ELYTRA + MACE DIVE SYSTEM
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    // Pro-level elytra+mace dive in 5 phases:
+    //   Phase 1 (tick 0):    Equip elytra, equip mace, jump
+    //   Phase 2 (tick 5-6):  Start gliding (must be falling), firework boost UP
+    //   Phase 3 (tick 15-20): Second firework boost (mostly upward, slight towards target)
+    //   Phase 4 (tick 30):   Stop gliding, free-fall DIVE towards target
+    //   Phase 5 (tick 32-80): Track target, smash on contact
+    //   Cleanup:             Re-equip chestplate, switch to melee
+    //
+    // CRITICAL: combatState = ELYTRA_FLIGHT during entire sequence.
+    //           Main loop will NOT run pearl/bow/sneak/anything.
+    // ══════════════════════════════════════════════════════════════════════════
+
     private ItemStack savedChestplate = null;
+    private boolean elytraDiveActive = false; // extra guard for scheduled tasks
 
     private void handleElytraMaceCombo(Player bot) {
-        // Step 1 — Equip elytra (save current chestplate)
+        if (isUsingElytra || elytraDiveActive) return; // Already in flight
+        if (!bot.isOnGround()) return; // Must start from ground
+
+        // ── Phase 1: Equip elytra + mace, jump ──
         ItemStack chest = bot.getInventory().getChestplate();
         if (chest == null || chest.getType() != Material.ELYTRA) {
             int elytraSlot = findItem(bot.getInventory(), Material.ELYTRA);
             if (elytraSlot == -1) return;
             ItemStack elytra = bot.getInventory().getItem(elytraSlot);
-            savedChestplate = chest; // save for re-equip
+            savedChestplate = chest;
             bot.getInventory().setItem(elytraSlot, null);
             bot.getInventory().setChestplate(elytra);
         } else {
-            savedChestplate = null; // already wearing elytra
+            savedChestplate = null;
         }
 
-        // Step 2 — Equip mace in hand
         int maceSlot = findMace(bot.getInventory());
         if (maceSlot != -1) {
             maceSlot = hotbarSlot(bot.getInventory(), maceSlot);
             if (maceSlot != -1) bot.getInventory().setHeldItemSlot(maceSlot);
         }
 
-        // Step 3 — Jump upward
-        bot.setVelocity(new Vector(0, 0.42, 0));
+        // LOCK state — no other actions until dive finishes
+        combatState = CombatState.ELYTRA_FLIGHT;
         isUsingElytra = true;
+        elytraDiveActive = true;
 
-        // Step 4 — Start gliding 3 ticks after jump (player must be falling)
+        // Jump with a higher velocity so the bot is clearly airborne by tick 5
+        bot.setVelocity(new Vector(0, 0.75, 0));
+
+        // ── Phase 2: Start gliding + first firework boost (tick 5) ──
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) { finishElytraCombo(); return; }
+            if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
             if (b == null) { finishElytraCombo(); return; }
 
+            // Bot should be falling by now — activate glide
             b.setGliding(true);
 
-            // Firework boost #1 — straight UP for altitude
+            // First firework: straight UP for maximum altitude
             if (hasFireworks(b)) {
-                boostElytra(b, new Vector(0, 3.0, 0));
+                boostElytra(b, new Vector(0, 3.5, 0));
+            } else {
+                // No fireworks — abort dive, just let bot fall
+                finishElytraCombo();
             }
-        }, 4L);
+        }, 5L);
 
-        // Step 5 — Second firework boost at peak (more height)
+        // ── Phase 3: Second firework boost — mostly UP, slight toward target (tick 18) ──
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) { finishElytraCombo(); return; }
+            if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
             if (b == null || !b.isGliding()) { finishElytraCombo(); return; }
 
             if (hasFireworks(b)) {
-                // Slight forward component towards target so we don't overshoot vertically
                 Vector toTarget = target.getLocation().toVector()
                         .subtract(b.getLocation().toVector()).normalize();
-                Vector boost = toTarget.multiply(0.5).setY(2.5);
+                // 80% upward, 20% toward target so we end up above them
+                Vector boost = new Vector(toTarget.getX() * 0.6, 3.0, toTarget.getZ() * 0.6);
                 boostElytra(b, boost);
             }
-        }, 14L);
 
-        // Step 6 — At peak, stop gliding and DIVE towards target
+            // Look at target during ascent
+            lookAt(b, target.getLocation());
+        }, 18L);
+
+        // ── Phase 4: Stop gliding, start free-fall dive (tick 32) ──
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) { finishElytraCombo(); return; }
+            if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
             if (b == null) { finishElytraCombo(); return; }
 
+            // Stop gliding — bot now free-falls (accumulates fall distance for mace damage)
             b.setGliding(false);
 
-            // Aim mace at target and dive
+            // Aim at target
             lookAt(b, target.getLocation());
 
+            // Calculate dive vector: strong forward + downward
             Vector dive = target.getLocation().toVector()
-                    .subtract(b.getLocation().toVector()).normalize();
-            // Strong downward + forward momentum for maximum fall distance
-            double height = b.getLocation().getY() - target.getLocation().getY();
-            double diveSpeed = Math.max(1.5, Math.min(height * 0.3, 3.0));
-            dive.multiply(diveSpeed);
-            if (dive.getY() > -0.5) dive.setY(-1.0); // Ensure downward
-            b.setVelocity(dive);
-        }, 28L);
+                    .subtract(b.getLocation().toVector());
+            double horizDist = Math.sqrt(dive.getX() * dive.getX() + dive.getZ() * dive.getZ());
+            dive.normalize();
 
-        // Step 7 — Check for smash every 2 ticks during dive
-        for (int tick = 30; tick <= 60; tick += 2) {
+            // Scale: more horizontal if target is far horizontally, always strongly downward
+            double speed = Math.max(1.2, Math.min(horizDist * 0.15, 2.5));
+            dive.multiply(speed);
+            // Ensure strong downward component for fall distance
+            if (dive.getY() > -0.8) dive.setY(-1.2);
+            b.setVelocity(dive);
+        }, 32L);
+
+        // ── Phase 5: Track + smash every 2 ticks during dive (tick 34-80) ──
+        for (int tick = 34; tick <= 80; tick += 2) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (!isValid() || !isUsingElytra) return;
+                if (!elytraDiveActive || !isValid()) return;
                 Player b = getBotPlayer();
                 if (b == null) return;
 
-                // Keep aiming at target during dive
+                // Keep aiming at target while diving
                 lookAt(b, target.getLocation());
 
+                // Gently steer toward target mid-dive (small velocity correction)
+                if (!b.isOnGround()) {
+                    Vector current = b.getVelocity();
+                    Vector toTarget = target.getLocation().toVector()
+                            .subtract(b.getLocation().toVector()).normalize();
+                    // Blend: 85% current velocity + 15% toward target
+                    Vector corrected = current.multiply(0.85).add(toTarget.multiply(0.25));
+                    if (corrected.getY() > -0.3) corrected.setY(Math.min(current.getY(), -0.3));
+                    b.setVelocity(corrected);
+                }
+
+                // Check if close enough to smash
                 double dist = b.getLocation().distance(target.getLocation());
                 if (dist <= 4.5 && b.getFallDistance() > 1.5) {
                     performMaceSmash(b);
+                    finishElytraCombo();
+                    return;
+                }
+
+                // If bot landed on ground without hitting target, abort
+                if (b.isOnGround() && b.getFallDistance() < 0.1) {
                     finishElytraCombo();
                 }
             }, tick);
         }
 
-        // Step 8 — Safety timeout: re-equip chestplate after max dive time
+        // ── Safety timeout: always clean up by tick 85 ──
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            finishElytraCombo();
-        }, 65L);
+            if (elytraDiveActive) finishElytraCombo();
+        }, 85L);
     }
 
-    /** Boost elytra flight with a firework (consume + velocity + visual). */
+    /** Boost elytra with firework: apply velocity, consume item, visual+sound. */
     private void boostElytra(Player bot, Vector direction) {
         int fwSlot = findItem(bot.getInventory(), Material.FIREWORK_ROCKET);
         if (fwSlot == -1) return;
@@ -1036,26 +1097,28 @@ public class BotCombatAI {
         bot.getWorld().spawn(bot.getLocation(), Firework.class, f -> f.detonate());
     }
 
-    /** Clean up after elytra combo: stop gliding, re-equip chestplate. */
+    /** Clean up after elytra dive: stop gliding, re-equip armor, unlock state. */
     private void finishElytraCombo() {
+        elytraDiveActive = false;
         isUsingElytra = false;
+        combatState = CombatState.IDLE;
+
         Player b = getBotPlayer();
         if (b == null) return;
 
         if (b.isGliding()) b.setGliding(false);
 
-        // Re-equip saved chestplate (swap elytra back to inventory)
+        // Re-equip saved chestplate
         if (savedChestplate != null) {
             ItemStack elytra = b.getInventory().getChestplate();
             b.getInventory().setChestplate(savedChestplate);
-            // Put elytra back in inventory
             if (elytra != null && elytra.getType() == Material.ELYTRA) {
                 b.getInventory().addItem(elytra);
             }
             savedChestplate = null;
         }
 
-        // Switch back to melee weapon
+        // Switch back to melee
         selectBestWeapon(b);
     }
 
@@ -1322,26 +1385,35 @@ public class BotCombatAI {
     // ══════════════════════════════════════════════════════════════════════════
 
     private void handleLongRangeCombat(Player bot, double distance) {
-        // Options: crossbow, bow, elytra approach, chase
-        
-        // Prefer crossbow (higher damage per shot, can be pre-loaded)
-        if (hasCrossbow(bot) && shouldShootCrossbow()) {
-            handleCrossbowShot(bot, distance);
+        // NEVER do anything during elytra flight
+        if (isUsingElytra || elytraDiveActive) return;
+
+        // Priority 1: Elytra+Mace dive if we have both (best long-range engage)
+        if (findMace(bot.getInventory()) != -1 && hasElytra(bot) && hasFireworks(bot)
+                && distance > 8 && shouldUseElytra(distance)) {
+            handleElytraMaceCombo(bot);
             return;
         }
-        
-        if (hasOnlyBow(bot) && shouldShootBow()) {
-            handleBowShot(bot, distance);
-            return;
-        }
-        
-        if (hasElytra(bot) && shouldUseElytra(distance)) {
+
+        // Priority 2: Elytra approach (close gap fast, no mace needed)
+        if (hasElytra(bot) && hasFireworks(bot) && distance > 20 && shouldUseElytra(distance)) {
             handleElytraApproach(bot);
             return;
         }
-        
-        // Default: chase - movement handled by startMovementLoop()
-        // NO Navigator - causes teleporting
+
+        // Priority 3: Crossbow (higher damage per shot)
+        if (hasCrossbow(bot) && shouldShootCrossbow() && distance > 8) {
+            handleCrossbowShot(bot, distance);
+            return;
+        }
+
+        // Priority 4: Bow
+        if (hasOnlyBow(bot) && shouldShootBow() && distance > 8) {
+            handleBowShot(bot, distance);
+            return;
+        }
+
+        // Default: sprint chase — movement loop handles the actual walking
         bot.setSprinting(true);
     }
 
@@ -1363,6 +1435,7 @@ public class BotCombatAI {
         bot.getInventory().setHeldItemSlot(cbSlot);
 
         isCrossbowLoading = true;
+        combatState = CombatState.CROSSBOW_LOAD;
 
         // Crossbow load time (vanilla = 25 ticks, Quick Charge reduces)
         int loadTime = switch (difficulty) {
@@ -1404,6 +1477,7 @@ public class BotCombatAI {
             bot.swingMainHand();
 
             isCrossbowLoading = false;
+            combatState = CombatState.IDLE;
             lastCrossbowShot = System.currentTimeMillis();
 
             // Switch back to melee weapon after shooting
@@ -1455,10 +1529,11 @@ public class BotCombatAI {
         };
         
         isBowDrawing = true;
+        combatState = CombatState.BOW_DRAW;
 
         // Simulate bow draw and release
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) { isBowDrawing = false; return; }
+            if (!isValid()) { isBowDrawing = false; combatState = CombatState.IDLE; return; }
             
             // Recalculate at release time in case target moved
             double dist2 = bot.getLocation().distance(target.getLocation());
@@ -1484,6 +1559,7 @@ public class BotCombatAI {
             
             bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_ARROW_SHOOT, 1.0f, 1.0f);
             isBowDrawing = false;
+            combatState = CombatState.IDLE;
             lastBowShot = System.currentTimeMillis();
 
             // Switch back to melee weapon
@@ -1537,8 +1613,9 @@ public class BotCombatAI {
 
     private void handleElytraApproach(Player bot) {
         long now = System.currentTimeMillis();
-        if (now - lastElytraUse < 3000) return;
+        if (now - lastElytraUse < 4000) return;
         if (!bot.isOnGround()) return;
+        if (isUsingElytra || elytraDiveActive) return;
 
         // Equip elytra (save chestplate)
         ItemStack chest = bot.getInventory().getChestplate();
@@ -1551,14 +1628,18 @@ public class BotCombatAI {
             bot.getInventory().setChestplate(elytra);
         }
 
-        // Jump
-        bot.setVelocity(new Vector(0, 0.42, 0));
+        // LOCK state
+        combatState = CombatState.ELYTRA_FLIGHT;
         isUsingElytra = true;
+        elytraDiveActive = true;
         lastElytraUse = now;
+
+        // Jump
+        bot.setVelocity(new Vector(0, 0.75, 0));
 
         // Start gliding + first boost towards target
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) { finishElytraCombo(); return; }
+            if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
             if (b == null) { finishElytraCombo(); return; }
 
@@ -1567,41 +1648,36 @@ public class BotCombatAI {
             if (hasFireworks(b)) {
                 Vector toTarget = target.getLocation().toVector()
                         .subtract(b.getLocation().toVector()).normalize();
-                toTarget.setY(Math.max(toTarget.getY(), 0.3)); // Keep some lift
-                boostElytra(b, toTarget.multiply(2.5));
+                toTarget.setY(Math.max(toTarget.getY(), 0.4));
+                boostElytra(b, toTarget.multiply(2.8));
             }
-        }, 4L);
+        }, 5L);
 
-        // Additional boosts every ~10 ticks, aimed at target
-        for (int i = 1; i <= 4; i++) {
+        // Additional boosts every 15 ticks, aimed at target
+        for (int i = 1; i <= 3; i++) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (!isValid() || !isUsingElytra) return;
+                if (!elytraDiveActive || !isValid()) return;
                 Player b = getBotPlayer();
                 if (b == null || !b.isGliding()) return;
 
                 double dist = b.getLocation().distance(target.getLocation());
-                // Stop gliding if close enough
-                if (dist < 5) {
-                    finishElytraCombo();
-                    return;
-                }
+                if (dist < 6) { finishElytraCombo(); return; }
 
                 if (hasFireworks(b)) {
                     Vector toTarget = target.getLocation().toVector()
                             .subtract(b.getLocation().toVector()).normalize();
-                    // Descend as we approach
-                    if (dist < 15) toTarget.setY(Math.min(toTarget.getY(), -0.2));
-                    else toTarget.setY(Math.max(toTarget.getY(), 0.15));
-                    boostElytra(b, toTarget.multiply(2.2));
+                    if (dist < 15) toTarget.setY(Math.min(toTarget.getY(), -0.15));
+                    else toTarget.setY(Math.max(toTarget.getY(), 0.2));
+                    boostElytra(b, toTarget.multiply(2.5));
                 }
-
-                // Keep looking at target
                 lookAt(b, target.getLocation());
-            }, 4L + 12L * i);
+            }, 5L + 15L * i);
         }
 
         // Safety timeout
-        Bukkit.getScheduler().runTaskLater(plugin, this::finishElytraCombo, 70L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (elytraDiveActive) finishElytraCombo();
+        }, 75L);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -1610,119 +1686,156 @@ public class BotCombatAI {
 
     private void startMovementLoop() {
         movementTask = new BukkitRunnable() {
+            private int tickCounter = 0;
+
             @Override
             public void run() {
                 if (!isValid()) return;
-                
+                tickCounter++;
+
                 Player bot = getBotPlayer();
                 if (bot == null) return;
-                
+
+                // ── NEVER move during elytra flight or bow draw ──
+                if (isUsingElytra || elytraDiveActive) return;
+                if (combatState == CombatState.ELYTRA_FLIGHT) return;
+
                 double distance = bot.getLocation().distance(target.getLocation());
-                double health = bot.getHealth();
-                double maxHealth = bot.getMaxHealth();
-                double healthPercent = (health / maxHealth) * 100;
-                
-                // ALWAYS move towards target when not eating or retreating
-                if (!isEating && !isRetreating && !isUsingElytra) {
-                    // Move manually with velocity - NO Navigator (causes teleporting)
+                double healthPercent = (bot.getHealth() / bot.getMaxHealth()) * 100;
+
+                // ── Movement: walk/sprint towards target ──
+                if (!isEating && !isRetreating) {
                     moveTowardsTarget(bot, distance);
                 }
-                
-                // Sneak/shift management (for combos, dodging)
-                handleSneaking(bot, distance);
-                
-                // Random jumps while moving (PvP style)
-                handleJumping(bot, distance);
-                
-                // Retreat if low health
-                if (healthPercent < 30 && !isEating) {
-                    if (!isRetreating && random.nextDouble() < 0.3) {
+
+                // ── Jumping: only over obstacles (every 2 ticks to avoid spam) ──
+                if (tickCounter % 2 == 0) {
+                    handleJumping(bot, distance);
+                }
+
+                // ── Sneaking: VERY rare, only tap-shift to reduce KB (every 4 ticks) ──
+                if (tickCounter % 4 == 0) {
+                    handleSneaking(bot, distance);
+                }
+
+                // ── Retreat when very low HP ──
+                if (healthPercent < 25 && !isEating && !isRetreating) {
+                    if (random.nextDouble() < 0.08) { // Low chance per tick
                         isRetreating = true;
                         retreat(bot);
+                        // Auto-cancel retreat after ~1 second
+                        Bukkit.getScheduler().runTaskLater(plugin, () -> isRetreating = false, 20L);
                     }
-                } else {
-                    isRetreating = false;
                 }
-                
-                // W-tap periodically during combat
-                if (distance <= 4 && shouldWTap()) {
+
+                // ── W-tap for KB: only in melee, rare (every 3 ticks) ──
+                if (tickCounter % 3 == 0 && distance <= 4 && distance > 1.5 && shouldWTap()) {
                     performWTap(bot);
                 }
-                
-                // Block placement for positioning
-                if (shouldPlaceBlock(bot, distance)) {
+
+                // ── Block placement: very situational (every 5 ticks) ──
+                if (tickCounter % 5 == 0 && shouldPlaceBlock(bot, distance)) {
                     placeBlock(bot);
                 }
             }
-        }.runTaskTimer(plugin, 1L, 1L); // Run EVERY tick for smooth movement
+        }.runTaskTimer(plugin, 1L, 1L);
     }
 
     /**
-     * Moves the bot towards the target using teleportation with small steps.
-     * This prevents the "flying" behavior caused by velocity manipulation.
-     * 
-     * Movement is done by teleporting small distances while respecting gravity.
+     * Human-like movement via small teleport steps.
+     * - Sprint when far, walk when close
+     * - Circle-strafe only in melee range
+     * - Step up 1-block obstacles automatically
+     * - Don't move into walls
+     * - Apply gravity when airborne (but still allow horizontal drift)
      */
     private void moveTowardsTarget(Player bot, double distance) {
-        if (distance < 2.0) return;
+        // Don't crowd the target — stop at comfortable melee range
+        if (distance < 1.8) return;
 
-        // Apply gravity manually when airborne (Player entities are client-driven normally)
+        Location botLoc = bot.getLocation();
+        Location targetLoc = target.getLocation();
+
+        // Look at target (smooth rotation)
+        lookAt(bot, targetLoc);
+
+        // If airborne, let vanilla gravity work but allow slight horizontal drift
         if (!bot.isOnGround()) {
+            // Don't teleport while in air — just let physics handle it
+            // But apply tiny horizontal correction toward target
             Vector vel = bot.getVelocity();
-            vel.setY(Math.max(vel.getY() - 0.08, -3.92));
-            bot.setVelocity(vel);
+            double hdx = targetLoc.getX() - botLoc.getX();
+            double hdz = targetLoc.getZ() - botLoc.getZ();
+            double hlen = Math.sqrt(hdx * hdx + hdz * hdz);
+            if (hlen > 0.5) {
+                vel.setX(vel.getX() + (hdx / hlen) * 0.02);
+                vel.setZ(vel.getZ() + (hdz / hlen) * 0.02);
+                bot.setVelocity(vel);
+            }
             return;
         }
 
-        Location targetLoc = target.getLocation();
-
-        // Look at target FIRST so the following bot.getLocation() returns the new yaw/pitch
-        lookAt(bot, targetLoc);
-
-        // Capture location AFTER lookAt so yaw is correct in the movement teleport
-        Location botLoc = bot.getLocation();
+        // Re-read location after lookAt
+        botLoc = bot.getLocation();
 
         double dx = targetLoc.getX() - botLoc.getX();
         double dz = targetLoc.getZ() - botLoc.getZ();
         double horizontalDist = Math.sqrt(dx * dx + dz * dz);
         if (horizontalDist < 0.1) return;
 
-        dx /= horizontalDist;
-        dz /= horizontalDist;
+        // Normalize
+        double ndx = dx / horizontalDist;
+        double ndz = dz / horizontalDist;
 
+        // Speed: sprint when far (>3.5), walk when close
         double speed;
-        if (distance > 4) {
+        if (distance > 3.5) {
             bot.setSprinting(true);
             isSprinting = true;
-            speed = 0.22;
+            // Vanilla sprint speed: 5.612 m/s = 0.2806 blocks/tick
+            speed = switch (difficulty) {
+                case EASY     -> 0.18;
+                case MEDIUM   -> 0.22;
+                case HARD     -> 0.26;
+                case HACKER   -> 0.28;
+                case ADAPTIVE -> 0.24;
+            };
         } else {
             bot.setSprinting(false);
             isSprinting = false;
-            speed = 0.16;
+            // Vanilla walk speed: 4.317 m/s = 0.2159 blocks/tick
+            speed = switch (difficulty) {
+                case EASY     -> 0.12;
+                case MEDIUM   -> 0.15;
+                case HARD     -> 0.18;
+                case HACKER   -> 0.21;
+                case ADAPTIVE -> 0.16;
+            };
         }
 
-        // Integrate strafe into the movement vector (circle-strafing)
+        // Strafe only during close combat (circle-strafing like a pro player)
         double strafeSpeed = 0;
-        if (distance <= 4.5 && !isRetreating) {
+        if (distance <= 4.5 && distance > 1.8 && !isRetreating) {
             long now = System.currentTimeMillis();
-            if (now - lastStrafeChange > 700 + random.nextInt(800)) {
-                if (random.nextDouble() < 0.35) {
+            // Change strafe direction every 600-1400ms (human-like)
+            if (now - lastStrafeChange > 600 + random.nextInt(800)) {
+                if (random.nextDouble() < strafeChance) {
                     strafeDirection *= -1;
                     lastStrafeChange = now;
                 }
             }
             strafeSpeed = switch (difficulty) {
-                case EASY     -> 0.06;
-                case MEDIUM   -> 0.09;
-                case HARD     -> 0.13;
-                case HACKER   -> 0.20;
-                case ADAPTIVE -> 0.11;
+                case EASY     -> 0.04;
+                case MEDIUM   -> 0.07;
+                case HARD     -> 0.10;
+                case HACKER   -> 0.14;
+                case ADAPTIVE -> 0.08;
             } * strafeDirection;
         }
 
-        // Forward + perpendicular strafe combined
-        double finalDx = dx * speed + (-dz) * strafeSpeed;
-        double finalDz = dz * speed + ( dx) * strafeSpeed;
+        // Combine forward movement + perpendicular strafe
+        double finalDx = ndx * speed + (-ndz) * strafeSpeed;
+        double finalDz = ndz * speed + ( ndx) * strafeSpeed;
 
         double newX = botLoc.getX() + finalDx;
         double newZ = botLoc.getZ() + finalDz;
@@ -1730,13 +1843,33 @@ public class BotCombatAI {
         Location newLoc = new Location(botLoc.getWorld(), newX, botLoc.getY(), newZ,
                 botLoc.getYaw(), botLoc.getPitch());
 
+        // Step-up logic: if block at feet is solid, try stepping up 1 block
         Block blockAtFeet = newLoc.getBlock();
         if (blockAtFeet.getType().isSolid()) {
             Location stepUp = newLoc.clone().add(0, 1, 0);
-            if (!stepUp.getBlock().getType().isSolid()) {
+            Block headBlock = stepUp.clone().add(0, 1, 0).getBlock();
+            if (!stepUp.getBlock().getType().isSolid() && !headBlock.getType().isSolid()) {
                 newLoc = stepUp;
             } else {
-                return;
+                return; // Can't move there — wall
+            }
+        }
+
+        // Check there's ground below (don't walk off cliffs unless sprinting to target)
+        Block below = newLoc.clone().add(0, -1, 0).getBlock();
+        if (!below.getType().isSolid() && distance > 5) {
+            // Might be a cliff — be cautious unless target is close
+            Block twoBelow = newLoc.clone().add(0, -2, 0).getBlock();
+            if (!twoBelow.getType().isSolid()) return; // Too high drop
+        }
+
+        // Snap to ground — if there's air below, drop down
+        if (!newLoc.clone().add(0, -1, 0).getBlock().getType().isSolid()
+                && newLoc.clone().add(0, -1, 0).getBlock().getType() == Material.AIR) {
+            // Check if we can drop 1 block
+            Location dropped = newLoc.clone().add(0, -1, 0);
+            if (dropped.clone().add(0, -1, 0).getBlock().getType().isSolid()) {
+                newLoc = dropped;
             }
         }
 
@@ -1782,86 +1915,82 @@ public class BotCombatAI {
         }
     }
 
+    /**
+     * Sneaking — PRO PLAYER STYLE:
+     * - NEVER hold shift randomly. That looks like a noob.
+     * - Only quick tap-shift (1-2 ticks) right after getting hit to reduce knockback.
+     * - Higher difficulties tap more consistently.
+     */
+    private double lastBotHealth = 20.0; // Track bot health to detect when we get hit
+
     private void handleSneaking(Player bot, double distance) {
+        if (isSneaking || isEating || distance > 5) return;
+
         long now = System.currentTimeMillis();
-        if (now - lastSneak < 300) return;
-        
-        // Sneak chance based on difficulty (for reduce knockback, mind games)
-        double sneakChance = switch(difficulty) {
-            case EASY -> 0.02;
-            case MEDIUM -> 0.08;
-            case HARD -> 0.15;
-            case HACKER -> 0.25;
-            case ADAPTIVE -> this.sneakChance;
-        };
-        
-        // Sneak randomly during close combat (reduces knockback taken)
-        if (distance <= 4 && !isEating && !isRetreating) {
-            if (!isSneaking && random.nextDouble() < sneakChance) {
+        if (now - lastSneak < 800) return; // Min 800ms between shift-taps
+
+        double currentHealth = bot.getHealth();
+
+        // Only shift-tap if we JUST took damage (health dropped since last check)
+        if (currentHealth < lastBotHealth - 0.5 && distance <= 4.5) {
+            // Chance to shift-tap based on difficulty
+            double tapChance = switch (difficulty) {
+                case EASY     -> 0.0;   // Noobs don't know this trick
+                case MEDIUM   -> 0.08;  // Rarely
+                case HARD     -> 0.20;  // Sometimes (good players)
+                case HACKER   -> 0.45;  // Almost always
+                case ADAPTIVE -> this.sneakChance * 0.5;
+            };
+
+            if (random.nextDouble() < tapChance) {
                 bot.setSneaking(true);
                 isSneaking = true;
                 lastSneak = now;
-                
-                // Stop sneaking after short duration
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (isValid() && isSneaking) {
-                        getBotPlayer().setSneaking(false);
-                        isSneaking = false;
-                    }
-                }, 3L + random.nextInt(5));
-            }
-        }
-        
-        // Quick sneak when getting hit (reduce KB)
-        if (target.getLastDamageCause() != null && distance <= 3) {
-            if (random.nextDouble() < sneakChance * 2) {
-                bot.setSneaking(true);
-                isSneaking = true;
+
+                // Release after 1-2 ticks (instant tap, not held)
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     if (isValid()) {
                         getBotPlayer().setSneaking(false);
                         isSneaking = false;
                     }
-                }, 2L);
+                }, 1L + (random.nextInt(2))); // 1-2 ticks only
             }
         }
+
+        lastBotHealth = currentHealth;
     }
 
+    /**
+     * Jumping — HUMAN PRO STYLE:
+     * - Jump ONLY to clear obstacles (block in front of bot).
+     * - NO random bunny-hopping. Pro players don't spam spacebar.
+     * - Crit jumps are handled in handleSwordAttack/handleAxeAttack, NOT here.
+     */
     private void handleJumping(Player bot, double distance) {
-        long now = System.currentTimeMillis();
-        // Much longer cooldown between jumps (was 400, now 1500+)
-        long jumpCooldown = switch(difficulty) {
-            case EASY -> 3000;
-            case MEDIUM -> 2000;
-            case HARD -> 1500;
-            case HACKER -> 1000;
-            case ADAPTIVE -> 1800;
-        };
-        if (now - lastJump < jumpCooldown) return;
         if (!bot.isOnGround()) return;
-        
-        // Much lower jump chance
-        double jumpChance = switch(difficulty) {
-            case EASY -> 0.02;
-            case MEDIUM -> 0.05;
-            case HARD -> 0.08;
-            case HACKER -> 0.15;
-            case ADAPTIVE -> this.jumpChance;
-        };
-        
-        // Only jump over obstacles - this is necessary movement
-        Block inFront = bot.getLocation().add(bot.getLocation().getDirection().multiply(1)).getBlock();
-        if (inFront.getType().isSolid()) {
-            bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
-            lastJump = now;
-            return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastJump < 600) return; // Min 600ms between jumps
+
+        // Check if there's a solid block in front at knee level
+        Vector facing = bot.getLocation().getDirection().clone();
+        facing.setY(0);
+        if (facing.lengthSquared() < 0.01) return;
+        facing.normalize();
+
+        Location kneeCheck = bot.getLocation().clone().add(facing.multiply(0.8));
+        Block blockInFront = kneeCheck.getBlock();
+
+        if (blockInFront.getType().isSolid()) {
+            // Check if we can actually clear it (no block above the obstacle)
+            Block aboveObstacle = kneeCheck.clone().add(0, 1, 0).getBlock();
+            Block headClearance = kneeCheck.clone().add(0, 2, 0).getBlock();
+            if (!aboveObstacle.getType().isSolid() || !headClearance.getType().isSolid()) {
+                bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
+                lastJump = now;
+            }
         }
-        
-        // Occasional bhop while sprinting (very rare)
-        if (isSprinting && distance > 5 && distance < 15 && random.nextDouble() < jumpChance) {
-            bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
-            lastJump = now;
-        }
+        // NO random jumps — everything else is handled in attack methods
     }
 
     private void performStrafe(Player bot) {
@@ -1917,23 +2046,38 @@ public class BotCombatAI {
     }
 
     private void retreat(Player bot) {
-        // Move away from target (human-like speed)
-        double retreatSpeed = switch(difficulty) {
-            case EASY -> 0.2;
-            case MEDIUM -> 0.25;
-            case HARD -> 0.3;    // Human-like
-            case HACKER -> 0.4;
-            case ADAPTIVE -> 0.28;
+        if (!bot.isOnGround()) return;
+
+        // Teleport-based backward movement (same system as moveTowardsTarget but AWAY)
+        Location botLoc = bot.getLocation();
+        Location targetLoc = target.getLocation();
+
+        double dx = botLoc.getX() - targetLoc.getX();
+        double dz = botLoc.getZ() - targetLoc.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 0.1) return;
+
+        double retreatSpeed = switch (difficulty) {
+            case EASY     -> 0.14;
+            case MEDIUM   -> 0.18;
+            case HARD     -> 0.22;
+            case HACKER   -> 0.26;
+            case ADAPTIVE -> 0.20;
         };
-        
-        Vector away = bot.getLocation().toVector()
-                .subtract(target.getLocation().toVector())
-                .normalize()
-                .multiply(retreatSpeed);
-        away.setY(0);
-        
-        bot.setVelocity(bot.getVelocity().add(away));
-        
+
+        double ndx = (dx / len) * retreatSpeed;
+        double ndz = (dz / len) * retreatSpeed;
+
+        Location newLoc = new Location(botLoc.getWorld(),
+                botLoc.getX() + ndx, botLoc.getY(), botLoc.getZ() + ndz,
+                botLoc.getYaw(), botLoc.getPitch());
+
+        // Don't retreat into walls
+        if (newLoc.getBlock().getType().isSolid()) return;
+
+        bot.teleport(newLoc);
+        bot.setSprinting(true);
+
         // Try to heal while retreating
         tryHeal(bot);
     }
@@ -2631,8 +2775,14 @@ public class BotCombatAI {
     }
 
     private boolean shouldUseElytra(double distance) {
-        return distance > 15 && random.nextDouble() < 0.3 
-                && System.currentTimeMillis() - lastElytraUse > 5000;
+        if (isUsingElytra || elytraDiveActive) return false;
+        if (combatState != CombatState.IDLE) return false;
+        long now = System.currentTimeMillis();
+        // 6s cooldown between elytra uses
+        if (now - lastElytraUse < 6000) return false;
+        // Higher chance the farther the target is
+        double chance = distance > 25 ? 0.15 : 0.06;
+        return random.nextDouble() < chance;
     }
 
     public BotDifficulty getDifficulty() { return difficulty; }
