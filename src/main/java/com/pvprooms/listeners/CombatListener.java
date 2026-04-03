@@ -4,20 +4,27 @@ import com.pvprooms.PvPRoomsPro;
 import com.pvprooms.model.Duel;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.block.Block;
+import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerAnimationType;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
@@ -259,6 +266,77 @@ public class CombatListener implements Listener {
         if (duel.isSpectator(player.getUniqueId())) {
             event.setCancelled(true);
         }
+    }
+
+    // ── Fast crystal placement ──────────────────────────────────────────────
+
+    /**
+     * Allows instant End Crystal placement in crystal kit duels.
+     * Intercepts right-click on obsidian/bedrock, manually spawns the crystal
+     * entity, removes the item, and resets the placement cooldown to zero.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onCrystalPlace(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (event.getHand() != EquipmentSlot.HAND) return;
+
+        Player player = event.getPlayer();
+        ItemStack held = player.getInventory().getItemInMainHand();
+        if (held.getType() != Material.END_CRYSTAL) return;
+
+        // Only in crystal kit duels/FFA/bot
+        if (!isInCrystalMatch(player)) return;
+
+        Block clicked = event.getClickedBlock();
+        if (clicked == null) return;
+        Material blockType = clicked.getType();
+        if (blockType != Material.OBSIDIAN && blockType != Material.BEDROCK) return;
+
+        // Check space above — need 2 blocks of air for the crystal entity
+        Block above1 = clicked.getRelative(org.bukkit.block.BlockFace.UP);
+        Block above2 = above1.getRelative(org.bukkit.block.BlockFace.UP);
+        if (!above1.getType().isAir() && above1.getType() != Material.FIRE) return;
+        if (!above2.getType().isAir() && above2.getType() != Material.FIRE) return;
+
+        // Check no existing crystal at this location
+        Location spawnLoc = clicked.getLocation().add(0.5, 1.0, 0.5);
+        boolean crystalExists = clicked.getWorld().getNearbyEntities(spawnLoc, 0.5, 0.5, 0.5).stream()
+                .anyMatch(e -> e instanceof EnderCrystal);
+        if (crystalExists) return;
+
+        // Cancel vanilla placement and do it manually (instant)
+        event.setCancelled(true);
+
+        // Spawn crystal
+        EnderCrystal crystal = (EnderCrystal) clicked.getWorld().spawnEntity(spawnLoc, EntityType.END_CRYSTAL);
+        crystal.setShowingBottom(false);
+
+        // Consume one crystal from hand
+        held.setAmount(held.getAmount() - 1);
+
+        // Reset placement cooldown so next placement is instant
+        player.setCooldown(Material.END_CRYSTAL, 0);
+
+        // Swing arm for visual feedback
+        player.swingMainHand();
+    }
+
+    /** Checks if a player is in a crystal kit match (duel, FFA, or bot) */
+    private boolean isInCrystalMatch(Player player) {
+        UUID uuid = player.getUniqueId();
+
+        Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
+        if (duel != null && "crystal".equalsIgnoreCase(duel.getKitName())) return true;
+
+        String ffaKit = plugin.getDuelManager().getFFAKit(uuid);
+        if ("crystal".equalsIgnoreCase(ffaKit)) return true;
+
+        if (plugin.getBotManager() != null && plugin.getBotManager().isInBotDuel(uuid)) {
+            var botDuel = plugin.getBotManager().getBotDuel(uuid);
+            if (botDuel != null && "crystal".equalsIgnoreCase(botDuel.kitName)) return true;
+        }
+
+        return false;
     }
 
     // ── Utility ────────────────────────────────────────────────────────────
