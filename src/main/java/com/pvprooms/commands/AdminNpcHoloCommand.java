@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +50,7 @@ public class AdminNpcHoloCommand implements CommandExecutor, TabCompleter {
             case "list" -> handleList(sender, args);
             case "tp" -> handleTeleport(sender, args);
             case "reload" -> handleReload(sender, args);
+            case "kicktierlist" -> handleKickTierList(sender, args);
             default -> sendHelp(sender);
         }
 
@@ -331,6 +333,24 @@ public class AdminNpcHoloCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void handleKickTierList(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("§cUso: /admin kicktierlist <jugador>");
+            return;
+        }
+
+        Player target = plugin.getServer().getPlayerExact(args[1]);
+        if (target == null) {
+            sender.sendMessage("§cJugador no encontrado: " + args[1]);
+            return;
+        }
+
+        UUID uuid = target.getUniqueId();
+        plugin.getTierManager().resetPlayer(uuid);
+        sender.sendMessage("§a✓ Jugador §e" + target.getName() + " §aexpulsado de la tierlist.");
+        target.sendMessage(plugin.prefix() + "§cHas sido expulsado de la tierlist por un administrador.");
+    }
+
     private void sendHelp(CommandSender sender) {
         sender.sendMessage("§5§l⚙ Admin NPC/Holograms");
         sender.sendMessage("§e/admin undo §7- Deshacer última acción");
@@ -341,6 +361,7 @@ public class AdminNpcHoloCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/admin list <npcs|holos> §7- Listar elementos");
         sender.sendMessage("§e/admin tp <npc|holo> <id> §7- Teletransportarte");
         sender.sendMessage("§e/admin reload <npcs|holos|all> §7- Recargar");
+        sender.sendMessage("§e/admin kicktierlist <jugador> §7- Expulsar de la tierlist");
     }
 
     private String formatLoc(org.bukkit.Location loc) {
@@ -352,13 +373,19 @@ public class AdminNpcHoloCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            completions.addAll(Arrays.asList("undo", "delete", "list", "tp", "reload"));
+            completions.addAll(Arrays.asList("undo", "delete", "list", "tp", "reload", "kicktierlist"));
         } else if (args.length == 2) {
             switch (args[0].toLowerCase()) {
                 case "delete" -> completions.addAll(Arrays.asList("npc", "holo", "nearest", "all"));
                 case "list" -> completions.addAll(Arrays.asList("npcs", "holos"));
                 case "tp" -> completions.addAll(Arrays.asList("npc", "holo"));
                 case "reload" -> completions.addAll(Arrays.asList("npcs", "holos", "all"));
+                case "kicktierlist" -> {
+                    // Tab complete online player names
+                    for (Player p : plugin.getServer().getOnlinePlayers()) {
+                        completions.add(p.getName());
+                    }
+                }
             }
         } else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("delete")) {
