@@ -36,7 +36,7 @@ public class DuelManager {
     private final Map<UUID, UUID> playerDuelMap = new ConcurrentHashMap<>();
 
     /** Saved player inventories before a duel starts: player UUID → snapshot */
-    private final Map<UUID, PlayerSnapshot> inventorySnapshots = new HashMap<>();
+    private final Map<UUID, PlayerSnapshot> inventorySnapshots = new ConcurrentHashMap<>();
 
     /** Players frozen during countdown (only arenas without walls) */
     private final Set<UUID> frozenPlayers = ConcurrentHashMap.newKeySet();
@@ -132,7 +132,9 @@ public class DuelManager {
         CompletableFuture.allOf(
                 fp1.teleportAsync(template.getSpawn1(iw)),
                 fp2.teleportAsync(template.getSpawn2(iw))
-        ).thenRun(() -> {
+        ).thenRun(() -> Bukkit.getScheduler().runTask(plugin, () -> {
+            // Guard: if the duel ended while teleport was in-flight, don't apply kit
+            if (duel.getState() == Duel.State.ENDED) return;
             Player cp1 = Bukkit.getPlayer(fp1.getUniqueId());
             Player cp2 = Bukkit.getPlayer(fp2.getUniqueId());
             if (cp1 == null || cp2 == null) {
@@ -142,7 +144,7 @@ public class DuelManager {
             plugin.getKitManager().applyKit(cp1, kit);
             plugin.getKitManager().applyKit(cp2, kit);
             startCountdown(duel, iw);
-        });
+        }));
     }
 
     // ── Countdown ─────────────────────────────────────────────────────────
@@ -481,7 +483,8 @@ public class DuelManager {
             CompletableFuture.allOf(
                     frp1.teleportAsync(duel.getArenaTemplate().getSpawn1(fw)),
                     frp2.teleportAsync(duel.getArenaTemplate().getSpawn2(fw))
-            ).thenRun(() -> {
+            ).thenRun(() -> Bukkit.getScheduler().runTask(plugin, () -> {
+                if (duel.getState() == Duel.State.ENDED) return;
                 Player cp1 = Bukkit.getPlayer(frp1.getUniqueId());
                 Player cp2 = Bukkit.getPlayer(frp2.getUniqueId());
                 if (cp1 == null || cp2 == null) {
@@ -493,7 +496,7 @@ public class DuelManager {
                 plugin.getKitManager().applyKit(cp2, duel.getKitName());
                 duel.setStartTimeMillis(System.currentTimeMillis());
                 startCountdown(duel, fw);
-            });
+            }));
             return;
         }
 
@@ -523,7 +526,8 @@ public class DuelManager {
                     CompletableFuture.allOf(
                             frp1.teleportAsync(duel.getArenaTemplate().getSpawn1(rw)),
                             frp2.teleportAsync(duel.getArenaTemplate().getSpawn2(rw))
-                    ).thenRun(() -> {
+                    ).thenRun(() -> Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (duel.getState() == Duel.State.ENDED) return;
                         Player cp1 = Bukkit.getPlayer(frp1.getUniqueId());
                         Player cp2 = Bukkit.getPlayer(frp2.getUniqueId());
                         if (cp1 == null || cp2 == null) {
@@ -535,7 +539,7 @@ public class DuelManager {
                         plugin.getKitManager().applyKit(cp2, duel.getKitName());
                         duel.setStartTimeMillis(System.currentTimeMillis());
                         startCountdown(duel, rw);
-                    });
+                    }));
                 }
         );
     }
@@ -611,6 +615,7 @@ public class DuelManager {
 
     /**
      * Safety net: if the player is online but NOT in the lobby world, force-teleport them.
+     * If they ARE at lobby, clean up any leftover snapshot.
      * Handles edge cases where the initial teleport silently failed.
      */
     private void ensureAtLobby(UUID uuid) {
@@ -636,6 +641,14 @@ public class DuelManager {
             restorePlayer(p);
             p.teleport(lobby);
             plugin.getScoreboardManager().restoreLobbyScoreboard(p);
+        } else {
+            // Player IS at lobby — restore snapshot if it wasn't applied yet
+            // (handles the "lobby with arena items" bug)
+            PlayerSnapshot snap = inventorySnapshots.get(uuid);
+            if (snap != null) {
+                restorePlayer(p);
+                plugin.getScoreboardManager().restoreLobbyScoreboard(p);
+            }
         }
     }
 
@@ -643,6 +656,7 @@ public class DuelManager {
         PlayerSnapshot snap = inventorySnapshots.remove(player.getUniqueId());
         if (snap != null) snap.restore(player);
         healPlayer(player);
+        player.setGameMode(GameMode.SURVIVAL);
         var atkSpeed = player.getAttribute(org.bukkit.attribute.Attribute.ATTACK_SPEED);
         if (atkSpeed != null) atkSpeed.setBaseValue(4.0);
     }
