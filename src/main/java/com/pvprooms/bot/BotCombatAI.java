@@ -62,6 +62,39 @@ public class BotCombatAI {
     private long lastMaceJump = 0;
     private long lastSpearThrow = 0;
     private long lastElytraUse = 0;
+    private long lastWindChargeUse = 0;
+
+    // MC 1.21 Attack Cooldown System
+    // Vanilla attack speeds: Sword=1.6, Axe=1.0, Mace=0.6, Trident=1.1, Fist=4.0
+    // Cooldown in ms = 1000 / attackSpeed
+    private long getWeaponCooldownMs(Player bot) {
+        ItemStack weapon = bot.getInventory().getItemInMainHand();
+        if (weapon == null) return 250; // Fist: 4.0 speed
+        return switch (weapon.getType()) {
+            // Swords: attack speed 1.6 → 625ms
+            case NETHERITE_SWORD, DIAMOND_SWORD, IRON_SWORD, STONE_SWORD,
+                 WOODEN_SWORD, GOLDEN_SWORD -> 625;
+            // Axes: attack speed 1.0 → 1000ms
+            case NETHERITE_AXE, DIAMOND_AXE -> 1000;
+            case IRON_AXE, STONE_AXE -> 1000; // iron/stone = 0.9 → ~1111ms, simplify
+            case WOODEN_AXE, GOLDEN_AXE -> 1000;
+            // Mace: attack speed 0.6 → 1667ms
+            case MACE -> 1667;
+            // Trident: attack speed 1.1 → 909ms
+            case TRIDENT -> 909;
+            default -> 250; // Fist
+        };
+    }
+
+    /** Returns true if the weapon cooldown has elapsed and an attack will deal full damage. */
+    private boolean isAttackCooldownReady(Player bot) {
+        long elapsed = System.currentTimeMillis() - lastAttackTime;
+        return elapsed >= getWeaponCooldownMs(bot);
+    }
+
+    // Manual fall distance tracking (NPCs may not accumulate getFallDistance correctly)
+    private double manualFallStartY = -1;
+    private boolean wasOnGroundLastTick = true;
     
     // Combo tracking
     private int comboCount = 0;
@@ -277,9 +310,11 @@ public class BotCombatAI {
 
     private void handleMeleeCombat(Player bot, double distance) {
         long now = System.currentTimeMillis();
-        
-        // Attack cooldown (vanilla is ~500ms = 10 ticks)
-        // reactionMs is minimum time between attacks, not a skip chance
+
+        // MC 1.21 attack cooldown — NEVER attack before cooldown is ready
+        // This prevents spam-clicking which does almost no damage
+        if (!isAttackCooldownReady(bot)) return;
+        // Also respect reaction time (human delay on top of cooldown)
         if (now - lastAttackTime < reactionMs) return;
         
         // Look at target
@@ -775,9 +810,8 @@ public class BotCombatAI {
 
     private void handleSwordAttack(Player bot, double distance) {
         if (distance > 3.5) return;
-        
-        // Check line of sight first
         if (!hasLineOfSight(bot, target)) return;
+        if (!isAttackCooldownReady(bot)) return; // MC 1.21 cooldown
         
         long now = System.currentTimeMillis();
         
@@ -860,6 +894,7 @@ public class BotCombatAI {
     private void handleAxeAttack(Player bot, double distance) {
         if (distance > 3.5) return;
         if (!hasLineOfSight(bot, target)) return;
+        if (!isAttackCooldownReady(bot)) return; // MC 1.21 cooldown (axe = 1000ms)
         
         long now = System.currentTimeMillis();
         
@@ -892,42 +927,172 @@ public class BotCombatAI {
 
     private void handleMaceAttack(Player bot, double distance) {
         long now = System.currentTimeMillis();
-        
-        // Check if we have elytra - use it for maximum mace damage!
-        if (hasElytra(bot) && hasFireworks(bot) && now - lastMaceJump > 4000) {
+
+        // ── Priority 1: Elytra+Mace dive (maximum damage, long range OK) ──
+        if (hasElytra(bot) && hasFireworks(bot) && now - lastMaceJump > 5000 && distance > 4) {
             handleElytraMaceCombo(bot);
             lastMaceJump = now;
             return;
         }
-        
-        // Mace is most effective with fall damage - use vanilla jump height
-        if (bot.isOnGround() && now - lastMaceJump > 3000) {
-            // Use vanilla jump height (0.42) - mace damage comes from fall, not jump height
-            double jumpPower = 0.42;
-            
-            // Jump towards target with vanilla-like velocity
+
+        // ── Priority 2: Wind charge + mace combo (best close-range mace move) ──
+        if (hasWindCharges(bot) && bot.isOnGround() && now - lastWindChargeUse > 4000
+                && distance <= 8 && distance > 2) {
+            performWindChargeMaceCombo(bot);
+            return;
+        }
+
+        // ── Priority 3: Normal jump + mace smash ──
+        if (bot.isOnGround() && now - lastMaceJump > 3000 && distance <= 5) {
+            // Jump toward target — mace needs fall distance for damage
             Vector direction = target.getLocation().toVector()
                     .subtract(bot.getLocation().toVector()).normalize();
-            direction.setY(jumpPower);
-            direction.multiply(0.5); // Better horizontal speed
+            direction.setY(0.42);
+            direction.multiply(0.5);
             bot.setVelocity(direction);
-            
+            manualFallStartY = bot.getLocation().getY() + 1.25; // Approximate jump peak
             lastMaceJump = now;
-            
-            // Attack when falling
+
+            // Wait for falling phase, then smash
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (isValid() && bot.getFallDistance() > 0.3) {
-                    performMaceSmash(bot);
+                if (!isValid()) return;
+                Player b = getBotPlayer();
+                if (b == null) return;
+                double fallDist = getManualFallDistance(b);
+                if (fallDist > 0.5 || b.getFallDistance() > 0.5) {
+                    performMaceSmash(b);
                 }
             }, 8L);
-        } else if (bot.getFallDistance() > 0.3) {
-            // Already falling - smash!
+            return;
+        }
+
+        // ── Priority 4: Already falling — smash immediately! ──
+        double fallDist = getManualFallDistance(bot);
+        if ((fallDist > 0.5 || bot.getFallDistance() > 0.5) && distance <= 4.5) {
             performMaceSmash(bot);
-        } else if (distance <= 3.0) {
-            // Ground attack - normal melee
+            return;
+        }
+
+        // ── Priority 5: Ground attack (mace has slow cooldown, make it count) ──
+        if (distance <= 3.0 && isAttackCooldownReady(bot)) {
             performAttack(bot, false);
             lastAttackTime = now;
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // WIND CHARGE + MACE COMBO
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    // Wind charge launched at bot's own feet launches it ~7-8 blocks up.
+    // Bot then free-falls with mace for massive smash damage.
+    // This is the META mace combo in MC 1.21.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void performWindChargeMaceCombo(Player bot) {
+        int windSlot = findWindCharge(bot.getInventory());
+        if (windSlot == -1) return;
+
+        // Equip mace first
+        int maceSlot = findMace(bot.getInventory());
+        if (maceSlot != -1) {
+            maceSlot = hotbarSlot(bot.getInventory(), maceSlot);
+            if (maceSlot != -1) bot.getInventory().setHeldItemSlot(maceSlot);
+        }
+
+        // Lock state briefly
+        combatState = CombatState.ELYTRA_FLIGHT; // Reuse flight state to block other actions
+        lastWindChargeUse = System.currentTimeMillis();
+
+        // Consume wind charge
+        ItemStack windItem = bot.getInventory().getItem(windSlot);
+        if (windItem != null) windItem.setAmount(windItem.getAmount() - 1);
+
+        // Wind charge visual + sound
+        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 1.0f, 1.0f);
+        bot.getWorld().spawnParticle(Particle.CLOUD, bot.getLocation(), 20, 0.3, 0.1, 0.3, 0.05);
+
+        // Launch bot upward (wind charge launches ~7-8 blocks)
+        Vector launch = new Vector(0, 1.4, 0); // Strong upward velocity
+        // Slight horizontal toward target so we land near them
+        Vector toTarget = target.getLocation().toVector()
+                .subtract(bot.getLocation().toVector());
+        toTarget.setY(0);
+        if (toTarget.lengthSquared() > 0.01) {
+            toTarget.normalize().multiply(0.3);
+            launch.add(toTarget);
+        }
+        bot.setVelocity(launch);
+        manualFallStartY = bot.getLocation().getY() + 8.0; // Will peak around +7-8 blocks
+
+        // Look at target during ascent
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) { combatState = CombatState.IDLE; return; }
+            Player b = getBotPlayer();
+            if (b != null) lookAt(b, target.getLocation());
+        }, 5L);
+
+        // At peak (~15 ticks), aim down at target
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) { combatState = CombatState.IDLE; return; }
+            Player b = getBotPlayer();
+            if (b == null) { combatState = CombatState.IDLE; return; }
+            lookAt(b, target.getLocation());
+            // Update manual fall start to actual peak
+            manualFallStartY = b.getLocation().getY();
+        }, 15L);
+
+        // During fall, track target and smash on contact (tick 18-50)
+        for (int tick = 18; tick <= 50; tick += 2) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!isValid() || combatState != CombatState.ELYTRA_FLIGHT) return;
+                Player b = getBotPlayer();
+                if (b == null) return;
+
+                lookAt(b, target.getLocation());
+
+                double dist = b.getLocation().distance(target.getLocation());
+                double fallD = getManualFallDistance(b);
+                double vanillaFall = b.getFallDistance();
+                double bestFall = Math.max(fallD, vanillaFall);
+
+                if (dist <= 4.5 && bestFall > 1.5) {
+                    performMaceSmash(b);
+                    combatState = CombatState.IDLE;
+                    return;
+                }
+
+                // If landed without hitting, unlock
+                if (b.isOnGround()) {
+                    combatState = CombatState.IDLE;
+                }
+            }, tick);
+        }
+
+        // Safety unlock
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (combatState == CombatState.ELYTRA_FLIGHT) combatState = CombatState.IDLE;
+        }, 55L);
+    }
+
+    /** Get manual fall distance (distance fallen from peak Y). */
+    private double getManualFallDistance(Player bot) {
+        if (manualFallStartY <= 0) return bot.getFallDistance();
+        double currentY = bot.getLocation().getY();
+        if (currentY >= manualFallStartY) return 0;
+        return manualFallStartY - currentY;
+    }
+
+    private boolean hasWindCharges(Player bot) {
+        return findWindCharge(bot.getInventory()) != -1;
+    }
+
+    private int findWindCharge(PlayerInventory inv) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == Material.WIND_CHARGE) return i;
+        }
+        return -1;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -950,10 +1115,10 @@ public class BotCombatAI {
     private boolean elytraDiveActive = false; // extra guard for scheduled tasks
 
     private void handleElytraMaceCombo(Player bot) {
-        if (isUsingElytra || elytraDiveActive) return; // Already in flight
-        if (!bot.isOnGround()) return; // Must start from ground
+        if (isUsingElytra || elytraDiveActive) return;
+        if (!bot.isOnGround()) return;
 
-        // ── Phase 1: Equip elytra + mace, jump ──
+        // ── Phase 1: Equip elytra + mace, normal jump ──
         ItemStack chest = bot.getInventory().getChestplate();
         if (chest == null || chest.getType() != Material.ELYTRA) {
             int elytraSlot = findItem(bot.getInventory(), Material.ELYTRA);
@@ -972,116 +1137,130 @@ public class BotCombatAI {
             if (maceSlot != -1) bot.getInventory().setHeldItemSlot(maceSlot);
         }
 
-        // LOCK state — no other actions until dive finishes
         combatState = CombatState.ELYTRA_FLIGHT;
         isUsingElytra = true;
         elytraDiveActive = true;
 
-        // Jump with a higher velocity so the bot is clearly airborne by tick 5
-        bot.setVelocity(new Vector(0, 0.75, 0));
+        // Normal jump (0.42) — exactly like a real player
+        bot.setVelocity(new Vector(0, 0.42, 0));
 
-        // ── Phase 2: Start gliding + first firework boost (tick 5) ──
+        // Calculate direction TO target for angled boosts
+        final Vector flatToTarget = target.getLocation().toVector()
+                .subtract(bot.getLocation().toVector());
+        flatToTarget.setY(0);
+        if (flatToTarget.lengthSquared() > 0.01) flatToTarget.normalize();
+
+        // ── Phase 2 (tick 6): Activate elytra while falling + first firework ──
+        // Real players activate elytra mid-fall, then firework boosts in LOOK direction
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
             if (b == null) { finishElytraCombo(); return; }
 
-            // Bot should be falling by now — activate glide
             b.setGliding(true);
 
-            // First firework: straight UP for maximum altitude
-            if (hasFireworks(b)) {
-                boostElytra(b, new Vector(0, 3.5, 0));
-            } else {
-                // No fireworks — abort dive, just let bot fall
-                finishElytraCombo();
-            }
-        }, 5L);
+            if (!hasFireworks(b)) { finishElytraCombo(); return; }
 
-        // ── Phase 3: Second firework boost — mostly UP, slight toward target (tick 18) ──
+            // First boost: ~55° upward angle toward target (natural elytra arc)
+            // This is how real players do it — look upward at an angle, use firework
+            Vector boost = flatToTarget.clone().multiply(1.2);
+            boost.setY(1.6); // ~55° angle upward
+            boost.normalize().multiply(2.2); // Firework boost speed
+            boostElytra(b, boost);
+
+            // Look in boost direction
+            float yaw = (float) Math.toDegrees(Math.atan2(-boost.getX(), boost.getZ()));
+            float pitch = (float) Math.toDegrees(Math.atan2(-boost.getY(),
+                    Math.sqrt(boost.getX() * boost.getX() + boost.getZ() * boost.getZ())));
+            b.setRotation(yaw, pitch);
+            currentBotYaw = yaw;
+            currentBotPitch = pitch;
+        }, 6L);
+
+        // ── Phase 3 (tick 18): Second firework — more forward, less upward ──
+        // Bot is now arcing — boost more toward target to position above them
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
             if (b == null || !b.isGliding()) { finishElytraCombo(); return; }
 
             if (hasFireworks(b)) {
+                // Recalculate direction to target (they may have moved)
                 Vector toTarget = target.getLocation().toVector()
-                        .subtract(b.getLocation().toVector()).normalize();
-                // 80% upward, 20% toward target so we end up above them
-                Vector boost = new Vector(toTarget.getX() * 0.6, 3.0, toTarget.getZ() * 0.6);
+                        .subtract(b.getLocation().toVector());
+                toTarget.normalize();
+                // ~30° upward angle — transitioning from climb to arc
+                Vector boost = new Vector(toTarget.getX() * 1.5, 0.8, toTarget.getZ() * 1.5);
+                boost.normalize().multiply(2.0);
                 boostElytra(b, boost);
             }
-
-            // Look at target during ascent
             lookAt(b, target.getLocation());
         }, 18L);
 
-        // ── Phase 4: Stop gliding, start free-fall dive (tick 32) ──
+        // ── Phase 4 (tick 30): Stop gliding — begin free fall dive ──
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
             if (b == null) { finishElytraCombo(); return; }
 
-            // Stop gliding — bot now free-falls (accumulates fall distance for mace damage)
             b.setGliding(false);
-
-            // Aim at target
+            b.setGravity(true);
             lookAt(b, target.getLocation());
 
-            // Calculate dive vector: strong forward + downward
+            // Record peak Y for manual fall distance
+            manualFallStartY = b.getLocation().getY();
+
+            // Give a nudge toward target — natural dive momentum
             Vector dive = target.getLocation().toVector()
                     .subtract(b.getLocation().toVector());
             double horizDist = Math.sqrt(dive.getX() * dive.getX() + dive.getZ() * dive.getZ());
             dive.normalize();
-
-            // Scale: more horizontal if target is far horizontally, always strongly downward
-            double speed = Math.max(1.2, Math.min(horizDist * 0.15, 2.5));
+            double speed = Math.max(0.8, Math.min(horizDist * 0.12, 1.8));
             dive.multiply(speed);
-            // Ensure strong downward component for fall distance
-            if (dive.getY() > -0.8) dive.setY(-1.2);
+            // Gravity will pull Y down naturally — just ensure slight downward start
+            if (dive.getY() > -0.3) dive.setY(-0.5);
             b.setVelocity(dive);
-        }, 32L);
+        }, 30L);
 
-        // ── Phase 5: Track + smash every 2 ticks during dive (tick 34-80) ──
-        for (int tick = 34; tick <= 80; tick += 2) {
+        // ── Phase 5 (tick 32-75): Track target, let gravity pull down, smash on contact ──
+        for (int tick = 32; tick <= 75; tick += 2) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!elytraDiveActive || !isValid()) return;
                 Player b = getBotPlayer();
                 if (b == null) return;
 
-                // Keep aiming at target while diving
                 lookAt(b, target.getLocation());
 
-                // Gently steer toward target mid-dive (small velocity correction)
+                // Gentle steering — blend current velocity toward target
                 if (!b.isOnGround()) {
                     Vector current = b.getVelocity();
                     Vector toTarget = target.getLocation().toVector()
                             .subtract(b.getLocation().toVector()).normalize();
-                    // Blend: 85% current velocity + 15% toward target
-                    Vector corrected = current.multiply(0.85).add(toTarget.multiply(0.25));
-                    if (corrected.getY() > -0.3) corrected.setY(Math.min(current.getY(), -0.3));
+                    // 90% physics + 10% correction (subtle, not robotic)
+                    Vector corrected = current.multiply(0.9).add(toTarget.multiply(0.15));
+                    // Don't fight gravity — let Y stay natural
                     b.setVelocity(corrected);
                 }
 
-                // Check if close enough to smash
+                // Check smash distance
                 double dist = b.getLocation().distance(target.getLocation());
-                if (dist <= 4.5 && b.getFallDistance() > 1.5) {
+                double fallDist = Math.max(getManualFallDistance(b), b.getFallDistance());
+                if (dist <= 4.5 && fallDist > 1.5) {
                     performMaceSmash(b);
                     finishElytraCombo();
                     return;
                 }
 
-                // If bot landed on ground without hitting target, abort
                 if (b.isOnGround() && b.getFallDistance() < 0.1) {
                     finishElytraCombo();
                 }
             }, tick);
         }
 
-        // ── Safety timeout: always clean up by tick 85 ──
+        // Safety timeout
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (elytraDiveActive) finishElytraCombo();
-        }, 85L);
+        }, 80L);
     }
 
     /** Boost elytra with firework: apply velocity, consume item, visual+sound. */
@@ -1130,39 +1309,107 @@ public class BotCombatAI {
         return -1;
     }
 
+    /**
+     * MC 1.21 Mace Smash Attack.
+     *
+     * Damage formula (vanilla-like with diminishing returns):
+     *   - Base mace damage: 7
+     *   - First 3 blocks fallen: +4 damage per block
+     *   - Blocks 3-8: +2 damage per block
+     *   - Blocks 8+: +1 damage per block
+     *   - Sharpness adds flat bonus
+     *
+     * On successful smash hit:
+     *   - Mace NEGATES all fall damage for the attacker
+     *   - Heavy knockback to target
+     *   - Smash ground particles + sound
+     */
     private void performMaceSmash(Player bot) {
         if (!isValid()) return;
-        
+
         double distance = bot.getLocation().distance(target.getLocation());
-        if (distance > 4.0) return;
-        
+        if (distance > 4.5) return;
+
+        // Use manual tracking OR vanilla, whichever is higher
+        double fallDistance = Math.max(getManualFallDistance(bot), bot.getFallDistance());
+
+        // Factor in actual Y velocity for momentum bonus
+        // Terminal velocity in MC is ~3.92 blocks/tick downward
+        // More speed = more momentum = more damage
+        double yVelocity = Math.abs(bot.getVelocity().getY());
+        double momentumBonus = 0;
+        if (yVelocity > 0.5) {
+            // Scale: velocity 0.5-1.0 = small bonus, 1.0-2.0 = medium, 2.0+ = big
+            momentumBonus = Math.min(yVelocity * 2.0, 6.0);
+        }
+
         // Swing animation
         bot.swingMainHand();
-        
-        // Mace smash damage scales with fall distance (vanilla-like)
-        double fallDistance = bot.getFallDistance();
-        double baseDamage = 6.0;
-        double bonusDamage = Math.min(fallDistance * 1.5, 10); // Reasonable cap
+
+        // ── MC 1.21 mace damage formula ──
+        double baseDamage = 7.0;
+        double bonusDamage = 0;
+
+        if (fallDistance > 0) {
+            // First 3 blocks: +4 per block
+            double tier1 = Math.min(fallDistance, 3.0);
+            bonusDamage += tier1 * 4.0;
+
+            // Blocks 3-8: +2 per block
+            if (fallDistance > 3) {
+                double tier2 = Math.min(fallDistance - 3, 5.0);
+                bonusDamage += tier2 * 2.0;
+            }
+
+            // Blocks 8+: +1 per block (up to reasonable cap)
+            if (fallDistance > 8) {
+                double tier3 = Math.min(fallDistance - 8, 20.0);
+                bonusDamage += tier3 * 1.0;
+            }
+        }
+
+        // Momentum bonus from velocity (rewards fast dives)
+        bonusDamage += momentumBonus;
+
+        // Sharpness from mace enchantment
+        ItemStack mace = bot.getInventory().getItemInMainHand();
+        if (mace != null && mace.getType() == Material.MACE) {
+            int sharpness = mace.getEnchantmentLevel(Enchantment.SHARPNESS);
+            baseDamage += sharpness * 0.5 + (sharpness > 0 ? 0.5 : 0);
+        }
+
         double totalDamage = baseDamage + bonusDamage;
-        
+
         // Deal damage
         target.damage(totalDamage, bot);
-        
-        // Mace knockback - vanilla-like, not excessive
-        Vector direction = target.getLocation().toVector()
+
+        // ── Mace NEGATES fall damage for the attacker on successful hit ──
+        bot.setFallDistance(0);
+        manualFallStartY = -1;
+
+        // ── Knockback scales with fall distance + impact velocity ──
+        Vector dir = target.getLocation().toVector()
                 .subtract(bot.getLocation().toVector());
-        direction.setY(0);
-        direction.normalize();
-        
-        // Small horizontal + normal vertical lift
-        double kbHorizontal = 0.5 + Math.min(fallDistance * 0.05, 0.3);
-        Vector knockback = direction.multiply(kbHorizontal);
-        knockback.setY(0.4);
-        target.setVelocity(knockback);
-        
-        // Sound and particles
-        bot.getWorld().playSound(bot.getLocation(), Sound.ITEM_MACE_SMASH_GROUND, 1.0f, 1.0f);
-        
+        dir.setY(0);
+        if (dir.lengthSquared() > 0.001) dir.normalize();
+        double impactForce = fallDistance + yVelocity;
+        double kbH = 0.5 + Math.min(impactForce * 0.05, 0.6);
+        double kbV = 0.35 + Math.min(impactForce * 0.03, 0.4);
+        target.setVelocity(dir.multiply(kbH).setY(kbV));
+
+        // ── Visual + sound ──
+        if (fallDistance > 5 || yVelocity > 1.5) {
+            // Heavy smash: ground crack + shockwave
+            bot.getWorld().playSound(bot.getLocation(), Sound.ITEM_MACE_SMASH_GROUND_HEAVY, 1.0f, 1.0f);
+            bot.getWorld().spawnParticle(Particle.EXPLOSION, bot.getLocation(), 3);
+            bot.getWorld().spawnParticle(Particle.CLOUD, bot.getLocation(), 15, 1.5, 0.2, 1.5, 0.02);
+        } else if (fallDistance > 1) {
+            bot.getWorld().playSound(bot.getLocation(), Sound.ITEM_MACE_SMASH_GROUND, 1.0f, 1.0f);
+            bot.getWorld().spawnParticle(Particle.CLOUD, bot.getLocation(), 8, 0.8, 0.1, 0.8, 0.01);
+        } else {
+            bot.getWorld().playSound(bot.getLocation(), Sound.ITEM_MACE_SMASH_GROUND, 0.6f, 1.2f);
+        }
+
         lastAttackTime = System.currentTimeMillis();
         comboCount = 0;
     }
@@ -1300,7 +1547,14 @@ public class BotCombatAI {
     // ══════════════════════════════════════════════════════════════════════════
 
     private void handleMidRangeCombat(Player bot, double distance) {
-        // Priority: spear throw > damage potion > crossbow quick shot > chase
+        // Priority: wind+mace > spear throw > damage potion > crossbow quick shot > chase
+
+        // Wind charge + mace combo at mid-range (best engage with mace kit)
+        if (hasWindCharges(bot) && findMace(bot.getInventory()) != -1
+                && bot.isOnGround() && System.currentTimeMillis() - lastWindChargeUse > 4000) {
+            performWindChargeMaceCombo(bot);
+            return;
+        }
 
         // Spear throw at mid-range — best mid-range weapon
         if (hasSpear(bot) && shouldThrowSpear()) {
@@ -1628,16 +1882,21 @@ public class BotCombatAI {
             bot.getInventory().setChestplate(elytra);
         }
 
-        // LOCK state
         combatState = CombatState.ELYTRA_FLIGHT;
         isUsingElytra = true;
         elytraDiveActive = true;
         lastElytraUse = now;
 
-        // Jump
-        bot.setVelocity(new Vector(0, 0.75, 0));
+        // Normal jump — like a real player
+        bot.setVelocity(new Vector(0, 0.42, 0));
 
-        // Start gliding + first boost towards target
+        // Direction to target (flat)
+        final Vector flatDir = target.getLocation().toVector()
+                .subtract(bot.getLocation().toVector());
+        flatDir.setY(0);
+        if (flatDir.lengthSquared() > 0.01) flatDir.normalize();
+
+        // Activate elytra mid-fall + first angled boost toward target
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!elytraDiveActive || !isValid()) { finishElytraCombo(); return; }
             Player b = getBotPlayer();
@@ -1646,14 +1905,16 @@ public class BotCombatAI {
             b.setGliding(true);
 
             if (hasFireworks(b)) {
-                Vector toTarget = target.getLocation().toVector()
-                        .subtract(b.getLocation().toVector()).normalize();
-                toTarget.setY(Math.max(toTarget.getY(), 0.4));
-                boostElytra(b, toTarget.multiply(2.8));
+                // Boost at ~20° upward angle toward target (mostly forward, slight climb)
+                Vector boost = flatDir.clone().multiply(2.0);
+                boost.setY(0.7);
+                boost.normalize().multiply(2.5);
+                boostElytra(b, boost);
             }
-        }, 5L);
+            lookAt(b, target.getLocation());
+        }, 6L);
 
-        // Additional boosts every 15 ticks, aimed at target
+        // Additional boosts every 15 ticks — aim directly at target
         for (int i = 1; i <= 3; i++) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!elytraDiveActive || !isValid()) return;
@@ -1666,12 +1927,14 @@ public class BotCombatAI {
                 if (hasFireworks(b)) {
                     Vector toTarget = target.getLocation().toVector()
                             .subtract(b.getLocation().toVector()).normalize();
-                    if (dist < 15) toTarget.setY(Math.min(toTarget.getY(), -0.15));
-                    else toTarget.setY(Math.max(toTarget.getY(), 0.2));
-                    boostElytra(b, toTarget.multiply(2.5));
+                    // Slight upward bias when far, slight downward when close
+                    if (dist > 15) {
+                        if (toTarget.getY() < 0.1) toTarget.setY(0.15);
+                    }
+                    boostElytra(b, toTarget.multiply(2.3));
                 }
                 lookAt(b, target.getLocation());
-            }, 5L + 15L * i);
+            }, 6L + 15L * i);
         }
 
         // Safety timeout
@@ -1695,6 +1958,25 @@ public class BotCombatAI {
 
                 Player bot = getBotPlayer();
                 if (bot == null) return;
+
+                // ── Manual fall distance tracking (NPCs don't always accumulate it) ──
+                if (bot.isOnGround()) {
+                    if (!wasOnGroundLastTick && manualFallStartY > bot.getLocation().getY()) {
+                        // Just landed — calculate fall distance
+                        // Bot takes fall damage like a real player (unless mace negated it)
+                    }
+                    manualFallStartY = -1;
+                    wasOnGroundLastTick = true;
+                } else {
+                    if (wasOnGroundLastTick) {
+                        // Just left ground — start tracking
+                        manualFallStartY = bot.getLocation().getY();
+                    } else if (manualFallStartY > 0 && bot.getLocation().getY() > manualFallStartY) {
+                        // Going UP — reset start to peak
+                        manualFallStartY = bot.getLocation().getY();
+                    }
+                    wasOnGroundLastTick = false;
+                }
 
                 // ── NEVER move during elytra flight or bow draw ──
                 if (isUsingElytra || elytraDiveActive) return;
@@ -1742,16 +2024,22 @@ public class BotCombatAI {
     }
 
     /**
-     * Human-like movement via small teleport steps.
+     * Velocity-based movement with natural gravity.
+     *
+     * Instead of teleporting (which bypasses physics), we set horizontal
+     * velocity every tick. The server's physics engine handles gravity,
+     * falling, landing, and collisions naturally — just like a real player.
+     *
      * - Sprint when far, walk when close
-     * - Circle-strafe only in melee range
-     * - Step up 1-block obstacles automatically
-     * - Don't move into walls
-     * - Apply gravity when airborne (but still allow horizontal drift)
+     * - Circle-strafe in melee range
+     * - Gravity is NATURAL (no teleport Y manipulation)
      */
     private void moveTowardsTarget(Player bot, double distance) {
         // Don't crowd the target — stop at comfortable melee range
         if (distance < 1.8) return;
+
+        // Ensure gravity is always enabled
+        bot.setGravity(true);
 
         Location botLoc = bot.getLocation();
         Location targetLoc = target.getLocation();
@@ -1759,15 +2047,15 @@ public class BotCombatAI {
         // Look at target (smooth rotation)
         lookAt(bot, targetLoc);
 
-        // If airborne, let vanilla gravity work but allow slight horizontal drift
+        // ── Airborne: let vanilla physics handle everything ──
+        // Only apply minimal air-strafe (like a real player can in MC)
         if (!bot.isOnGround()) {
-            // Don't teleport while in air — just let physics handle it
-            // But apply tiny horizontal correction toward target
             Vector vel = bot.getVelocity();
             double hdx = targetLoc.getX() - botLoc.getX();
             double hdz = targetLoc.getZ() - botLoc.getZ();
             double hlen = Math.sqrt(hdx * hdx + hdz * hdz);
             if (hlen > 0.5) {
+                // Minecraft allows ~0.02 air-strafe per tick (very small)
                 vel.setX(vel.getX() + (hdx / hlen) * 0.02);
                 vel.setZ(vel.getZ() + (hdz / hlen) * 0.02);
                 bot.setVelocity(vel);
@@ -1775,24 +2063,21 @@ public class BotCombatAI {
             return;
         }
 
-        // Re-read location after lookAt
-        botLoc = bot.getLocation();
-
+        // ── On ground: set horizontal velocity ──
         double dx = targetLoc.getX() - botLoc.getX();
         double dz = targetLoc.getZ() - botLoc.getZ();
         double horizontalDist = Math.sqrt(dx * dx + dz * dz);
         if (horizontalDist < 0.1) return;
 
-        // Normalize
         double ndx = dx / horizontalDist;
         double ndz = dz / horizontalDist;
 
-        // Speed: sprint when far (>3.5), walk when close
+        // Speed: sprint when far, walk when close
         double speed;
         if (distance > 3.5) {
             bot.setSprinting(true);
             isSprinting = true;
-            // Vanilla sprint speed: 5.612 m/s = 0.2806 blocks/tick
+            // Vanilla sprint: 5.612 m/s ≈ 0.28 blocks/tick
             speed = switch (difficulty) {
                 case EASY     -> 0.18;
                 case MEDIUM   -> 0.22;
@@ -1803,7 +2088,7 @@ public class BotCombatAI {
         } else {
             bot.setSprinting(false);
             isSprinting = false;
-            // Vanilla walk speed: 4.317 m/s = 0.2159 blocks/tick
+            // Vanilla walk: 4.317 m/s ≈ 0.216 blocks/tick
             speed = switch (difficulty) {
                 case EASY     -> 0.12;
                 case MEDIUM   -> 0.15;
@@ -1813,11 +2098,10 @@ public class BotCombatAI {
             };
         }
 
-        // Strafe only during close combat (circle-strafing like a pro player)
+        // Circle-strafe in close combat
         double strafeSpeed = 0;
         if (distance <= 4.5 && distance > 1.8 && !isRetreating) {
             long now = System.currentTimeMillis();
-            // Change strafe direction every 600-1400ms (human-like)
             if (now - lastStrafeChange > 600 + random.nextInt(800)) {
                 if (random.nextDouble() < strafeChance) {
                     strafeDirection *= -1;
@@ -1833,47 +2117,31 @@ public class BotCombatAI {
             } * strafeDirection;
         }
 
-        // Combine forward movement + perpendicular strafe
-        double finalDx = ndx * speed + (-ndz) * strafeSpeed;
-        double finalDz = ndz * speed + ( ndx) * strafeSpeed;
+        // Combine forward + perpendicular strafe
+        double vx = ndx * speed + (-ndz) * strafeSpeed;
+        double vz = ndz * speed + ( ndx) * strafeSpeed;
 
-        double newX = botLoc.getX() + finalDx;
-        double newZ = botLoc.getZ() + finalDz;
-
-        Location newLoc = new Location(botLoc.getWorld(), newX, botLoc.getY(), newZ,
-                botLoc.getYaw(), botLoc.getPitch());
-
-        // Step-up logic: if block at feet is solid, try stepping up 1 block
-        Block blockAtFeet = newLoc.getBlock();
-        if (blockAtFeet.getType().isSolid()) {
-            Location stepUp = newLoc.clone().add(0, 1, 0);
-            Block headBlock = stepUp.clone().add(0, 1, 0).getBlock();
-            if (!stepUp.getBlock().getType().isSolid() && !headBlock.getType().isSolid()) {
-                newLoc = stepUp;
+        // Check for wall ahead (don't walk into solid blocks)
+        Location ahead = botLoc.clone().add(vx * 2, 0, vz * 2);
+        Block blockAhead = ahead.getBlock();
+        if (blockAhead.getType().isSolid()) {
+            // Check if we can step up 1 block
+            Block aboveAhead = ahead.clone().add(0, 1, 0).getBlock();
+            Block headClear = ahead.clone().add(0, 2, 0).getBlock();
+            if (!aboveAhead.getType().isSolid() && !headClear.getType().isSolid()) {
+                // Step up: add jump velocity
+                vx *= 0.6; // Reduce horizontal while stepping
+                vz *= 0.6;
+                bot.setVelocity(new Vector(vx, 0.42, vz));
+                return;
             } else {
-                return; // Can't move there — wall
+                return; // Wall — can't pass
             }
         }
 
-        // Check there's ground below (don't walk off cliffs unless sprinting to target)
-        Block below = newLoc.clone().add(0, -1, 0).getBlock();
-        if (!below.getType().isSolid() && distance > 5) {
-            // Might be a cliff — be cautious unless target is close
-            Block twoBelow = newLoc.clone().add(0, -2, 0).getBlock();
-            if (!twoBelow.getType().isSolid()) return; // Too high drop
-        }
-
-        // Snap to ground — if there's air below, drop down
-        if (!newLoc.clone().add(0, -1, 0).getBlock().getType().isSolid()
-                && newLoc.clone().add(0, -1, 0).getBlock().getType() == Material.AIR) {
-            // Check if we can drop 1 block
-            Location dropped = newLoc.clone().add(0, -1, 0);
-            if (dropped.clone().add(0, -1, 0).getBlock().getType().isSolid()) {
-                newLoc = dropped;
-            }
-        }
-
-        bot.teleport(newLoc);
+        // Apply horizontal velocity, preserve vertical (gravity handles Y)
+        Vector currentVel = bot.getVelocity();
+        bot.setVelocity(new Vector(vx, currentVel.getY(), vz));
     }
 
     private void handleSprinting(Player bot, double distance) {
@@ -2048,7 +2316,6 @@ public class BotCombatAI {
     private void retreat(Player bot) {
         if (!bot.isOnGround()) return;
 
-        // Teleport-based backward movement (same system as moveTowardsTarget but AWAY)
         Location botLoc = bot.getLocation();
         Location targetLoc = target.getLocation();
 
@@ -2058,24 +2325,22 @@ public class BotCombatAI {
         if (len < 0.1) return;
 
         double retreatSpeed = switch (difficulty) {
-            case EASY     -> 0.14;
-            case MEDIUM   -> 0.18;
-            case HARD     -> 0.22;
-            case HACKER   -> 0.26;
-            case ADAPTIVE -> 0.20;
+            case EASY     -> 0.18;
+            case MEDIUM   -> 0.22;
+            case HARD     -> 0.26;
+            case HACKER   -> 0.28;
+            case ADAPTIVE -> 0.24;
         };
 
-        double ndx = (dx / len) * retreatSpeed;
-        double ndz = (dz / len) * retreatSpeed;
-
-        Location newLoc = new Location(botLoc.getWorld(),
-                botLoc.getX() + ndx, botLoc.getY(), botLoc.getZ() + ndz,
-                botLoc.getYaw(), botLoc.getPitch());
+        double vx = (dx / len) * retreatSpeed;
+        double vz = (dz / len) * retreatSpeed;
 
         // Don't retreat into walls
-        if (newLoc.getBlock().getType().isSolid()) return;
+        Location ahead = botLoc.clone().add(vx * 2, 0, vz * 2);
+        if (ahead.getBlock().getType().isSolid()) return;
 
-        bot.teleport(newLoc);
+        // Velocity-based retreat — gravity handles Y naturally
+        bot.setVelocity(new Vector(vx, bot.getVelocity().getY(), vz));
         bot.setSprinting(true);
 
         // Try to heal while retreating

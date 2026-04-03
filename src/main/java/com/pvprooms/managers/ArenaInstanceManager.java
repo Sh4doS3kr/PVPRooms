@@ -226,9 +226,18 @@ public class ArenaInstanceManager {
 
         world.setAutoSave(false);
 
-        // Remove lingering non-player entities (items, orbs, projectiles, crystals)
+        // Remove only transient entities (items, projectiles, XP orbs) — NOT map decoration
+        // entities like EnderCrystals, armor stands, item frames, etc.
         for (org.bukkit.entity.Entity e : world.getEntities()) {
-            if (!(e instanceof Player)) e.remove();
+            if (e instanceof Player) continue;
+            if (e instanceof org.bukkit.entity.Item
+                    || e instanceof org.bukkit.entity.ExperienceOrb
+                    || e instanceof org.bukkit.entity.Projectile
+                    || e instanceof org.bukkit.entity.TNTPrimed
+                    || e instanceof org.bukkit.entity.FallingBlock) {
+                e.remove();
+            }
+            // EnderCrystal, ArmorStand, ItemFrame, Painting, etc. are preserved
         }
 
         // Only unload chunks when the arena allows block modifications.
