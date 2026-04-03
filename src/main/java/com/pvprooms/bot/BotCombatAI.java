@@ -180,6 +180,7 @@ public class BotCombatAI {
                 case HARD -> 0.25;
                 case HACKER -> 0.50;
                 case ADAPTIVE -> 0.20;
+                case DUMMY -> 0.0;
             };
             this.healThreshold = difficulty.healThreshold;
             this.strafeChance = switch(difficulty) {
@@ -188,6 +189,7 @@ public class BotCombatAI {
                 case HARD -> 0.35;
                 case HACKER -> 0.5;
                 case ADAPTIVE -> 0.25;
+                case DUMMY -> 0.0;
             };
             this.wTapChance = switch(difficulty) {
                 case EASY -> 0.05;
@@ -195,6 +197,7 @@ public class BotCombatAI {
                 case HARD -> 0.25;
                 case HACKER -> 0.4;
                 case ADAPTIVE -> 0.15;
+                case DUMMY -> 0.0;
             };
             this.jumpChance = switch(difficulty) {
                 case EASY -> 0.05;
@@ -202,6 +205,7 @@ public class BotCombatAI {
                 case HARD -> 0.15;
                 case HACKER -> 0.25;
                 case ADAPTIVE -> 0.1;
+                case DUMMY -> 0.0;
             };
             this.sneakChance = switch(difficulty) {
                 case EASY -> 0.02;
@@ -209,6 +213,7 @@ public class BotCombatAI {
                 case HARD -> 0.1;
                 case HACKER -> 0.2;
                 case ADAPTIVE -> 0.08;
+                case DUMMY -> 0.0;
             };
         }
     }
@@ -265,6 +270,9 @@ public class BotCombatAI {
                 if (bot == null) return;
 
                 double distance = bot.getLocation().distance(target.getLocation());
+
+                // ── DUMMY MODE: do absolutely nothing — stand still for target practice ──
+                if (difficulty == BotDifficulty.DUMMY) return;
 
                 // ── NEVER interrupt these states ──
                 if (combatState == CombatState.ELYTRA_FLIGHT) return; // Elytra dive in progress
@@ -386,6 +394,7 @@ public class BotCombatAI {
             case HARD     -> 0.04;
             case HACKER   -> 0.08;
             case ADAPTIVE -> 0.03;
+            case DUMMY    -> 0.0;
         };
 
         // Only pearl if target is running away AND far
@@ -420,6 +429,7 @@ public class BotCombatAI {
             case HARD     -> 0.03;
             case HACKER   -> 0.01;
             case ADAPTIVE -> 0.05;
+            case DUMMY    -> 0.0;
         };
         direction.add(new Vector(
             (random.nextDouble() - 0.5) * jitter,
@@ -487,6 +497,7 @@ public class BotCombatAI {
             case HARD -> 300;
             case HACKER -> 150;  // Insane crystal speed
             case ADAPTIVE -> 400;
+            case DUMMY -> 9999;
         };
         int anchorCooldown = switch(difficulty) {
             case EASY -> 1200;
@@ -494,6 +505,7 @@ public class BotCombatAI {
             case HARD -> 500;
             case HACKER -> 250;
             case ADAPTIVE -> 600;
+            case DUMMY -> 9999;
         };
         
         // Priority: Crystals > Anchors > Sword (pro crystal players spam crystals)
@@ -752,6 +764,7 @@ public class BotCombatAI {
             case HARD     -> 0.22;
             case HACKER   -> 0.40;
             case ADAPTIVE -> 0.18;
+            case DUMMY    -> 0.0;
         };
 
         if (!isBlocking && random.nextDouble() < blockChance) {
@@ -765,6 +778,7 @@ public class BotCombatAI {
                 case HARD     -> 1400;
                 case HACKER   -> 1800;
                 case ADAPTIVE -> 1000;
+                case DUMMY    -> 100;
             };
             if (now - lastShieldRaise > holdTime || random.nextDouble() < 0.04) {
                 isBlocking = false;
@@ -835,6 +849,7 @@ public class BotCombatAI {
             case HARD -> 0.45;
             case HACKER -> 0.70;
             case ADAPTIVE -> critChance;
+            case DUMMY -> 0.0;
         };
         
         if (bot.isOnGround() && random.nextDouble() < critAttemptChance && System.currentTimeMillis() - lastJump > 800) {
@@ -909,6 +924,7 @@ public class BotCombatAI {
             case HARD -> 0.55;
             case HACKER -> 0.80;
             case ADAPTIVE -> critChance;
+            case DUMMY -> 0.0;
         };
         
         if (bot.isOnGround() && random.nextDouble() < axeCritChance && System.currentTimeMillis() - lastJump > 1000) {
@@ -944,6 +960,8 @@ public class BotCombatAI {
 
         // ── Priority 3: Normal jump + mace smash ──
         if (bot.isOnGround() && now - lastMaceJump > 3000 && distance <= 5) {
+            // Look at target before jumping
+            lookAt(bot, target.getLocation());
             // Jump toward target — mace needs fall distance for damage
             Vector direction = target.getLocation().toVector()
                     .subtract(bot.getLocation().toVector()).normalize();
@@ -975,6 +993,7 @@ public class BotCombatAI {
 
         // ── Priority 5: Ground attack (mace has slow cooldown, make it count) ──
         if (distance <= 3.0 && isAttackCooldownReady(bot)) {
+            lookAt(bot, target.getLocation()); // Always face target with mace
             performAttack(bot, false);
             lastAttackTime = now;
         }
@@ -1000,69 +1019,86 @@ public class BotCombatAI {
             if (maceSlot != -1) bot.getInventory().setHeldItemSlot(maceSlot);
         }
 
-        // Lock state briefly
-        combatState = CombatState.ELYTRA_FLIGHT; // Reuse flight state to block other actions
+        // Lock state
+        combatState = CombatState.ELYTRA_FLIGHT;
         lastWindChargeUse = System.currentTimeMillis();
 
-        // Consume wind charge
+        // Look at target before launching
+        lookAt(bot, target.getLocation());
+
+        // Consume wind charge from inventory
         ItemStack windItem = bot.getInventory().getItem(windSlot);
         if (windItem != null) windItem.setAmount(windItem.getAmount() - 1);
 
-        // Wind charge visual + sound
-        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 1.0f, 1.0f);
-        bot.getWorld().spawnParticle(Particle.CLOUD, bot.getLocation(), 20, 0.3, 0.1, 0.3, 0.05);
-
-        // Launch bot upward (wind charge launches ~7-8 blocks)
-        Vector launch = new Vector(0, 1.4, 0); // Strong upward velocity
-        // Slight horizontal toward target so we land near them
-        Vector toTarget = target.getLocation().toVector()
-                .subtract(bot.getLocation().toVector());
-        toTarget.setY(0);
-        if (toTarget.lengthSquared() > 0.01) {
-            toTarget.normalize().multiply(0.3);
-            launch.add(toTarget);
+        // ── Spawn a REAL WindCharge entity at the bot's feet ──
+        // This creates the actual wind charge explosion that launches the bot naturally
+        Location feetLoc = bot.getLocation().clone();
+        try {
+            org.bukkit.entity.WindCharge windCharge = bot.getWorld().spawn(
+                    feetLoc, org.bukkit.entity.WindCharge.class, wc -> {
+                        wc.setShooter(bot);
+                        // Set downward velocity so it hits the ground immediately
+                        wc.setVelocity(new Vector(0, -1.0, 0));
+                    });
+            // Detonate after 1 tick so it explodes at the bot's feet
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (windCharge.isValid()) {
+                    // Explode at bot's feet — the natural explosion launches the bot upward
+                    windCharge.explode();
+                }
+            }, 1L);
+        } catch (Exception e) {
+            // Fallback if WindCharge entity not available: manual launch
+            bot.setVelocity(new Vector(0, 1.4, 0));
+            bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_WIND_CHARGE_THROW, 1.0f, 1.0f);
         }
-        bot.setVelocity(launch);
-        manualFallStartY = bot.getLocation().getY() + 8.0; // Will peak around +7-8 blocks
 
-        // Look at target during ascent
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!isValid()) { combatState = CombatState.IDLE; return; }
-            Player b = getBotPlayer();
-            if (b != null) lookAt(b, target.getLocation());
-        }, 5L);
+        // Track the peak Y for manual fall distance
+        manualFallStartY = bot.getLocation().getY();
 
-        // At peak (~15 ticks), aim down at target
+        // Look at target during ascent (every few ticks)
+        for (int tick = 3; tick <= 12; tick += 3) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!isValid()) { combatState = CombatState.IDLE; return; }
+                Player b = getBotPlayer();
+                if (b == null) return;
+                lookAt(b, target.getLocation());
+                // Update peak Y
+                if (b.getLocation().getY() > manualFallStartY) {
+                    manualFallStartY = b.getLocation().getY();
+                }
+            }, tick);
+        }
+
+        // At peak (~15 ticks), record actual peak and aim at target
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!isValid()) { combatState = CombatState.IDLE; return; }
             Player b = getBotPlayer();
             if (b == null) { combatState = CombatState.IDLE; return; }
             lookAt(b, target.getLocation());
-            // Update manual fall start to actual peak
             manualFallStartY = b.getLocation().getY();
         }, 15L);
 
-        // During fall, track target and smash on contact (tick 18-50)
-        for (int tick = 18; tick <= 50; tick += 2) {
+        // During fall, track target and smash on contact (tick 17-55)
+        for (int tick = 17; tick <= 55; tick += 2) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!isValid() || combatState != CombatState.ELYTRA_FLIGHT) return;
                 Player b = getBotPlayer();
                 if (b == null) return;
 
+                // ALWAYS look at target during mace dive
                 lookAt(b, target.getLocation());
 
                 double dist = b.getLocation().distance(target.getLocation());
-                double fallD = getManualFallDistance(b);
-                double vanillaFall = b.getFallDistance();
-                double bestFall = Math.max(fallD, vanillaFall);
+                double bestFall = Math.max(getManualFallDistance(b), b.getFallDistance());
 
                 if (dist <= 4.5 && bestFall > 1.5) {
+                    lookAt(b, target.getLocation()); // Face target for the smash
                     performMaceSmash(b);
                     combatState = CombatState.IDLE;
                     return;
                 }
 
-                // If landed without hitting, unlock
                 if (b.isOnGround()) {
                     combatState = CombatState.IDLE;
                 }
@@ -1072,7 +1108,7 @@ public class BotCombatAI {
         // Safety unlock
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (combatState == CombatState.ELYTRA_FLIGHT) combatState = CombatState.IDLE;
-        }, 55L);
+        }, 60L);
     }
 
     /** Get manual fall distance (distance fallen from peak Y). */
@@ -1326,6 +1362,9 @@ public class BotCombatAI {
      */
     private void performMaceSmash(Player bot) {
         if (!isValid()) return;
+
+        // ALWAYS look at target when smashing with mace
+        lookAt(bot, target.getLocation());
 
         double distance = bot.getLocation().distance(target.getLocation());
         if (distance > 4.5) return;
@@ -1698,6 +1737,7 @@ public class BotCombatAI {
             case HARD -> 20;
             case HACKER -> 12;
             case ADAPTIVE -> 22;
+            case DUMMY -> 9999;
         };
 
         // Loading phase — bot aims at target while loading
@@ -1780,6 +1820,7 @@ public class BotCombatAI {
             case HARD -> 15;
             case HACKER -> 8;
             case ADAPTIVE -> 18;
+            case DUMMY -> 9999;
         };
         
         isBowDrawing = true;
@@ -1831,6 +1872,7 @@ public class BotCombatAI {
             case HARD     -> 3.0;
             case HACKER   -> 3.0;
             case ADAPTIVE -> 2.8;
+            case DUMMY    -> 0.0;
         };
 
         // Horizontal distance for flight-time estimation
@@ -1855,6 +1897,7 @@ public class BotCombatAI {
             case HARD     -> 0.05;
             case HACKER   -> 0.01;
             case ADAPTIVE -> 0.08;
+            case DUMMY    -> 0.0;
         };
         direction.add(new Vector(
             (random.nextDouble() - 0.5) * aimError,
@@ -1978,6 +2021,9 @@ public class BotCombatAI {
                     wasOnGroundLastTick = false;
                 }
 
+                // ── DUMMY MODE: no movement at all ──
+                if (difficulty == BotDifficulty.DUMMY) return;
+
                 // ── NEVER move during elytra flight or bow draw ──
                 if (isUsingElytra || elytraDiveActive) return;
                 if (combatState == CombatState.ELYTRA_FLIGHT) return;
@@ -2084,6 +2130,7 @@ public class BotCombatAI {
                 case HARD     -> 0.26;
                 case HACKER   -> 0.28;
                 case ADAPTIVE -> 0.24;
+                case DUMMY    -> 0.0;
             };
         } else {
             bot.setSprinting(false);
@@ -2095,6 +2142,7 @@ public class BotCombatAI {
                 case HARD     -> 0.18;
                 case HACKER   -> 0.21;
                 case ADAPTIVE -> 0.16;
+                case DUMMY    -> 0.0;
             };
         }
 
@@ -2114,6 +2162,7 @@ public class BotCombatAI {
                 case HARD     -> 0.10;
                 case HACKER   -> 0.14;
                 case ADAPTIVE -> 0.08;
+                case DUMMY    -> 0.0;
             } * strafeDirection;
         }
 
@@ -2154,6 +2203,7 @@ public class BotCombatAI {
             case HARD -> 0.7;
             case HACKER -> 0.95;
             case ADAPTIVE -> adaptiveParams != null ? adaptiveParams.sprintChance : 0.6;
+            case DUMMY -> 0.0;
         };
         
         // Always sprint when chasing from far away
@@ -2208,6 +2258,7 @@ public class BotCombatAI {
                 case HARD     -> 0.20;  // Sometimes (good players)
                 case HACKER   -> 0.45;  // Almost always
                 case ADAPTIVE -> this.sneakChance * 0.5;
+                case DUMMY    -> 0.0;
             };
 
             if (random.nextDouble() < tapChance) {
@@ -2280,6 +2331,7 @@ public class BotCombatAI {
             case HARD -> 0.12;    // Human-like
             case HACKER -> 0.18;
             case ADAPTIVE -> strafeChance;
+            case DUMMY -> 0.0;
         };
         
         Vector strafe = bot.getLocation().getDirection()
@@ -2301,6 +2353,7 @@ public class BotCombatAI {
             case HARD -> 0.15;    // Sometimes (human-like)
             case HACKER -> 0.35;  // Often
             case ADAPTIVE -> wTapChance;
+            case DUMMY -> 0.0;
         };
         return random.nextDouble() < chance;
     }
@@ -2330,6 +2383,7 @@ public class BotCombatAI {
             case HARD     -> 0.26;
             case HACKER   -> 0.28;
             case ADAPTIVE -> 0.24;
+            case DUMMY    -> 0.0;
         };
 
         double vx = (dx / len) * retreatSpeed;
@@ -2355,6 +2409,7 @@ public class BotCombatAI {
             case HARD -> 1000;    // Human-like
             case HACKER -> 400;   // Fast
             case ADAPTIVE -> 1200;
+            case DUMMY -> 9999;
         };
         if (System.currentTimeMillis() - lastBlockPlace < cooldown) return false;
         
@@ -2689,6 +2744,7 @@ public class BotCombatAI {
             case HARD     -> 0.03;
             case HACKER   -> 0.005;
             case ADAPTIVE -> 0.05;
+            case DUMMY    -> 0.0;
         };
         direction.add(new Vector(
                 (random.nextDouble() - 0.5) * jitter,
@@ -2708,6 +2764,7 @@ public class BotCombatAI {
             case HARD     -> 28.0f;
             case HACKER   -> 55.0f;
             case ADAPTIVE -> 20.0f;
+            case DUMMY    -> 0.0f;
         };
 
         // Wrap yaw difference to [-180, 180] so we always turn the short way
@@ -2733,6 +2790,7 @@ public class BotCombatAI {
             case HARD -> 0.5;
             case HACKER -> 0.8;
             case ADAPTIVE -> 0.4;
+            case DUMMY -> 0.0;
         };
         
         Location predicted = target.getLocation().clone();

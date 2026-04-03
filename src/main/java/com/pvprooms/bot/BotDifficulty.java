@@ -14,7 +14,8 @@ public enum BotDifficulty {
     MEDIUM("§eMedio", 500, 0.80, 0.35, 3, 40),     // Average player - consistent attacks
     HARD("§cDifícil", 400, 0.90, 0.45, 2, 30),     // Skilled player - fast and accurate
     HACKER("§4§lHACKER", 250, 0.95, 0.60, 1, 20),  // Pro level - very aggressive
-    ADAPTIVE("§d§lAdaptivo", 450, 0.85, 0.40, 3, 35); // Learns from player
+    ADAPTIVE("§d§lAdaptivo", 450, 0.85, 0.40, 3, 35), // Learns from player
+    DUMMY("§7Quieto", 9999, 0.0, 0.0, 20, 0);      // Practice dummy - no movement, no attacks, massive HP
 
     public final String displayName;
     public final int reactionTimeMs;      // How fast bot reacts (humans: 200-300ms)

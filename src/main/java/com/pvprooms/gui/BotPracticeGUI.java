@@ -94,6 +94,9 @@ public class BotPracticeGUI implements Listener {
         // Adaptive AI mode (special)
         inv.setItem(22, createAdaptiveItem(player));
 
+        // DUMMY mode (practice target)
+        inv.setItem(20, createDummyItem());
+
         // Back button
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta backMeta = back.getItemMeta();
@@ -156,6 +159,36 @@ public class BotPracticeGUI implements Listener {
         return item;
     }
 
+    private ItemStack createDummyItem() {
+        ItemStack item = new ItemStack(Material.ARMOR_STAND);
+        ItemMeta meta = item.getItemMeta();
+        
+        meta.displayName(Component.text("◎ QUIETO", NamedTextColor.GRAY)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true));
+        
+        meta.lore(List.of(
+                Component.empty(),
+                Component.text("» El bot NO se mueve", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("» El bot NO ataca", NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("» Tiene muchísima vida (500❤)", NamedTextColor.RED)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.empty(),
+                Component.text("Perfecto para practicar", NamedTextColor.WHITE)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("mazo, combos, elytra, etc.", NamedTextColor.WHITE)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.empty(),
+                Component.text("Click para empezar", NamedTextColor.GREEN)
+                        .decoration(TextDecoration.ITALIC, false)
+        ));
+        
+        item.setItemMeta(meta);
+        return item;
+    }
+
     private ItemStack createKitItem(String kitName) {
         // Pick material based on kit name
         Material material = switch (kitName.toLowerCase()) {
@@ -202,6 +235,7 @@ public class BotPracticeGUI implements Listener {
             case HARD -> NamedTextColor.RED;
             case HACKER -> NamedTextColor.DARK_RED;
             case ADAPTIVE -> NamedTextColor.LIGHT_PURPLE;
+            case DUMMY -> NamedTextColor.GRAY;
         };
         
         meta.displayName(Component.text(difficulty.name(), color)
@@ -214,6 +248,7 @@ public class BotPracticeGUI implements Listener {
             case HARD -> "Reacción rápida, muy preciso";
             case HACKER -> "Reacción muy rápida, muy preciso";
             case ADAPTIVE -> "Se adapta a tu estilo";
+            case DUMMY -> "No se mueve ni ataca";
         };
 
         String healDesc = switch (difficulty) {
@@ -222,6 +257,7 @@ public class BotPracticeGUI implements Listener {
             case HARD -> "Cura al " + difficulty.healThreshold + "% HP";
             case HACKER -> "Cura al " + difficulty.healThreshold + "% HP";
             case ADAPTIVE -> "Aprende cuándo curas tú";
+            case DUMMY -> "500❤ de vida";
         };
 
         meta.lore(List.of(
@@ -304,6 +340,7 @@ public class BotPracticeGUI implements Listener {
             case RED_WOOL -> BotDifficulty.HARD;
             case BLACK_WOOL -> BotDifficulty.HACKER;
             case ENDER_EYE -> BotDifficulty.ADAPTIVE;
+            case ARMOR_STAND -> BotDifficulty.DUMMY;
             default -> null;
         };
     }

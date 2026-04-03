@@ -278,6 +278,7 @@ public class ScoreboardManager {
             case HARD -> "§c";
             case HACKER -> "§4§l";
             case ADAPTIVE -> "§d§l";
+            case DUMMY -> "§7";
         };
 
         // Get bot health

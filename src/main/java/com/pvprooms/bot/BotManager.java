@@ -202,6 +202,7 @@ public class BotManager {
             // Force teleport to exact spawn position AFTER Citizens finishes spawn logic
             // Using a 2-tick delay ensures the entity is fully initialized
             final Location exactSpawn = botSpawn.clone();
+            final BotDifficulty finalDifficulty = difficulty;
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (bot.isSpawned() && bot.getEntity() != null) {
                     bot.getEntity().teleport(exactSpawn);
@@ -209,6 +210,18 @@ public class BotManager {
                     if (bot.getEntity() instanceof Player botPlayer) {
                         botPlayer.setAllowFlight(false);
                         botPlayer.setFlying(false);
+
+                        // DUMMY mode: massive HP so bot is a training dummy
+                        if (finalDifficulty == BotDifficulty.DUMMY) {
+                            var maxHpAttr = botPlayer.getAttribute(
+                                    org.bukkit.attribute.Attribute.MAX_HEALTH);
+                            if (maxHpAttr != null) {
+                                maxHpAttr.setBaseValue(1000.0); // 500 hearts
+                            }
+                            botPlayer.setHealth(1000.0);
+                            // Also give absorption so HP bar shows full
+                            botPlayer.setAbsorptionAmount(0);
+                        }
                     }
                     plugin.getLogger().info("[BotDuel] Bot force-teleported to exact spawn: " + 
                         exactSpawn.getBlockX() + "," + exactSpawn.getBlockY() + "," + exactSpawn.getBlockZ());
@@ -357,6 +370,7 @@ public class BotManager {
             case HARD -> "Bot_Dificil";
             case HACKER -> "Bot_Hacker";
             case ADAPTIVE -> "Bot_Adaptivo";
+            case DUMMY -> "Bot_Quieto";
         };
     }
 
