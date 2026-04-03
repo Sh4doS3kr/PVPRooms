@@ -239,7 +239,7 @@
             <div class="tier-req"><span class="req-tier lt1">LT1</span><span class="req-text">6500+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
             <div class="tier-req"><span class="req-tier ht1">HT1</span><span class="req-text">9000+ pts · <strong style="color:#f59e0b">🎫 Requiere Ticket</strong></span></div>
           </div>
-          <p style="margin-top:0.75rem;font-size:0.85rem;color:#9ca3af;">⚠️ A partir de <strong style="color:#f97316">HT3</strong> se requiere verificación via ticket en <a href="/tickets.html" style="color:#60a5fa;">Sistema de Tickets</a></p>
+          <p style="margin-top:0.75rem;font-size:0.85rem;color:#9ca3af;">⚠️ A partir de <strong style="color:#f97316">HT3</strong> se requiere verificación via ticket en <a href="https://discord.gg/Mmyqs3PGGf" target="_blank" style="color:#60a5fa;">Discord</a></p>
         </div>
 
         <div class="info-box warning">
@@ -274,7 +274,7 @@
               
               <p class="verify-note" style="margin-top:1rem;"><strong>📋 Proceso de verificación via ticket:</strong></p>
               <ol class="verify-reqs" style="list-style:decimal;padding-left:1.5rem;">
-                <li>Abre un ticket en el <a href="/tickets.html" style="color:#60a5fa;text-decoration:underline;">Sistema de Tickets</a></li>
+                <li>Abre un ticket en <a href="https://discord.gg/Mmyqs3PGGf" target="_blank" style="color:#60a5fa;text-decoration:underline;">Discord</a></li>
                 <li>Se te asignará un <strong>Tester de tu nivel</strong> (HT3+)</li>
                 <li><strong>Debes GRABAR</strong> todo el test completo</li>
                 <li>El Tester te evaluará en partidas BO3/BO5</li>
@@ -946,12 +946,12 @@ if (!checkPrivacyAccepted()) {
     document.body.style.overflow = '';
   }
 
-  // Intercept all links to /tickets.html and anchor #tierInfo ticket links
+  // Intercept all links to Discord tickets and anchor #tierInfo ticket links
   document.addEventListener('click', function(e) {
     const a = e.target.closest('a');
     if (!a) return;
     const href = a.getAttribute('href') || '';
-    if (href === '/tickets.html' || a.classList.contains('ticket-rules-trigger')) {
+    if (href === 'https://discord.gg/Mmyqs3PGGf' || a.classList.contains('ticket-rules-trigger')) {
       e.preventDefault();
       openRules();
     }
@@ -1001,10 +1001,10 @@ if (!checkPrivacyAccepted()) {
     acceptBtn.disabled = !check.checked;
   });
 
-  // Accept → go to tickets
+  // Accept → go to Discord
   acceptBtn.addEventListener('click', function() {
     closeRules();
-    window.location.href = '/tickets.html';
+    window.location.href = 'https://discord.gg/Mmyqs3PGGf';
   });
 })();
 
@@ -1061,7 +1061,7 @@ function checkAuthStatus() {
   .then(r => r.json())
   .then(data => {
     if (data.valid) {
-      authBtn.href = data.role === 'user' ? '/tickets.html' : '/admin.html';
+      authBtn.href = data.role === 'user' ? 'https://discord.gg/Mmyqs3PGGf' : '/admin.html';
       authBtn.innerHTML = '<img src="https://mc-heads.net/avatar/' + data.uuid + '/20" style="width:20px;height:20px;border-radius:4px;image-rendering:pixelated;"><span>' + data.username + '</span>';
       authBtn.classList.add('logged-in');
     }

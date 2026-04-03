@@ -371,17 +371,46 @@ public class PlayerListener implements Listener {
     }
 
     /**
-     * Returns true if the player's body occupies a solid (non-passable) block.
+     * Returns true if the player's body occupies a solid full-cube block.
+     * Excludes stairs, slabs, trapdoors, doors, fences, walls, and other
+     * non-full-cube blocks that players can legitimately stand in/on.
      */
     private boolean isInsideWall(Location loc) {
         World w = loc.getWorld();
         int bx = loc.getBlockX(), bz = loc.getBlockZ();
         Block feet = w.getBlockAt(bx, (int) Math.floor(loc.getY()), bz);
-        if (!feet.isPassable()) return true;
+        if (isWallBlock(feet)) return true;
         Block chest = w.getBlockAt(bx, (int) Math.floor(loc.getY() + 0.9), bz);
-        if (!chest.isPassable()) return true;
+        if (isWallBlock(chest)) return true;
         Block eyes = w.getBlockAt(bx, (int) Math.floor(loc.getY() + 1.62), bz);
-        return !eyes.isPassable();
+        return isWallBlock(eyes);
+    }
+
+    /**
+     * Returns true only for full solid cubes that a player should never be inside.
+     * Returns false for stairs, slabs, trapdoors, doors, fences, walls, signs,
+     * beds, chests, and other non-full blocks.
+     */
+    private boolean isWallBlock(Block block) {
+        if (block.isPassable()) return false;
+        Material type = block.getType();
+        if (!type.isSolid()) return false;
+        // Must be occluding (full opaque cube) — stairs, slabs, etc. are NOT occluding
+        if (!type.isOccluding()) return false;
+        String name = type.name();
+        // Extra safety: exclude any block with these keywords
+        if (name.contains("STAIR") || name.contains("SLAB") || name.contains("STEP")
+                || name.contains("FENCE") || name.contains("WALL") || name.contains("GATE")
+                || name.contains("DOOR") || name.contains("TRAPDOOR") || name.contains("SIGN")
+                || name.contains("BED") || name.contains("CHEST") || name.contains("ANVIL")
+                || name.contains("BREWING") || name.contains("ENCHANT") || name.contains("HOPPER")
+                || name.contains("LANTERN") || name.contains("CAMPFIRE") || name.contains("BELL")
+                || name.contains("CANDLE") || name.contains("CHAIN") || name.contains("CARPET")
+                || name.contains("PISTON") || name.contains("SKULL") || name.contains("HEAD")
+                || name.contains("BANNER") || name.contains("POT")) {
+            return false;
+        }
+        return true;
     }
 
     // ── Movement freeze (countdown, no-walls arenas) ───────────────────────

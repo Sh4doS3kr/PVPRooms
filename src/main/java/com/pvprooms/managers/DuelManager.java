@@ -118,7 +118,7 @@ public class DuelManager {
         preparePlayer(p2);
 
         // Notify match found & clear queue scoreboard before teleport
-        String modeTag = bo3 ? " §8[§bBO3§8]" : "";
+        String modeTag = bo3 ? " §8[§bBO10§8]" : "";
         p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         plugin.getScoreboardManager().clearScoreboard(p1);
@@ -317,10 +317,10 @@ public class DuelManager {
             }
         }
 
-        // Restore and teleport combatants
+        // Restore and teleport combatants — force-respawn dead players first
         Location lobby = plugin.getLobbySpawn();
-        if (p1 != null) { restorePlayer(p1); p1.teleport(lobby); }
-        if (p2 != null) { restorePlayer(p2); p2.teleport(lobby); }
+        safeRestoreAndTeleport(p1, lobby);
+        safeRestoreAndTeleport(p2, lobby);
 
         // Give trim key AFTER restore so the snapshot doesn't overwrite it
         if (winnerUUID != null && !duel.isBo3()) {
@@ -335,6 +335,20 @@ public class DuelManager {
         // Restaurar scoreboard de lobby
         if (p1 != null) plugin.getScoreboardManager().restoreLobbyScoreboard(p1);
         if (p2 != null) plugin.getScoreboardManager().restoreLobbyScoreboard(p2);
+
+        // ── Safety net: guarantee ALL combatants reach lobby ──
+        // Catches edge cases where teleport fails (death screen, respawn timing, etc.)
+        final UUID uid1 = duel.getPlayer1(), uid2 = duel.getPlayer2();
+        if (plugin.isEnabled()) {
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                ensureAtLobby(uid1);
+                ensureAtLobby(uid2);
+            }, 5L);  // 0.25s later
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                ensureAtLobby(uid1);
+                ensureAtLobby(uid2);
+            }, 20L); // 1s later — final guarantee
+        }
 
         // Destroy or return the arena world to the pool
         String worldName = duel.getCurrentWorldName();
@@ -573,6 +587,47 @@ public class DuelManager {
 
     private void saveSnapshot(Player player) {
         inventorySnapshots.put(player.getUniqueId(), new PlayerSnapshot(player));
+    }
+
+    /**
+     * Force-respawn if dead, restore inventory, and teleport to lobby.
+     * If the player is still in the death screen, schedule a delayed retry.
+     */
+    private void safeRestoreAndTeleport(Player player, Location lobby) {
+        if (player == null) return;
+        // Force respawn if still dead
+        if (player.isDead()) {
+            try { player.spigot().respawn(); } catch (Exception ignored) {}
+        }
+        restorePlayer(player);
+        player.teleport(lobby);
+    }
+
+    /**
+     * Safety net: if the player is online but NOT in the lobby world, force-teleport them.
+     * Handles edge cases where the initial teleport silently failed.
+     */
+    private void ensureAtLobby(UUID uuid) {
+        if (uuid == null) return;
+        Player p = Bukkit.getPlayer(uuid);
+        if (p == null || !p.isOnline()) return;
+        // Already in a new duel? Don't interfere
+        if (playerDuelMap.containsKey(uuid)) return;
+        // Already in an FFA? Don't interfere
+        if (isInFFA(uuid)) return;
+
+        Location lobby = plugin.getLobbySpawn();
+        String lobbyWorld = lobby.getWorld() != null ? lobby.getWorld().getName() : "";
+        String playerWorld = p.getWorld().getName();
+
+        if (!playerWorld.equals(lobbyWorld)) {
+            if (p.isDead()) {
+                try { p.spigot().respawn(); } catch (Exception ignored) {}
+            }
+            restorePlayer(p);
+            p.teleport(lobby);
+            plugin.getScoreboardManager().restoreLobbyScoreboard(p);
+        }
     }
 
     private void restorePlayer(Player player) {
