@@ -131,6 +131,34 @@ public class BotCombatAI {
     private int targetHitStreak = 0;
     private long lastTargetDamageTime = 0;
     private boolean targetIsAggressive = false;
+
+    // Bot's own combo tracking — how many consecutive hits WE landed
+    private int botComboCount = 0;
+    private long lastBotHitLanded = 0;
+
+    // Damage received tracking — detect when WE are being comboed
+    private double lastBotHealth = 20.0;
+    private int hitsReceivedStreak = 0;
+    private long lastDamageReceivedTime = 0;
+    private boolean isBeingComboed = false;
+
+    // Post-hit chase: after landing a hit, chase harder for a short window
+    private boolean postHitChase = false;
+    private long postHitChaseStart = 0;
+
+    // Reactive defense: cooldowns for emergency actions
+    private long lastEmergencyBlock = 0;
+    private long lastEmergencyPearl = 0;
+    private long lastEmergencyRetreat = 0;
+
+    // ── FLEE-TO-HEAL system ──
+    // Triggered when totem pops or HP is critically low.
+    // Bot will: pearl away → sprint retreat → eat gapple → return to fight.
+    private boolean isFleeingToHeal = false;
+    private long fleeStartTime = 0;
+    private boolean totemJustPopped = false;
+    private long totemPopTime = 0;
+    private long lastEscapePearl = 0;
     
     // Constants based on difficulty
     private final int tickRate;
@@ -186,32 +214,32 @@ public class BotCombatAI {
             this.strafeChance = switch(difficulty) {
                 case EASY -> 0.1;
                 case MEDIUM -> 0.2;
-                case HARD -> 0.35;
-                case HACKER -> 0.5;
+                case HARD -> 0.45;   // Aggressive strafing
+                case HACKER -> 0.65; // Constant strafing
                 case ADAPTIVE -> 0.25;
                 case DUMMY -> 0.0;
             };
             this.wTapChance = switch(difficulty) {
                 case EASY -> 0.05;
                 case MEDIUM -> 0.15;
-                case HARD -> 0.25;
-                case HACKER -> 0.4;
+                case HARD -> 0.35;   // Consistent W-tapping
+                case HACKER -> 0.55; // Almost always W-taps
                 case ADAPTIVE -> 0.15;
                 case DUMMY -> 0.0;
             };
             this.jumpChance = switch(difficulty) {
                 case EASY -> 0.05;
                 case MEDIUM -> 0.1;
-                case HARD -> 0.15;
-                case HACKER -> 0.25;
+                case HARD -> 0.20;   // Sprint-jumps often
+                case HACKER -> 0.35; // Sprint-jumps very often
                 case ADAPTIVE -> 0.1;
                 case DUMMY -> 0.0;
             };
             this.sneakChance = switch(difficulty) {
                 case EASY -> 0.02;
                 case MEDIUM -> 0.05;
-                case HARD -> 0.1;
-                case HACKER -> 0.2;
+                case HARD -> 0.15;   // KB reduction shift-tap
+                case HACKER -> 0.30; // Almost always shift-taps after hit
                 case ADAPTIVE -> 0.08;
                 case DUMMY -> 0.0;
             };
@@ -285,6 +313,33 @@ public class BotCombatAI {
                 updateWeaponType(bot);
                 trackOpponentState(bot);
 
+                // ── FLEE-TO-HEAL: highest priority — overrides all combat ──
+                if (handleFleeToHeal(bot, distance)) return;
+
+                // ── LOW HP FLEE TRIGGER: start fleeing if critically low ──
+                if (!isFleeingToHeal && difficulty != BotDifficulty.DUMMY
+                        && difficulty != BotDifficulty.EASY) {
+                    double hp = (bot.getHealth() / bot.getMaxHealth()) * 100;
+                    boolean hasHealing = findItem(bot.getInventory(), Material.GOLDEN_APPLE) != -1
+                            || findItem(bot.getInventory(), Material.ENCHANTED_GOLDEN_APPLE) != -1
+                            || findHealingPotion(bot.getInventory()) != -1;
+                    // Flee at ≤15% HP if we have healing items
+                    double fleeChance = switch (difficulty) {
+                        case MEDIUM   -> 0.08;
+                        case HARD     -> 0.20;
+                        case HACKER   -> 0.40;
+                        case ADAPTIVE -> 0.12;
+                        default -> 0.0;
+                    };
+                    if (hp <= 15 && hasHealing && random.nextDouble() < fleeChance) {
+                        startFleeToHeal();
+                        return;
+                    }
+                }
+
+                // ── REACTIVE DEFENSE: respond to being comboed ──
+                if (handleReactiveDefense(bot, distance)) return;
+
                 // Shield logic (reactive — only in close combat)
                 handleShieldLogic(bot, distance);
 
@@ -352,26 +407,203 @@ public class BotCombatAI {
 
     private void trackOpponentState(Player bot) {
         double currentTargetHealth = target.getHealth();
+        double currentBotHealth = bot.getHealth();
         long now = System.currentTimeMillis();
 
-        // Detect if target just took damage (we hit them or they took environmental dmg)
+        // ── Track when WE land hits on the target ──
         if (currentTargetHealth < lastTargetHealth - 0.5) {
             lastTargetDamageTime = now;
+            // We landed a hit — increment our combo
+            if (now - lastBotHitLanded < 1200) {
+                botComboCount++;
+            } else {
+                botComboCount = 1;
+            }
+            lastBotHitLanded = now;
+
+            // Post-hit chase: after landing a hit, be aggressive for a window
+            postHitChase = true;
+            postHitChaseStart = now;
         }
 
-        // Detect if WE are being hit a lot (target is aggressive)
-        double botHealth = bot.getHealth();
-        targetIsAggressive = (now - lastTargetDamageTime < 2000) || target.isSprinting();
+        // Expire post-hit chase after 800ms
+        if (postHitChase && now - postHitChaseStart > 800) {
+            postHitChase = false;
+        }
 
-        // Track how many consecutive hits target is landing on us
-        // (used to decide when to block, retreat, or pearl away)
-        if (botHealth < bot.getMaxHealth() * 0.4 && targetIsAggressive) {
+        // ── Track when WE receive damage (being comboed) ──
+        if (currentBotHealth < lastBotHealth - 0.5) {
+            if (now - lastDamageReceivedTime < 1000) {
+                hitsReceivedStreak++;
+            } else {
+                hitsReceivedStreak = 1;
+            }
+            lastDamageReceivedTime = now;
+        }
+
+        // Being comboed = 3+ hits in quick succession
+        isBeingComboed = hitsReceivedStreak >= 3 && (now - lastDamageReceivedTime < 1500);
+
+        // Decay hit streak if no damage for a while
+        if (now - lastDamageReceivedTime > 2000) {
+            hitsReceivedStreak = 0;
+            isBeingComboed = false;
+        }
+
+        // Reset our combo if we haven't landed a hit recently
+        if (now - lastBotHitLanded > 1500) {
+            botComboCount = 0;
+        }
+
+        // Detect if target is aggressive
+        targetIsAggressive = (now - lastDamageReceivedTime < 2000) || target.isSprinting();
+
+        // Track target hit streak (old behavior, refined)
+        if (currentBotHealth < lastBotHealth - 0.5 && targetIsAggressive) {
             targetHitStreak++;
-        } else {
+        } else if (now - lastDamageReceivedTime > 3000) {
             targetHitStreak = Math.max(0, targetHitStreak - 1);
         }
 
         lastTargetHealth = currentTargetHealth;
+        lastBotHealth = currentBotHealth;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // REACTIVE DEFENSE — Combo escape, emergency actions
+    //
+    // When the bot detects it's being comboed (3+ hits in quick succession),
+    // it reacts with pro-level techniques:
+    //   1. Emergency shield raise (instant block to absorb next hit)
+    //   2. Emergency retreat (sprint backwards + heal)
+    //   3. Emergency pearl (pearl behind target to escape and counter-attack)
+    //   4. Strafe burst (sudden direction change to break the combo)
+    //
+    // Higher difficulties react faster and more consistently.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Check if the bot should perform a reactive defense action.
+     * @return true if the bot performed a defense action this tick (skip combat)
+     */
+    private boolean handleReactiveDefense(Player bot, double distance) {
+        long now = System.currentTimeMillis();
+        double healthPercent = (bot.getHealth() / bot.getMaxHealth()) * 100;
+
+        // Only react defensively if we've recently taken damage
+        if (now - lastDamageReceivedTime > 1500) return false;
+        if (difficulty == BotDifficulty.DUMMY || difficulty == BotDifficulty.EASY) return false;
+
+        // ── CRITICAL HEALTH EMERGENCY: heal IMMEDIATELY ──
+        if (healthPercent <= 15 && !isEating) {
+            double emergencyHealChance = switch (difficulty) {
+                case MEDIUM   -> 0.3;
+                case HARD     -> 0.6;
+                case HACKER   -> 0.9;
+                case ADAPTIVE -> 0.4;
+                default -> 0.0;
+            };
+            if (random.nextDouble() < emergencyHealChance) {
+                tryHeal(bot);
+                if (isEating) {
+                    // Also retreat while eating
+                    isRetreating = true;
+                    return true;
+                }
+            }
+        }
+
+        // ── BEING COMBOED: react based on difficulty ──
+        if (isBeingComboed) {
+            // Option 1: Emergency shield raise (fastest reaction)
+            if (now - lastEmergencyBlock > 3000 && distance <= 4.0) {
+                double blockReactChance = switch (difficulty) {
+                    case MEDIUM   -> 0.15;
+                    case HARD     -> 0.35;
+                    case HACKER   -> 0.60;
+                    case ADAPTIVE -> 0.25;
+                    default -> 0.0;
+                };
+                ItemStack offhand = bot.getInventory().getItemInOffHand();
+                if (offhand != null && offhand.getType() == Material.SHIELD
+                        && random.nextDouble() < blockReactChance && !isBlocking) {
+                    isBlocking = true;
+                    setShieldBlockVisual(bot, true);
+                    lastShieldRaise = now;
+                    lastEmergencyBlock = now;
+                    // Quick block: release after 5-8 ticks (just enough to absorb one hit)
+                    int holdTicks = 5 + random.nextInt(3);
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (isValid()) {
+                            isBlocking = false;
+                            Player b = getBotPlayer();
+                            if (b != null) setShieldBlockVisual(b, false);
+                        }
+                    }, holdTicks);
+                    return true;
+                }
+            }
+
+            // Option 2: Emergency strafe burst (change direction suddenly)
+            if (distance <= 5.0) {
+                double strafeBurstChance = switch (difficulty) {
+                    case MEDIUM   -> 0.10;
+                    case HARD     -> 0.30;
+                    case HACKER   -> 0.50;
+                    case ADAPTIVE -> 0.20;
+                    default -> 0.0;
+                };
+                if (random.nextDouble() < strafeBurstChance) {
+                    // Sudden strafe direction change
+                    strafeDirection *= -1;
+                    lastStrafeChange = now;
+                    // Apply lateral velocity burst
+                    Vector look = bot.getLocation().getDirection();
+                    look.setY(0).normalize();
+                    Vector strafe = new Vector(-look.getZ(), 0, look.getX())
+                            .multiply(0.25 * strafeDirection);
+                    bot.setVelocity(bot.getVelocity().add(strafe));
+                    return false; // Don't skip combat, just added movement
+                }
+            }
+
+            // Option 3: Emergency retreat when low HP and being comboed
+            if (healthPercent <= 40 && now - lastEmergencyRetreat > 4000) {
+                double retreatChance = switch (difficulty) {
+                    case MEDIUM   -> 0.10;
+                    case HARD     -> 0.25;
+                    case HACKER   -> 0.45;
+                    case ADAPTIVE -> 0.15;
+                    default -> 0.0;
+                };
+                if (random.nextDouble() < retreatChance) {
+                    isRetreating = true;
+                    lastEmergencyRetreat = now;
+                    retreat(bot);
+                    return true;
+                }
+            }
+        }
+
+        // ── TAKING HEAVY DAMAGE but not comboed: consider retreat at critical HP ──
+        if (healthPercent <= 25 && hitsReceivedStreak >= 2) {
+            double critRetreatChance = switch (difficulty) {
+                case MEDIUM   -> 0.05;
+                case HARD     -> 0.20;
+                case HACKER   -> 0.40;
+                case ADAPTIVE -> 0.10;
+                default -> 0.0;
+            };
+            if (random.nextDouble() < critRetreatChance && now - lastEmergencyRetreat > 5000) {
+                isRetreating = true;
+                lastEmergencyRetreat = now;
+                retreat(bot);
+                tryHeal(bot);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -761,8 +993,8 @@ public class BotCombatAI {
         double blockChance = switch (difficulty) {
             case EASY     -> 0.04;
             case MEDIUM   -> 0.10;
-            case HARD     -> 0.22;
-            case HACKER   -> 0.40;
+            case HARD     -> 0.28;  // Blocks often
+            case HACKER   -> 0.50;  // Very reactive blocking
             case ADAPTIVE -> 0.18;
             case DUMMY    -> 0.0;
         };
@@ -775,8 +1007,8 @@ public class BotCombatAI {
             long holdTime = switch (difficulty) {
                 case EASY     -> 600;
                 case MEDIUM   -> 900;
-                case HARD     -> 1400;
-                case HACKER   -> 1800;
+                case HARD     -> 1600;  // Holds shield longer
+                case HACKER   -> 2000;  // Very patient blocking
                 case ADAPTIVE -> 1000;
                 case DUMMY    -> 100;
             };
@@ -822,6 +1054,202 @@ public class BotCombatAI {
 
     public boolean isShieldBlocking() { return isBlocking; }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // FLEE-TO-HEAL SYSTEM
+    //
+    // Triggered when:
+    //   1. Totem of Undying activates (bot was about to die)
+    //   2. Health drops critically low (≤15%) and bot has healing items
+    //
+    // Behavior:
+    //   - Throw ender pearl AWAY from the target (escape pearl)
+    //   - Sprint retreat at max speed
+    //   - Eat golden apple / use potions while running
+    //   - After healing enough (or time expires), return to fight
+    //
+    // This mimics how real PvP players "run" after totem pop to regen.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Called by BotListener when the bot's totem activates.
+     * Triggers the flee-to-heal sequence.
+     */
+    public void onTotemPop() {
+        totemJustPopped = true;
+        totemPopTime = System.currentTimeMillis();
+
+        // Immediately start fleeing (unless dummy/easy)
+        if (difficulty != BotDifficulty.DUMMY && difficulty != BotDifficulty.EASY) {
+            startFleeToHeal();
+        }
+    }
+
+    /**
+     * Begin the flee-to-heal sequence.
+     * Bot will try to pearl away, then sprint retreat while healing.
+     */
+    private void startFleeToHeal() {
+        if (isFleeingToHeal) return; // Already fleeing
+
+        isFleeingToHeal = true;
+        isRetreating = true;
+        fleeStartTime = System.currentTimeMillis();
+
+        Player bot = getBotPlayer();
+        if (bot == null) return;
+
+        // Drop shield if blocking — need to run, not block
+        if (isBlocking) {
+            isBlocking = false;
+            setShieldBlockVisual(bot, false);
+        }
+
+        // ── Try escape pearl first (throw AWAY from target) ──
+        long now = System.currentTimeMillis();
+        if (now - lastEscapePearl > 5000 && now - lastPearlThrow > 3000) {
+            boolean threwPearl = throwEscapePearl(bot);
+            if (threwPearl) {
+                lastEscapePearl = now;
+                lastPearlThrow = now;
+            }
+        }
+
+        // ── Start eating immediately while fleeing ──
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!isValid()) return;
+            Player b = getBotPlayer();
+            if (b == null) return;
+            tryHeal(b);
+        }, 3L); // Small delay to let pearl throw finish
+
+        // ── Auto-end fleeing after a duration (so bot returns to fight) ──
+        int fleeDurationTicks = switch (difficulty) {
+            case MEDIUM   -> 60;  // 3 seconds
+            case HARD     -> 80;  // 4 seconds
+            case HACKER   -> 100; // 5 seconds (heals fully before returning)
+            case ADAPTIVE -> 70;
+            default -> 40;        // 2 seconds
+        };
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            isFleeingToHeal = false;
+            isRetreating = false;
+            totemJustPopped = false;
+        }, fleeDurationTicks);
+    }
+
+    /**
+     * Throw an ender pearl AWAY from the target to escape.
+     * Unlike offensive pearls, this aims BEHIND the bot (away from opponent).
+     * @return true if pearl was successfully thrown
+     */
+    private boolean throwEscapePearl(Player bot) {
+        int pearlSlot = findItem(bot.getInventory(), Material.ENDER_PEARL);
+        if (pearlSlot == -1) return false;
+
+        pearlSlot = hotbarSlot(bot.getInventory(), pearlSlot);
+        if (pearlSlot == -1) return false;
+
+        int originalSlot = bot.getInventory().getHeldItemSlot();
+        bot.getInventory().setHeldItemSlot(pearlSlot);
+
+        // Direction AWAY from target (opposite of target direction)
+        Vector awayDir = bot.getLocation().toVector()
+                .subtract(target.getLocation().toVector());
+        awayDir.setY(0);
+        if (awayDir.lengthSquared() < 0.001) {
+            // Same position — pick random direction
+            awayDir = new Vector(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5);
+        }
+        awayDir.normalize();
+
+        // Add slight sideways offset so bot doesn't pearl into a wall directly behind
+        Vector sideways = new Vector(-awayDir.getZ(), 0, awayDir.getX());
+        awayDir.add(sideways.multiply(0.2 * (random.nextBoolean() ? 1 : -1)));
+        awayDir.normalize();
+
+        // Add upward arc for distance (aim ~15-25 blocks away)
+        awayDir.setY(0.35);
+        awayDir.normalize();
+
+        // Look in escape direction
+        float yaw = (float) Math.toDegrees(Math.atan2(-awayDir.getX(), awayDir.getZ()));
+        float pitch = (float) Math.toDegrees(Math.atan2(-awayDir.getY(),
+                Math.sqrt(awayDir.getX() * awayDir.getX() + awayDir.getZ() * awayDir.getZ())));
+        bot.setRotation(yaw, pitch);
+        currentBotYaw = yaw;
+        currentBotPitch = pitch;
+
+        // Spawn and throw the pearl
+        org.bukkit.entity.EnderPearl pearl = bot.getWorld().spawn(
+                bot.getEyeLocation(), org.bukkit.entity.EnderPearl.class);
+        pearl.setVelocity(awayDir.multiply(2.0));
+        pearl.setShooter(bot);
+
+        // Consume pearl
+        ItemStack pearlItem = bot.getInventory().getItem(bot.getInventory().getHeldItemSlot());
+        if (pearlItem != null) pearlItem.setAmount(pearlItem.getAmount() - 1);
+
+        bot.swingMainHand();
+        bot.getWorld().playSound(bot.getLocation(), Sound.ENTITY_ENDER_PEARL_THROW, 1.0f, 1.0f);
+
+        // Switch back to weapon
+        final int fOriginalSlot = originalSlot;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (isValid()) getBotPlayer().getInventory().setHeldItemSlot(fOriginalSlot);
+        }, 2L);
+
+        return true;
+    }
+
+    /**
+     * Handle the bot's behavior while fleeing to heal.
+     * Called every tick from the main combat loop.
+     * @return true if the bot is fleeing (skip normal combat)
+     */
+    private boolean handleFleeToHeal(Player bot, double distance) {
+        if (!isFleeingToHeal) return false;
+
+        long now = System.currentTimeMillis();
+        double healthPercent = (bot.getHealth() / bot.getMaxHealth()) * 100;
+
+        // ── If healed enough, stop fleeing early and return to fight ──
+        if (healthPercent >= 70) {
+            isFleeingToHeal = false;
+            isRetreating = false;
+            totemJustPopped = false;
+            return false;
+        }
+
+        // ── Keep trying to heal while fleeing ──
+        if (!isEating && now - fleeStartTime > 500) {
+            tryHeal(bot);
+            // Also try potions
+            if (!isEating) {
+                tryUsePotions(bot);
+            }
+        }
+
+        // ── If pearl is on cooldown and we're still close, try another escape pearl ──
+        if (distance <= 5.0 && now - lastEscapePearl > 5000 && now - lastPearlThrow > 3000) {
+            boolean threwPearl = throwEscapePearl(bot);
+            if (threwPearl) {
+                lastEscapePearl = now;
+                lastPearlThrow = now;
+            }
+        }
+
+        // ── Sprint away from target ──
+        retreat(bot);
+
+        // ── Look behind occasionally (pro players check if being chased) ──
+        if (random.nextDouble() < 0.15) {
+            lookAt(bot, target.getLocation());
+        }
+
+        return true; // Skip normal combat while fleeing
+    }
+
     private void handleSwordAttack(Player bot, double distance) {
         if (distance > 3.5) return;
         if (!hasLineOfSight(bot, target)) return;
@@ -837,17 +1265,21 @@ public class BotCombatAI {
             return;
         }
         
-        // W-tap for extra knockback (sprint reset) - only if target not blocking
-        if (shouldWTap() && !target.isBlocking()) {
-            performWTap(bot);
+        // W-tap or D-tap for extra knockback (sprint reset) - only if target not blocking
+        if (!target.isBlocking()) {
+            if (shouldWTap()) {
+                performWTap(bot);
+            } else if (shouldDTap()) {
+                performDTap(bot);
+            }
         }
         
-        // Attempt critical hit sometimes (not every hit - that's not human-like)
+        // Attempt critical hit — higher difficulties crit much more consistently
         double critAttemptChance = switch(difficulty) {
             case EASY -> 0.15;
             case MEDIUM -> 0.30;
-            case HARD -> 0.45;
-            case HACKER -> 0.70;
+            case HARD -> 0.55;   // Crits often
+            case HACKER -> 0.80; // Crits almost every hit
             case ADAPTIVE -> critChance;
             case DUMMY -> 0.0;
         };
@@ -917,12 +1349,12 @@ public class BotCombatAI {
         // Check if target is blocking - ALWAYS crit with axe to break shield
         boolean targetBlocking = target.isBlocking();
         
-        // Jump for crit with axe - but not constantly
+        // Jump for crit with axe — higher difficulties always crit with axe
         double axeCritChance = switch(difficulty) {
             case EASY -> 0.20;
             case MEDIUM -> 0.40;
-            case HARD -> 0.55;
-            case HACKER -> 0.80;
+            case HARD -> 0.65;   // Crits most axe hits
+            case HACKER -> 0.90; // Almost always crits with axe
             case ADAPTIVE -> critChance;
             case DUMMY -> 0.0;
         };
@@ -1472,11 +1904,15 @@ public class BotCombatAI {
     private void handleSpearMelee(Player bot, double distance) {
         // Spear can be used in melee or thrown
         if (distance <= 3.0) {
-            // Melee attack
+            // Melee attack with W-tap/D-tap like sword
+            if (!target.isBlocking()) {
+                if (shouldWTap()) performWTap(bot);
+                else if (shouldDTap()) performDTap(bot);
+            }
             performAttack(bot, random.nextDouble() < critChance);
             lastAttackTime = System.currentTimeMillis();
-        } else if (distance <= 6.0) {
-            // Consider throwing
+        } else if (distance <= 8.0) {
+            // Throw at mid-range — pros throw spear aggressively
             handleSpearThrow(bot, distance);
         }
     }
@@ -1544,55 +1980,59 @@ public class BotCombatAI {
     }
 
     /**
-     * Apply REDUCED knockback to victim.
-     * Bot knockback is intentionally lower than vanilla to prevent
-     * excessive combo knockback that feels unfair.
+     * Apply VANILLA knockback to victim using the exact MC source code formula.
      * 
-     * Vanilla values (for reference):
-     * - Base horizontal: 0.4
-     * - Base vertical: 0.4
-     * - Sprint bonus: +0.4 horizontal
+     * From LivingEntity.knockback() in the Minecraft source:
+     *   velX = currentVelX / 2.0 + direction.x * strength
+     *   velY = onGround ? min(0.4, currentVelY / 2.0 + strength) : currentVelY
+     *   velZ = currentVelZ / 2.0 + direction.z * strength
      * 
-     * Bot uses ~60% of vanilla values.
+     * Base:   strength 0.4
+     * Sprint: separate call with strength 0.5
+     * KB enc: separate call with strength level * 0.5
      */
     private void applyKnockback(Player attacker, Player victim) {
-        // Cooldown between knockback applications (prevent spam)
-        long now = System.currentTimeMillis();
-        if (now - lastKnockbackApplied < 400) return; // 400ms cooldown
-        lastKnockbackApplied = now;
-        
-        // Direction from attacker to victim
-        Vector direction = victim.getLocation().toVector()
+        // Direction from attacker to victim (push direction)
+        Vector dir = victim.getLocation().toVector()
                 .subtract(attacker.getLocation().toVector());
-        direction.setY(0);
-        if (direction.lengthSquared() > 0) {
-            direction.normalize();
-        } else {
-            return; // Same position, no knockback
-        }
+        dir.setY(0);
+        if (dir.lengthSquared() < 0.001) return;
+        dir.normalize();
         
-        // REDUCED values (60% of vanilla)
-        double kbHorizontal = 0.25;  // Was 0.4
-        double kbVertical = 0.28;    // Was 0.4
+        boolean onGround = victim.isOnGround();
+        Vector vel = victim.getVelocity().clone();
         
-        // Sprint bonus (reduced)
+        // Step 1: Base knockback (strength 0.4)
+        vel = vanillaKnockbackStep(vel, dir, 0.4, onGround);
+        
+        // Step 2: Sprint bonus (strength 0.5) — separate call
         if (attacker.isSprinting()) {
-            kbHorizontal += 0.2;  // Was 0.4
+            vel = vanillaKnockbackStep(vel, dir, 0.5, onGround);
         }
         
-        // Knockback enchantment (reduced)
+        // Step 3: Knockback enchantment — separate call
         ItemStack weapon = attacker.getInventory().getItemInMainHand();
-        if (weapon != null && weapon.hasItemMeta()) {
+        if (weapon != null) {
             int kbLevel = weapon.getEnchantmentLevel(Enchantment.KNOCKBACK);
-            kbHorizontal += kbLevel * 0.3;  // Was 0.5
+            if (kbLevel > 0) {
+                vel = vanillaKnockbackStep(vel, dir, kbLevel * 0.5, onGround);
+            }
         }
         
-        // Build final knockback vector
-        Vector knockback = direction.multiply(kbHorizontal);
-        knockback.setY(kbVertical);
-        
-        // Apply knockback
-        victim.setVelocity(knockback);
+        victim.setVelocity(vel);
+    }
+
+    /**
+     * One round of the vanilla knockback formula.
+     */
+    private Vector vanillaKnockbackStep(Vector currentVel, Vector direction,
+                                         double strength, boolean onGround) {
+        double newX = currentVel.getX() / 2.0 + direction.getX() * strength;
+        double newY = onGround
+                ? Math.min(0.4, currentVel.getY() / 2.0 + strength)
+                : currentVel.getY();
+        double newZ = currentVel.getZ() / 2.0 + direction.getZ() * strength;
+        return new Vector(newX, newY, newZ);
     }
     
     private long lastKnockbackApplied = 0;
@@ -2048,26 +2488,48 @@ public class BotCombatAI {
                 double healthPercent = (bot.getHealth() / bot.getMaxHealth()) * 100;
 
                 // ── Movement: walk/sprint towards target ──
-                if (!isEating && !isRetreating) {
-                    moveTowardsTarget(bot, distance);
+                // When eating: still move but slower (retreat direction)
+                // When retreating: handled by retreat() method
+                if (!isRetreating) {
+                    if (isEating) {
+                        // Walk backwards slowly while eating (pro technique)
+                        if (distance <= 4.0) {
+                            retreat(bot);
+                        }
+                    } else {
+                        moveTowardsTarget(bot, distance);
+                    }
                 }
 
-                // ── Jumping: only over obstacles (every 2 ticks to avoid spam) ──
+                // ── Jumping: only over obstacles or sprint-jumps ──
                 if (tickCounter % 2 == 0) {
                     handleJumping(bot, distance);
                 }
 
-                // ── Sneaking: VERY rare, only tap-shift to reduce KB (every 4 ticks) ──
+                // ── Sneaking: tap-shift to reduce KB after getting hit ──
                 if (tickCounter % 4 == 0) {
                     handleSneaking(bot, distance);
                 }
 
-                // ── Retreat when very low HP ──
-                if (healthPercent < 25 && !isEating && !isRetreating) {
-                    if (random.nextDouble() < 0.08) { // Low chance per tick
+                // ── Smart retreat based on health and combat state ──
+                if (!isEating && !isRetreating) {
+                    // Retreat more aggressively when being comboed
+                    double retreatThreshold = isBeingComboed ? 35 : 25;
+                    double retreatChance = isBeingComboed ? 0.15 : 0.08;
+                    
+                    // Higher difficulties retreat smarter
+                    retreatChance *= switch (difficulty) {
+                        case EASY     -> 0.3;
+                        case MEDIUM   -> 0.7;
+                        case HARD     -> 1.2;
+                        case HACKER   -> 1.5;
+                        case ADAPTIVE -> 1.0;
+                        case DUMMY    -> 0.0;
+                    };
+                    
+                    if (healthPercent < retreatThreshold && random.nextDouble() < retreatChance) {
                         isRetreating = true;
                         retreat(bot);
-                        // Auto-cancel retreat after ~1 second
                         Bukkit.getScheduler().runTaskLater(plugin, () -> isRetreating = false, 20L);
                     }
                 }
@@ -2143,8 +2605,8 @@ public class BotCombatAI {
             speed = switch (difficulty) {
                 case EASY     -> 0.18;
                 case MEDIUM   -> 0.22;
-                case HARD     -> 0.26;
-                case HACKER   -> 0.28;
+                case HARD     -> 0.27;  // Near vanilla sprint
+                case HACKER   -> 0.28;  // Full vanilla sprint
                 case ADAPTIVE -> 0.24;
                 case DUMMY    -> 0.0;
             };
@@ -2155,18 +2617,41 @@ public class BotCombatAI {
             speed = switch (difficulty) {
                 case EASY     -> 0.12;
                 case MEDIUM   -> 0.15;
-                case HARD     -> 0.18;
-                case HACKER   -> 0.21;
+                case HARD     -> 0.20;  // Fast walk
+                case HACKER   -> 0.21;  // Full vanilla walk
                 case ADAPTIVE -> 0.16;
                 case DUMMY    -> 0.0;
             };
+        }
+
+        // ── POST-HIT CHASE: sprint harder after landing a hit to maintain combo ──
+        if (postHitChase && distance > 2.0 && distance <= 6.0) {
+            bot.setSprinting(true);
+            isSprinting = true;
+            // Boost speed by 15-25% to close the gap after knockback
+            double chaseBoost = switch (difficulty) {
+                case EASY     -> 1.05;
+                case MEDIUM   -> 1.10;
+                case HARD     -> 1.18;
+                case HACKER   -> 1.25;
+                case ADAPTIVE -> 1.12;
+                case DUMMY    -> 1.0;
+            };
+            speed = Math.min(0.30, speed * chaseBoost); // Cap at slightly above vanilla sprint
+        }
+
+        // ── KILL CHASE: sprint at max speed when target is very low HP ──
+        if (target.getHealth() <= 6.0 && distance > 2.0 && distance <= 8.0) {
+            bot.setSprinting(true);
+            isSprinting = true;
+            speed = Math.max(speed, 0.27); // At least near-max sprint for the kill
         }
 
         // Circle-strafe in close combat
         double strafeSpeed = 0;
         if (distance <= 4.5 && distance > 1.8 && !isRetreating) {
             long now = System.currentTimeMillis();
-            if (now - lastStrafeChange > 600 + random.nextInt(800)) {
+            if (now - lastStrafeChange > 400 + random.nextInt(600)) {
                 if (random.nextDouble() < strafeChance) {
                     strafeDirection *= -1;
                     lastStrafeChange = now;
@@ -2175,8 +2660,8 @@ public class BotCombatAI {
             strafeSpeed = switch (difficulty) {
                 case EASY     -> 0.04;
                 case MEDIUM   -> 0.07;
-                case HARD     -> 0.10;
-                case HACKER   -> 0.14;
+                case HARD     -> 0.13;  // Aggressive strafe
+                case HACKER   -> 0.17;  // Very aggressive strafe
                 case ADAPTIVE -> 0.08;
                 case DUMMY    -> 0.0;
             } * strafeDirection;
@@ -2255,24 +2740,20 @@ public class BotCombatAI {
      * - Only quick tap-shift (1-2 ticks) right after getting hit to reduce knockback.
      * - Higher difficulties tap more consistently.
      */
-    private double lastBotHealth = 20.0; // Track bot health to detect when we get hit
-
     private void handleSneaking(Player bot, double distance) {
         if (isSneaking || isEating || distance > 5) return;
 
         long now = System.currentTimeMillis();
         if (now - lastSneak < 800) return; // Min 800ms between shift-taps
 
-        double currentHealth = bot.getHealth();
-
-        // Only shift-tap if we JUST took damage (health dropped since last check)
-        if (currentHealth < lastBotHealth - 0.5 && distance <= 4.5) {
+        // Only shift-tap if we recently took damage (tracked by trackOpponentState)
+        if (now - lastDamageReceivedTime < 500 && distance <= 4.5) {
             // Chance to shift-tap based on difficulty
             double tapChance = switch (difficulty) {
                 case EASY     -> 0.0;   // Noobs don't know this trick
-                case MEDIUM   -> 0.08;  // Rarely
-                case HARD     -> 0.20;  // Sometimes (good players)
-                case HACKER   -> 0.45;  // Almost always
+                case MEDIUM   -> 0.10;  // Rarely
+                case HARD     -> 0.35;  // Often (pro KB reduction)
+                case HACKER   -> 0.60;  // Almost always shift-taps
                 case ADAPTIVE -> this.sneakChance * 0.5;
                 case DUMMY    -> 0.0;
             };
@@ -2291,21 +2772,20 @@ public class BotCombatAI {
                 }, 1L + (random.nextInt(2))); // 1-2 ticks only
             }
         }
-
-        lastBotHealth = currentHealth;
     }
 
     /**
-     * Jumping — HUMAN PRO STYLE:
-     * - Jump ONLY to clear obstacles (block in front of bot).
-     * - NO random bunny-hopping. Pro players don't spam spacebar.
+     * Jumping — PRO PLAYER STYLE:
+     * - Jump to clear obstacles (block in front of bot).
+     * - Sprint-jump when chasing from distance (moves ~30% faster than sprinting alone).
+     * - Higher difficulties sprint-jump more consistently, like real pros.
      * - Crit jumps are handled in handleSwordAttack/handleAxeAttack, NOT here.
      */
     private void handleJumping(Player bot, double distance) {
         if (!bot.isOnGround()) return;
 
         long now = System.currentTimeMillis();
-        if (now - lastJump < 600) return; // Min 600ms between jumps
+        if (now - lastJump < 400) return; // Min 400ms between jumps (tighter for sprint-jumping)
 
         // Check if there's a solid block in front at knee level
         Vector facing = bot.getLocation().getDirection().clone();
@@ -2323,9 +2803,32 @@ public class BotCombatAI {
             if (!aboveObstacle.getType().isSolid() || !headClearance.getType().isSolid()) {
                 bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
                 lastJump = now;
+                return;
             }
         }
-        // NO random jumps — everything else is handled in attack methods
+
+        // Sprint-jumping: pros jump while sprinting to move faster (~30% speed boost)
+        // Only when chasing from a distance and sprinting
+        if (distance > 4.0 && bot.isSprinting() && !isEating && !isRetreating) {
+            double sprintJumpChance = switch (difficulty) {
+                case EASY     -> 0.0;   // Noobs don't sprint-jump
+                case MEDIUM   -> 0.10;  // Occasionally
+                case HARD     -> 0.35;  // Often (good players)
+                case HACKER   -> 0.55;  // Very often (pro movement)
+                case ADAPTIVE -> jumpChance * 1.5;
+                case DUMMY    -> 0.0;
+            };
+
+            if (random.nextDouble() < sprintJumpChance) {
+                // Sprint-jump: jump + forward momentum boost
+                Vector vel = bot.getVelocity();
+                Vector forward = facing.clone().multiply(0.05); // Small forward boost on jump
+                vel.setY(0.42); // Standard jump height
+                vel.add(forward);
+                bot.setVelocity(vel);
+                lastJump = now;
+            }
+        }
     }
 
     private void performStrafe(Player bot) {
@@ -2362,24 +2865,63 @@ public class BotCombatAI {
     }
 
     private boolean shouldWTap() {
-        // Human-like: W-tap is hard to do consistently, reduce chance
         double chance = switch(difficulty) {
             case EASY -> 0.0;     // Beginners don't W-tap
-            case MEDIUM -> 0.08;  // Rarely
-            case HARD -> 0.15;    // Sometimes (human-like)
-            case HACKER -> 0.35;  // Often
+            case MEDIUM -> 0.12;  // Sometimes
+            case HARD -> 0.30;    // Often (good players)
+            case HACKER -> 0.55;  // Very consistently (pro)
             case ADAPTIVE -> wTapChance;
             case DUMMY -> 0.0;
         };
         return random.nextDouble() < chance;
     }
 
+    /**
+     * W-tap: sprint reset for extra knockback.
+     * Pro technique: release sprint briefly then re-sprint before hitting
+     * to reset the sprint-hit KB bonus, giving extra knockback per hit.
+     */
     private void performWTap(Player bot) {
-        // Sprint reset for extra knockback
         bot.setSprinting(false);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (isValid()) bot.setSprinting(true);
+            if (isValid()) {
+                Player b = getBotPlayer();
+                if (b != null) b.setSprinting(true);
+            }
         }, 1L);
+    }
+
+    /**
+     * D-tap: briefly strafe sideways then re-engage for sprint reset.
+     * Alternative to W-tap used by pros to maintain forward pressure
+     * while still resetting sprint knockback. Only Hard/Hacker use this.
+     */
+    private boolean shouldDTap() {
+        double chance = switch(difficulty) {
+            case EASY -> 0.0;
+            case MEDIUM -> 0.0;
+            case HARD -> 0.12;    // Sometimes (advanced technique)
+            case HACKER -> 0.30;  // Often
+            case ADAPTIVE -> wTapChance * 0.5;
+            case DUMMY -> 0.0;
+        };
+        return random.nextDouble() < chance;
+    }
+
+    private void performDTap(Player bot) {
+        // Brief sideways strafe to reset sprint
+        bot.setSprinting(false);
+        Vector strafe = bot.getLocation().getDirection()
+                .crossProduct(new Vector(0, 1, 0))
+                .normalize()
+                .multiply(0.15 * (random.nextBoolean() ? 1 : -1));
+        bot.setVelocity(bot.getVelocity().add(strafe));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (isValid()) {
+                Player b = getBotPlayer();
+                if (b != null) b.setSprinting(true);
+            }
+        }, 2L);
     }
 
     private void retreat(Player bot) {
@@ -2757,8 +3299,8 @@ public class BotCombatAI {
         double jitter = switch (difficulty) {
             case EASY     -> 0.14;
             case MEDIUM   -> 0.07;
-            case HARD     -> 0.03;
-            case HACKER   -> 0.005;
+            case HARD     -> 0.02;   // Very precise
+            case HACKER   -> 0.003;  // Near-perfect aim
             case ADAPTIVE -> 0.05;
             case DUMMY    -> 0.0;
         };
@@ -2777,8 +3319,8 @@ public class BotCombatAI {
         float maxTurn = switch (difficulty) {
             case EASY     -> 7.0f;
             case MEDIUM   -> 14.0f;
-            case HARD     -> 28.0f;
-            case HACKER   -> 55.0f;
+            case HARD     -> 40.0f;  // Fast tracking
+            case HACKER   -> 90.0f;  // Instant snap-aim
             case ADAPTIVE -> 20.0f;
             case DUMMY    -> 0.0f;
         };
@@ -2803,8 +3345,8 @@ public class BotCombatAI {
         double prediction = switch(difficulty) {
             case EASY -> 0.1;
             case MEDIUM -> 0.3;
-            case HARD -> 0.5;
-            case HACKER -> 0.8;
+            case HARD -> 0.65;  // Good prediction
+            case HACKER -> 0.95; // Near-perfect prediction
             case ADAPTIVE -> 0.4;
             case DUMMY -> 0.0;
         };
@@ -3094,8 +3636,24 @@ public class BotCombatAI {
     // ══════════════════════════════════════════════════════════════════════════
 
     private boolean shouldThrowSpear() {
-        return random.nextDouble() < accuracy * 0.6 
-                && System.currentTimeMillis() - lastSpearThrow > 2000;
+        long cooldown = switch (difficulty) {
+            case EASY     -> 3000;
+            case MEDIUM   -> 2000;
+            case HARD     -> 1200;  // Aggressive spear usage
+            case HACKER   -> 800;   // Very aggressive
+            case ADAPTIVE -> 1500;
+            case DUMMY    -> 99999;
+        };
+        double chance = switch (difficulty) {
+            case EASY     -> accuracy * 0.4;
+            case MEDIUM   -> accuracy * 0.6;
+            case HARD     -> accuracy * 0.8;   // High chance
+            case HACKER   -> accuracy * 0.95;  // Almost always
+            case ADAPTIVE -> accuracy * 0.6;
+            case DUMMY    -> 0.0;
+        };
+        return random.nextDouble() < chance
+                && System.currentTimeMillis() - lastSpearThrow > cooldown;
     }
 
     private boolean shouldThrowPotion() {

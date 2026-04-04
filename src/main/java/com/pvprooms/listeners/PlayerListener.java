@@ -78,34 +78,38 @@ public class PlayerListener implements Listener {
         antiClipTaskId = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             for (org.bukkit.entity.Player p : plugin.getServer().getOnlinePlayers()) {
                 UUID uid = p.getUniqueId();
-                boolean inActiveDuel = false;
-                var duel = plugin.getDuelManager().getDuelByPlayer(uid);
-                if (duel != null && duel.getState() == com.pvprooms.model.Duel.State.FIGHTING
-                        && !duel.getSpectators().contains(uid)) {
-                    inActiveDuel = true;
-                }
-                if (!inActiveDuel && plugin.getDuelManager().isInFFA(uid)
-                        && !plugin.getDuelManager().isFFASpectator(uid)) {
-                    inActiveDuel = true;
-                }
-                if (!inActiveDuel) continue;
-                // Skip death-cam spectators (combatants temporarily in spectator mode)
+                // Skip only if player is in creative mode (admins building)
+                if (p.getGameMode() == org.bukkit.GameMode.CREATIVE) continue;
+                // Skip death-cam spectators
                 if (p.getGameMode() == org.bukkit.GameMode.SPECTATOR) continue;
 
                 Location loc = p.getLocation();
                 if (isInsideWall(loc)) {
                     Location safe = lastSafeLoc.get(uid);
                     Location target = safe != null ? safe : loc.clone().add(0, 1, 0);
-                    p.teleport(target);
-                    // Knockback: push away from the wall toward the safe spot
-                    org.bukkit.util.Vector push = target.toVector().subtract(loc.toVector());
-                    if (push.lengthSquared() > 0.001) {
-                        push.normalize().multiply(0.45);
+                    if (!isInsideWall(target)) {
+                        p.teleport(target);
+                        // Stronger knockback: push away from the wall with upward boost
+                        org.bukkit.util.Vector push = target.toVector().subtract(loc.toVector());
+                        if (push.lengthSquared() > 0.001) {
+                            push.normalize().multiply(0.8);
+                        } else {
+                            // Random upward ejection if no clear direction
+                            push = new org.bukkit.util.Vector(
+                                (Math.random() - 0.5) * 0.8,
+                                0.6,
+                                (Math.random() - 0.5) * 0.8
+                            );
+                        }
+                        p.setVelocity(push);
+                        p.sendMessage(plugin.prefix() + "§e¡Has sido expulsado de un bloque sólido!");
                     } else {
-                        push.zero();
+                        // No safe location - eject upward
+                        Location ejectLoc = loc.clone().add(0, 2, 0);
+                        p.teleport(ejectLoc);
+                        p.setVelocity(new org.bukkit.util.Vector(0, 0.5, 0));
+                        p.sendMessage(plugin.prefix() + "§e¡Expulsado hacia arriba para evitar quedar atrapado!");
                     }
-                    push.setY(0.15);
-                    p.setVelocity(push);
                 } else {
                     lastSafeLoc.put(uid, loc.clone());
                 }
@@ -365,16 +369,9 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
 
-        // Check active duel combatants and active FFA fighters
-        boolean active = false;
-        Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
-        if (duel != null && duel.getState() == Duel.State.FIGHTING && !duel.getSpectators().contains(uuid)) {
-            active = true;
-        }
-        if (!active && plugin.getDuelManager().isInFFA(uuid) && !plugin.getDuelManager().isFFASpectator(uuid)) {
-            active = true;
-        }
-        if (!active) return;
+        // Check for ALL players (not just duel participants) - anti-clip should work everywhere
+        // Skip only if player is in creative mode (admins building)
+        if (player.getGameMode() == org.bukkit.GameMode.CREATIVE) return;
         // Skip death-cam spectators
         if (player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return;
 
@@ -391,15 +388,26 @@ public class PlayerListener implements Listener {
             Location target = safe != null ? safe : (!isInsideWall(from) ? from : null);
             if (target != null) {
                 player.teleport(target);
-                // Knockback: push opposite to movement direction
+                // Stronger knockback: push away from the wall with upward boost
                 org.bukkit.util.Vector push = target.toVector().subtract(to.toVector());
                 if (push.lengthSquared() > 0.001) {
-                    push.normalize().multiply(0.45);
+                    push.normalize().multiply(0.8); // Stronger push
                 } else {
-                    push.zero();
+                    // If no clear direction, push upward and random horizontal
+                    push = new org.bukkit.util.Vector(
+                        (Math.random() - 0.5) * 0.8,
+                        0.6, // Upward boost
+                        (Math.random() - 0.5) * 0.8
+                    );
                 }
-                push.setY(0.15);
                 player.setVelocity(push);
+                player.sendMessage(plugin.prefix() + "§e¡Has sido expulsado de un bloque sólido!");
+            } else {
+                // No safe location found - try to eject upward
+                Location ejectLoc = to.clone().add(0, 2, 0);
+                player.teleport(ejectLoc);
+                player.setVelocity(new org.bukkit.util.Vector(0, 0.5, 0));
+                player.sendMessage(plugin.prefix() + "§e¡Expulsado hacia arriba para evitar quedar atrapado!");
             }
         } else {
             lastSafeLoc.put(uuid, to.clone());

@@ -12,8 +12,8 @@ public enum BotDifficulty {
     
     EASY("§aFácil", 600, 0.70, 0.25, 4, 50),        // Beginner - slower but still attacks
     MEDIUM("§eMedio", 500, 0.80, 0.35, 3, 40),     // Average player - consistent attacks
-    HARD("§cDifícil", 400, 0.90, 0.45, 2, 30),     // Skilled player - fast and accurate
-    HACKER("§4§lHACKER", 250, 0.95, 0.60, 1, 20),  // Pro level - very aggressive
+    HARD("§cDifícil", 300, 0.93, 0.50, 2, 35),     // Skilled player - fast, accurate, heals early
+    HACKER("§4§lHACKER", 150, 0.98, 0.70, 1, 25),  // Inhuman - insane reactions and accuracy
     ADAPTIVE("§d§lAdaptivo", 450, 0.85, 0.40, 3, 35), // Learns from player
     DUMMY("§7Quieto", 9999, 0.0, 0.0, 20, 0);      // Practice dummy - no movement, no attacks, massive HP
 
