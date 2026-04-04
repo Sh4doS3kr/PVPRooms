@@ -113,6 +113,32 @@ public class PlayerListener implements Listener {
                 } else {
                     lastSafeLoc.put(uid, loc.clone());
                 }
+
+                // ── ANTI-FLOATING SAFETY: detect and fix stuck-in-air players ──
+                // If player is in the lobby, not in a duel, and has broken movement state, fix it
+                if (!plugin.getDuelManager().isInDuel(uid)
+                        && !plugin.getDuelManager().isInFFA(uid)
+                        && p.getGameMode() == GameMode.SURVIVAL) {
+                    // Fix gravity being disabled
+                    if (!p.hasGravity()) {
+                        p.setGravity(true);
+                    }
+                    // Fix flight being enabled for non-staff
+                    if (p.isFlying() && !p.hasPermission("pvprooms.staff")) {
+                        p.setAllowFlight(false);
+                        p.setFlying(false);
+                    }
+                    // Fix walk speed stuck at 0 or abnormal
+                    if (p.getWalkSpeed() < 0.01f || p.getWalkSpeed() > 0.3f) {
+                        p.setWalkSpeed(0.2f);
+                    }
+                    // Clear leftover freeze state
+                    if (plugin.getDuelManager().isFrozen(uid)) {
+                        plugin.getDuelManager().getPlayerDuelMap().remove(uid);
+                        // Force unfreeze via the frozenPlayers set
+                        plugin.getDuelManager().unfreezePlayer(uid);
+                    }
+                }
             }
         }, 2L, 2L).getTaskId();
     }
@@ -125,7 +151,16 @@ public class PlayerListener implements Listener {
         
         // Ensure player is registered in EloManager (initializes if not exists)
         plugin.getEloManager().ensureRegistered(player.getUniqueId(), player.getName());
-        
+
+        // Safety: reset movement state on join (prevents stuck-in-air from previous session)
+        player.setGravity(true);
+        player.setWalkSpeed(0.2f);
+        plugin.getDuelManager().unfreezePlayer(player.getUniqueId());
+        if (!player.hasPermission("pvprooms.staff")) {
+            player.setAllowFlight(false);
+            player.setFlying(false);
+        }
+
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             plugin.getScoreboardManager().showLobbyScoreboard(player);
 
@@ -224,13 +259,20 @@ public class PlayerListener implements Listener {
         }
 
         // End duel if in one (opponent wins)
+        // IMPORTANT: check if they're a spectator first — spectators leaving should NOT end the match
         Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
         if (duel != null && duel.getState() != Duel.State.ENDED) {
-            UUID opponentUUID = duel.getOpponent(uuid);
-            if (opponentUUID != null) {
-                plugin.getDuelManager().endDuel(duel, opponentUUID, "disconnect");
+            if (duel.isSpectator(uuid)) {
+                // Spectator leaving — just remove them, don't end the duel
+                duel.removeSpectator(uuid);
+                plugin.getDuelManager().getPlayerDuelMap().remove(uuid);
             } else {
-                plugin.getDuelManager().endDuel(duel, null, "disconnect");
+                UUID opponentUUID = duel.getOpponent(uuid);
+                if (opponentUUID != null) {
+                    plugin.getDuelManager().endDuel(duel, opponentUUID, "disconnect");
+                } else {
+                    plugin.getDuelManager().endDuel(duel, null, "disconnect");
+                }
             }
         }
 
@@ -465,8 +507,11 @@ public class PlayerListener implements Listener {
         org.bukkit.Location from = event.getFrom();
         org.bukkit.Location to   = event.getTo();
         if (to == null) return;
-        // Only block actual position change; allow yaw/pitch (head rotation)
-        if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
+        // Block horizontal movement (X/Z) but ALLOW gravity (Y decrease).
+        // This prevents the bug where players get stuck floating in the air during countdown.
+        if (from.getX() != to.getX() || from.getZ() != to.getZ()) {
+            // Allow falling (Y decrease) and head rotation, block horizontal movement
+            from.setY(to.getY());
             from.setYaw(to.getYaw());
             from.setPitch(to.getPitch());
             event.setTo(from);

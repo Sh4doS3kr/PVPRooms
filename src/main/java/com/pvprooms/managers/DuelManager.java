@@ -104,7 +104,7 @@ public class DuelManager {
 
         Duel duel = new Duel(uuid1, uuid2, kitName, instanceWorldName, template);
         duel.setRanked(bo3);
-        duel.setWinsNeeded(bo3 ? 4 : 1); // Tier: BO7 (first to 4), ELO: single round
+        duel.setWinsNeeded(bo3 ? 7 : 1); // Tier: first to 7 wins, ELO: single round
         activeDuels.put(duel.getId(), duel);
         playerDuelMap.put(uuid1, duel.getId());
         playerDuelMap.put(uuid2, duel.getId());
@@ -118,7 +118,7 @@ public class DuelManager {
         preparePlayer(p2);
 
         // Notify match found & clear queue scoreboard before teleport
-        String modeTag = bo3 ? " §8[§bBO7§8]" : "";
+        String modeTag = bo3 ? " §8[§bBO13§8]" : "";
         p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         plugin.getScoreboardManager().clearScoreboard(p1);
@@ -377,7 +377,7 @@ public class DuelManager {
      * Called after a round ends in a ranked (Tier) duel.
      * Increments the winner's round count, then either starts the next round
      * or finalises the match if someone has reached the required wins.
-     * Tier matches: BO7 (first to 4 wins)
+     * Tier matches: first to 7 wins (BO13)
      */
     private void handleBo3Round(Duel duel, UUID roundWinnerUUID) {
         duel.addWin(roundWinnerUUID);
@@ -631,6 +631,9 @@ public class DuelManager {
         String lobbyWorld = lobby.getWorld() != null ? lobby.getWorld().getName() : "";
         String playerWorld = p.getWorld().getName();
 
+        // Always clear frozen state — safety net
+        frozenPlayers.remove(uuid);
+
         if (!playerWorld.equals(lobbyWorld)) {
             if (p.isDead()) {
                 try { p.spigot().respawn(); } catch (Exception ignored) {}
@@ -649,6 +652,11 @@ public class DuelManager {
                 restorePlayer(p);
                 plugin.getScoreboardManager().restoreLobbyScoreboard(p);
             }
+            // Safety: always reset movement state at lobby
+            p.setGravity(true);
+            p.setAllowFlight(false);
+            p.setFlying(false);
+            p.setWalkSpeed(0.2f);
         }
     }
 
@@ -657,6 +665,13 @@ public class DuelManager {
         if (snap != null) snap.restore(player);
         healPlayer(player);
         player.setGameMode(GameMode.SURVIVAL);
+        // Safety resets — prevent stuck-in-air / broken movement
+        player.setGravity(true);
+        player.setAllowFlight(false);
+        player.setFlying(false);
+        player.setWalkSpeed(0.2f);  // Vanilla default
+        player.setFlySpeed(0.1f);   // Vanilla default
+        frozenPlayers.remove(player.getUniqueId()); // Clear any leftover freeze
         var atkSpeed = player.getAttribute(org.bukkit.attribute.Attribute.ATTACK_SPEED);
         if (atkSpeed != null) atkSpeed.setBaseValue(4.0);
     }
@@ -681,6 +696,12 @@ public class DuelManager {
         player.setFireTicks(0);
         player.setFoodLevel(20);
         player.setSaturation(20f);
+        // Safety resets — prevent stuck-in-air / broken movement
+        player.setGravity(true);
+        player.setAllowFlight(false);
+        player.setFlying(false);
+        player.setWalkSpeed(0.2f);  // Vanilla default
+        player.setFlySpeed(0.1f);   // Vanilla default
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
         }
@@ -792,6 +813,15 @@ public class DuelManager {
     /** Returns true if this player is currently frozen during a countdown. */
     public boolean isFrozen(UUID uuid) {
         return frozenPlayers.contains(uuid);
+    }
+
+    public Map<UUID, UUID> getPlayerDuelMap() {
+        return playerDuelMap;
+    }
+
+    /** Force-unfreeze a player (safety net for stuck states). */
+    public void unfreezePlayer(UUID uuid) {
+        frozenPlayers.remove(uuid);
     }
 
     public boolean isInDuel(UUID uuid) {

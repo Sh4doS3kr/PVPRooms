@@ -176,8 +176,8 @@ public class ScoreboardManager {
         if (duel.isRanked()) {
             int myW = duel.getWins(player.getUniqueId());
             int opW = duel.getWins(duel.getOpponent(player.getUniqueId()));
-            int boTotal = duel.getWinsNeeded() * 2 - 1; // BO7 = 7
-            tl(obj, s++, leg("&b[TIER] &8• &6" + myW + " &8- &evs &c" + opW + " &8(a " + boTotal + ")"), 11);
+            int needed = duel.getWinsNeeded(); // first to 7
+            tl(obj, s++, leg("&b[TIER] &8• &6" + myW + " &8- &evs &c" + opW + " &8(a " + needed + ")"), 11);
         } else {
             tl(obj, s++, leg("&a[ELO] &8• &6" + plugin.getEloManager().getElo(player.getUniqueId()) + " ELO"), 11);
         }
@@ -338,8 +338,8 @@ public class ScoreboardManager {
 
         int w1 = duel.getWins1();
         int w2 = duel.getWins2();
-        int boTotal = duel.getWinsNeeded() * 2 - 1; // BO7 = 7
-        String scoreStr = "§a" + w1 + " §7- §c" + w2 + " §8(a " + boTotal + ")";
+        int needed = duel.getWinsNeeded(); // first to 7
+        String scoreStr = "§a" + w1 + " §7- §c" + w2 + " §8(a " + needed + ")";
 
         // Health info
         String hp1 = p1 != null ? formatHealth(p1) : "§c???";
@@ -351,7 +351,7 @@ public class ScoreboardManager {
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
         tl(obj, s++, " ", 14);
         tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), 13);
-        tl(obj, s++, leg("&e⏱ &fModo: " + (duel.isBo3() ? "&6Tier (BO7)" : "&aELO")), 12);
+        tl(obj, s++, leg("&e⏱ &fModo: " + (duel.isBo3() ? "&6Tier (BO13)" : "&aELO")), 12);
         tl(obj, s++, " ", 11);
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 10);
         tl(obj, s++, " ", 9);

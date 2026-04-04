@@ -38,8 +38,8 @@ public class Duel {
     private final Set<UUID> spectators = new HashSet<>();
 
     // ── Multi-round match fields ──────────────────────────────────────────
-    private boolean ranked       = false;  // true = Tier mode (BO7), false = ELO (single round)
-    private int     winsNeeded   = 1;      // Wins needed to win match (4 for Tier BO7, 1 for ELO)
+    private boolean ranked       = false;  // true = Tier mode, false = ELO (single round)
+    private int     winsNeeded   = 1;      // Wins needed to win match (7 for Tier, 1 for ELO)
     private int     wins1        = 0;      // wins for player1
     private int     wins2        = 0;      // wins for player2
     private int     currentRound = 1;
@@ -123,7 +123,7 @@ public class Duel {
     /** @deprecated Use isRanked() instead */
     public boolean isBo3()                       { return ranked; }
     /** @deprecated Use setRanked() and setWinsNeeded() instead */
-    public void    setBo3(boolean bo3)           { this.ranked = bo3; this.winsNeeded = bo3 ? 4 : 1; }
+    public void    setBo3(boolean bo3)           { this.ranked = bo3; this.winsNeeded = bo3 ? 7 : 1; }
 
     public int getWins1()        { return wins1; }
     public int getWins2()        { return wins2; }
