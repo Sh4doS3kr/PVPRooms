@@ -869,84 +869,46 @@ public class BotCombatAI {
     }
 
     private void placeObsidianForCrystal(Player bot, Location target) {
-        int obsidianSlot = findItem(bot.getInventory(), Material.OBSIDIAN);
-        if (obsidianSlot == -1) return;
-        
-        // Place obsidian near target
-        Location placeLoc = target.clone();
-        placeLoc.setY(Math.floor(placeLoc.getY()));
-        Block placeBlock = placeLoc.getBlock();
-        
-        if (placeBlock.getType() == Material.AIR) {
-            final int finalObsidianSlot = hotbarSlot(bot.getInventory(), obsidianSlot);
-            if (finalObsidianSlot == -1) return;
-            int originalSlot = bot.getInventory().getHeldItemSlot();
-            bot.getInventory().setHeldItemSlot(finalObsidianSlot);
-            
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (!isValid()) return;
-                placeBlock.setType(Material.OBSIDIAN);
-                ItemStack obsidian = bot.getInventory().getItem(finalObsidianSlot);
-                if (obsidian != null) obsidian.setAmount(obsidian.getAmount() - 1);
-                bot.swingMainHand();
-                bot.getInventory().setHeldItemSlot(originalSlot);
-            }, 1L);
-        }
+        // DISABLED — bots must NEVER place blocks in the arena
     }
 
     private void useRespawnAnchor(Player bot, double distance) {
         int anchorSlot = findItem(bot.getInventory(), Material.RESPAWN_ANCHOR);
         int glowstoneSlot = findItem(bot.getInventory(), Material.GLOWSTONE);
         if (anchorSlot == -1 || glowstoneSlot == -1) return;
-        
-        Location targetLoc = target.getLocation().clone();
-        Location placeLoc = targetLoc.clone().subtract(0, 1, 0);
-        Block placeBlock = placeLoc.getBlock();
-        
-        // Need air to place anchor
-        if (placeBlock.getType() != Material.AIR && !placeBlock.getType().isSolid()) {
-            placeLoc = targetLoc.clone();
-            placeBlock = placeLoc.getBlock();
-        }
-        
-        if (placeBlock.getType() != Material.AIR) return;
-        
+
         final int finalAnchorSlot = hotbarSlot(bot.getInventory(), anchorSlot);
         final int finalGlowstoneSlot = hotbarSlot(bot.getInventory(), glowstoneSlot);
         if (finalAnchorSlot == -1 || finalGlowstoneSlot == -1) return;
-        
-        // Find sword slot to switch back to
+
         int swordSlot = findSwordSlot(bot);
-        
+
         isCrystalAction = true;
         bot.getInventory().setHeldItemSlot(finalAnchorSlot);
-        final Block finalBlock = placeBlock;
-        
+
+        // Simulate anchor placement + charge + explosion WITHOUT modifying blocks.
+        // We consume items and create a non-destructive explosion near the target.
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!isValid()) { isCrystalAction = false; return; }
-            
-            finalBlock.setType(Material.RESPAWN_ANCHOR);
+            // Consume anchor item
             ItemStack anchor = bot.getInventory().getItem(finalAnchorSlot);
             if (anchor != null) anchor.setAmount(anchor.getAmount() - 1);
             bot.swingMainHand();
-            
-            // Charge with glowstone
+
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (!isValid()) { isCrystalAction = false; return; }
                 bot.getInventory().setHeldItemSlot(finalGlowstoneSlot);
-                
-                // Simulate charging and exploding (in overworld it explodes)
+
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     if (!isValid()) { isCrystalAction = false; return; }
+                    // Consume glowstone
                     ItemStack glowstone = bot.getInventory().getItem(finalGlowstoneSlot);
                     if (glowstone != null) glowstone.setAmount(glowstone.getAmount() - 1);
-                    
-                    // Explode the anchor
-                    Location explosionLoc = finalBlock.getLocation().add(0.5, 0.5, 0.5);
-                    finalBlock.setType(Material.AIR);
-                    bot.getWorld().createExplosion(explosionLoc, 5.0f, true, false);
-                    
-                    // Switch back to sword
+
+                    // Explosion near target — NO fire, NO block breaking
+                    Location explosionLoc = target.getLocation().clone().add(0, 0.5, 0);
+                    bot.getWorld().createExplosion(explosionLoc, 5.0f, false, false);
+
                     if (swordSlot != -1) {
                         bot.getInventory().setHeldItemSlot(swordSlot);
                     }
@@ -954,7 +916,7 @@ public class BotCombatAI {
                 }, 2L);
             }, 2L);
         }, 1L);
-        
+
         lastAnchorUse = System.currentTimeMillis();
     }
 
@@ -1485,14 +1447,14 @@ public class BotCombatAI {
         }
 
         // ALWAYS apply manual launch since Citizens NPCs don't get launched by explosions
-        // Wind charge launches ~7-8 blocks upward
-        Vector launch = new Vector(0, 1.4, 0); // Strong upward velocity
+        // Vanilla wind charge at own feet: ~1.0 upward velocity (~5-6 blocks height)
+        Vector launch = new Vector(0, 1.0, 0);
         // Slight horizontal toward target so we land near them
         Vector toTarget = target.getLocation().toVector()
                 .subtract(bot.getLocation().toVector());
         toTarget.setY(0);
         if (toTarget.lengthSquared() > 0.01) {
-            toTarget.normalize().multiply(0.3);
+            toTarget.normalize().multiply(0.2); // Vanilla: small horizontal push
             launch.add(toTarget);
         }
         bot.setVelocity(launch);
@@ -1646,10 +1608,10 @@ public class BotCombatAI {
             if (!hasFireworks(b)) { finishElytraCombo(); return; }
 
             // First boost: ~55° upward angle toward target (natural elytra arc)
-            // This is how real players do it — look upward at an angle, use firework
-            Vector boost = flatToTarget.clone().multiply(1.2);
-            boost.setY(1.6); // ~55° angle upward
-            boost.normalize().multiply(2.2); // Firework boost speed
+            // Vanilla firework boost: ~1.5 speed (not 2.2)
+            Vector boost = flatToTarget.clone().multiply(0.8);
+            boost.setY(1.2); // ~55° angle upward
+            boost.normalize().multiply(1.5); // Vanilla firework boost speed
             boostElytra(b, boost);
 
             // Look in boost direction
@@ -1674,8 +1636,8 @@ public class BotCombatAI {
                         .subtract(b.getLocation().toVector());
                 toTarget.normalize();
                 // ~30° upward angle — transitioning from climb to arc
-                Vector boost = new Vector(toTarget.getX() * 1.5, 0.8, toTarget.getZ() * 1.5);
-                boost.normalize().multiply(2.0);
+                Vector boost = new Vector(toTarget.getX() * 1.0, 0.6, toTarget.getZ() * 1.0);
+                boost.normalize().multiply(1.5); // Vanilla firework speed
                 boostElytra(b, boost);
             }
             lookAt(b, target.getLocation());
@@ -2405,9 +2367,10 @@ public class BotCombatAI {
 
             if (hasFireworks(b)) {
                 // Boost at ~20° upward angle toward target (mostly forward, slight climb)
-                Vector boost = flatDir.clone().multiply(2.0);
-                boost.setY(0.7);
-                boost.normalize().multiply(2.5);
+                // Vanilla firework boost: ~1.5 speed
+                Vector boost = flatDir.clone().multiply(1.2);
+                boost.setY(0.5);
+                boost.normalize().multiply(1.5);
                 boostElytra(b, boost);
             }
             lookAt(b, target.getLocation());
@@ -2430,7 +2393,7 @@ public class BotCombatAI {
                     if (dist > 15) {
                         if (toTarget.getY() < 0.1) toTarget.setY(0.15);
                     }
-                    boostElytra(b, toTarget.multiply(2.3));
+                    boostElytra(b, toTarget.multiply(1.5)); // Vanilla firework speed
                 }
                 lookAt(b, target.getLocation());
             }, 6L + 15L * i);
@@ -2458,11 +2421,35 @@ public class BotCombatAI {
                 Player bot = getBotPlayer();
                 if (bot == null) return;
 
-                // ── Manual fall distance tracking (NPCs don't always accumulate it) ──
+                // ── Manual fall distance tracking + FALL DAMAGE ──
+                // Citizens NPCs don't accumulate fall distance naturally,
+                // so we track it manually and apply vanilla fall damage.
                 if (bot.isOnGround()) {
                     if (!wasOnGroundLastTick && manualFallStartY > bot.getLocation().getY()) {
-                        // Just landed — calculate fall distance
-                        // Bot takes fall damage like a real player (unless mace negated it)
+                        // Just landed — calculate and APPLY fall damage
+                        double fallDist = manualFallStartY - bot.getLocation().getY();
+                        // Vanilla: damage = fallDistance - 3 (no damage below 3 blocks)
+                        if (fallDist > 3.0) {
+                            double fallDamage = fallDist - 3.0;
+                            // Check for Feather Falling enchantment (reduces by 12% per level)
+                            ItemStack boots = bot.getInventory().getBoots();
+                            if (boots != null && boots.containsEnchantment(org.bukkit.enchantments.Enchantment.FEATHER_FALLING)) {
+                                int ffLevel = boots.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.FEATHER_FALLING);
+                                fallDamage *= Math.max(0, 1.0 - (ffLevel * 0.12));
+                            }
+                            // Check for Protection enchantment on all armor
+                            for (ItemStack armor : bot.getInventory().getArmorContents()) {
+                                if (armor != null && armor.containsEnchantment(org.bukkit.enchantments.Enchantment.PROTECTION)) {
+                                    int protLevel = armor.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.PROTECTION);
+                                    fallDamage *= Math.max(0, 1.0 - (protLevel * 0.04));
+                                }
+                            }
+                            if (fallDamage > 0.5) {
+                                bot.damage(fallDamage);
+                                bot.getWorld().playSound(bot.getLocation(),
+                                        Sound.ENTITY_PLAYER_HURT, 1.0f, 1.0f);
+                            }
+                        }
                     }
                     manualFallStartY = -1;
                     wasOnGroundLastTick = true;
@@ -2775,17 +2762,23 @@ public class BotCombatAI {
     }
 
     /**
-     * Jumping — PRO PLAYER STYLE:
+     * Jumping — PRO PLAYER STYLE + BHOP:
      * - Jump to clear obstacles (block in front of bot).
      * - Sprint-jump when chasing from distance (moves ~30% faster than sprinting alone).
-     * - Higher difficulties sprint-jump more consistently, like real pros.
+     * - BHop (Bunny Hop): continuous sprint-jump chains — jump immediately on landing
+     *   to maintain maximum momentum. This is THE key PvP movement technique.
+     *   In vanilla MC, sprint-jumping is ~30% faster than sprinting alone.
+     *   BHop chains these jumps with no pause between landing and jumping.
+     * - Higher difficulties BHop more consistently, like real pros.
      * - Crit jumps are handled in handleSwordAttack/handleAxeAttack, NOT here.
      */
+    private boolean isBhopping = false;
+    private long bhopStartTime = 0;
+
     private void handleJumping(Player bot, double distance) {
         if (!bot.isOnGround()) return;
 
         long now = System.currentTimeMillis();
-        if (now - lastJump < 400) return; // Min 400ms between jumps (tighter for sprint-jumping)
 
         // Check if there's a solid block in front at knee level
         Vector facing = bot.getLocation().getDirection().clone();
@@ -2796,8 +2789,8 @@ public class BotCombatAI {
         Location kneeCheck = bot.getLocation().clone().add(facing.multiply(0.8));
         Block blockInFront = kneeCheck.getBlock();
 
+        // ── OBSTACLE JUMP: always jump over blocks in front ──
         if (blockInFront.getType().isSolid()) {
-            // Check if we can actually clear it (no block above the obstacle)
             Block aboveObstacle = kneeCheck.clone().add(0, 1, 0).getBlock();
             Block headClearance = kneeCheck.clone().add(0, 2, 0).getBlock();
             if (!aboveObstacle.getType().isSolid() || !headClearance.getType().isSolid()) {
@@ -2807,24 +2800,94 @@ public class BotCombatAI {
             }
         }
 
-        // Sprint-jumping: pros jump while sprinting to move faster (~30% speed boost)
-        // Only when chasing from a distance and sprinting
-        if (distance > 4.0 && bot.isSprinting() && !isEating && !isRetreating) {
-            double sprintJumpChance = switch (difficulty) {
-                case EASY     -> 0.0;   // Noobs don't sprint-jump
-                case MEDIUM   -> 0.10;  // Occasionally
-                case HARD     -> 0.35;  // Often (good players)
-                case HACKER   -> 0.55;  // Very often (pro movement)
-                case ADAPTIVE -> jumpChance * 1.5;
-                case DUMMY    -> 0.0;
-            };
+        // ── BHOP: continuous sprint-jump chains ──
+        // When sprinting and chasing, jump IMMEDIATELY on landing to chain jumps.
+        // This gives ~30% speed boost over sprinting alone (vanilla mechanic).
+        // BHop is triggered when chasing and maintained until bot stops or changes action.
+        if (bot.isSprinting() && !isEating && !isRetreating && !isFleeingToHeal) {
+            // Decide whether to start/continue BHop based on distance and difficulty
+            if (distance > 4.0 && distance <= 30.0) {
+                double bhopChance = switch (difficulty) {
+                    case EASY     -> 0.0;    // Noobs don't BHop
+                    case MEDIUM   -> 0.08;   // Rarely starts BHop
+                    case HARD     -> 0.40;   // Often BHops (good players)
+                    case HACKER   -> 0.70;   // Almost always BHops
+                    case ADAPTIVE -> jumpChance * 2.0;
+                    case DUMMY    -> 0.0;
+                };
 
-            if (random.nextDouble() < sprintJumpChance) {
-                // Sprint-jump: jump + forward momentum boost
+                // Start BHop chain
+                if (!isBhopping && random.nextDouble() < bhopChance) {
+                    isBhopping = true;
+                    bhopStartTime = now;
+                }
+
+                // Continue BHop chain — jump immediately on landing (minimal delay)
+                if (isBhopping) {
+                    // BHop timing: jump within 1-2 ticks of landing for perfect chain
+                    // Min delay between jumps: ~300ms (vanilla jump cooldown)
+                    if (now - lastJump >= 300) {
+                        Vector vel = bot.getVelocity();
+                        vel.setY(0.42); // Vanilla jump velocity
+                        bot.setVelocity(vel);
+                        lastJump = now;
+                        bot.setSprinting(true); // Maintain sprint through jump
+                    }
+
+                    // Stop BHop after a duration (human-like, not infinite)
+                    long maxBhopDuration = switch (difficulty) {
+                        case MEDIUM   -> 1500L;  // Short chains
+                        case HARD     -> 3000L;  // Medium chains
+                        case HACKER   -> 6000L;  // Long chains (very pro)
+                        case ADAPTIVE -> 2000L;
+                        default -> 0L;
+                    };
+                    if (now - bhopStartTime > maxBhopDuration) {
+                        isBhopping = false;
+                    }
+
+                    return;
+                }
+            } else {
+                // Out of BHop range — stop
+                isBhopping = false;
+            }
+
+            // ── Regular sprint-jump (non-BHop, occasional) ──
+            if (distance > 4.0 && now - lastJump >= 400) {
+                double sprintJumpChance = switch (difficulty) {
+                    case EASY     -> 0.0;
+                    case MEDIUM   -> 0.10;
+                    case HARD     -> 0.25;
+                    case HACKER   -> 0.40;
+                    case ADAPTIVE -> jumpChance * 1.5;
+                    case DUMMY    -> 0.0;
+                };
+
+                if (random.nextDouble() < sprintJumpChance) {
+                    Vector vel = bot.getVelocity();
+                    vel.setY(0.42); // Vanilla jump height
+                    bot.setVelocity(vel);
+                    lastJump = now;
+                }
+            }
+        } else {
+            // Not sprinting or in special state — stop BHop
+            isBhopping = false;
+        }
+
+        // ── BHOP while retreating (fleeing BHop — sprint-jump backwards) ──
+        if (isFleeingToHeal && bot.isSprinting() && now - lastJump >= 350) {
+            double fleeBhopChance = switch (difficulty) {
+                case MEDIUM   -> 0.10;
+                case HARD     -> 0.30;
+                case HACKER   -> 0.55;
+                case ADAPTIVE -> 0.20;
+                default -> 0.0;
+            };
+            if (random.nextDouble() < fleeBhopChance) {
                 Vector vel = bot.getVelocity();
-                Vector forward = facing.clone().multiply(0.05); // Small forward boost on jump
-                vel.setY(0.42); // Standard jump height
-                vel.add(forward);
+                vel.setY(0.42);
                 bot.setVelocity(vel);
                 lastJump = now;
             }
@@ -2960,26 +3023,7 @@ public class BotCombatAI {
     }
 
     private boolean shouldPlaceBlock(Player bot, double distance) {
-        // Human-like: place blocks less frequently
-        long cooldown = switch(difficulty) {
-            case EASY -> 2000;    // Very slow
-            case MEDIUM -> 1500;  // Slow  
-            case HARD -> 1000;    // Human-like
-            case HACKER -> 400;   // Fast
-            case ADAPTIVE -> 1200;
-            case DUMMY -> 9999;
-        };
-        if (System.currentTimeMillis() - lastBlockPlace < cooldown) return false;
-        
-        // Don't always place blocks (human hesitation)
-        if (random.nextDouble() > 0.3) return false;
-        
-        // Bridge gaps or tower up
-        Block below = bot.getLocation().subtract(0, 1, 0).getBlock();
-        if (below.getType() == Material.AIR) {
-            return hasBlocks(bot);
-        }
-        
+        // DISABLED — bots must NEVER modify the arena map
         return false;
     }
 
