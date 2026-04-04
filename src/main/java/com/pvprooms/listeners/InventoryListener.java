@@ -24,6 +24,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -40,6 +41,37 @@ public class InventoryListener implements Listener {
 
     public InventoryListener(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+
+    // ── Drag protection: prevent dragging player items into protected GUIs ──
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        Inventory inv = event.getInventory();
+
+        // Kit Editor: block any drag that touches slots outside the editor
+        if (inv.getHolder() instanceof KitEditorHolder) {
+            int editorSize = inv.getSize();
+            for (int slot : event.getRawSlots()) {
+                if (slot >= editorSize) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+            return;
+        }
+
+        // All other custom GUIs: block drags entirely
+        if (inv.getHolder() instanceof KitSelectHolder
+                || inv.getHolder() instanceof AdminPanelHolder
+                || inv.getHolder() instanceof ArenaConfigHolder
+                || inv.getHolder() instanceof QueueModeHolder
+                || inv.getHolder() instanceof DuelKitSelectHolder
+                || inv.getHolder() instanceof DuelChallengeKitHolder
+                || inv.getHolder() instanceof KitReorderHolder) {
+            event.setCancelled(true);
+        }
     }
 
     // ── Kit GUI click ──────────────────────────────────────────────────────
@@ -176,6 +208,23 @@ public class InventoryListener implements Listener {
         // ── Kit Editor GUI ─────────────────────────────────────────────────
         if (event.getInventory().getHolder() instanceof KitEditorHolder holder) {
             int raw = event.getRawSlot();
+            int editorSize = event.getInventory().getSize(); // 45 slots
+            var action = event.getAction();
+
+            // Block ANY interaction from the player's own inventory (bottom half).
+            // This prevents lobby/spawn items from being moved into the kit editor.
+            if (raw >= editorSize) {
+                event.setCancelled(true);
+                return;
+            }
+
+            // Block shift-click & hotbar swap — these can move items from player inv
+            if (action == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY
+                    || action == org.bukkit.event.inventory.InventoryAction.HOTBAR_SWAP
+                    || action == org.bukkit.event.inventory.InventoryAction.HOTBAR_MOVE_AND_READD) {
+                event.setCancelled(true);
+                return;
+            }
 
             // Separator panes — always block
             if (raw == KitEditorGUI.PANE_SLOT_1 || raw == KitEditorGUI.PANE_SLOT_2) {
@@ -196,7 +245,7 @@ public class InventoryListener implements Listener {
                 player.closeInventory();
                 return;
             }
-            // Allow all other clicks (inventory + armor slots)
+            // Allow rearranging items within the editor GUI (slots 0-44)
             return;
         }
 
