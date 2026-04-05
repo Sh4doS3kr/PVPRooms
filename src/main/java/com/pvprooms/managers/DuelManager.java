@@ -459,12 +459,16 @@ public class DuelManager {
         // Stop holograms immediately
         plugin.getHealthHologramManager().stopHolograms(duel.getId());
 
-        // Round result chat message
-        String roundMsg = plugin.prefix()
-                + "§e⚔ §6§l" + winnerName
-                + " §egana! §8[§a" + w1 + "§7-§c" + w2 + "§8]";
-        if (p1 != null) p1.sendMessage(roundMsg);
-        if (p2 != null) p2.sendMessage(roundMsg);
+        // Round result chat message — each player sees THEIR score in green, rival in red
+        int p1Score = w1, p2Score = w2;
+        if (p1 != null) {
+            p1.sendMessage(plugin.prefix() + "§e⚔ §6§l" + winnerName
+                    + " §egana! §8[§a" + p1Score + " §7- §c" + p2Score + "§8]");
+        }
+        if (p2 != null) {
+            p2.sendMessage(plugin.prefix() + "§e⚔ §6§l" + winnerName
+                    + " §egana! §8[§a" + p2Score + " §7- §c" + p1Score + "§8]");
+        }
 
         // Step 1: clear death-cam spectator mode, then teleport to spawns
         if (p1 != null && p1.getGameMode() == GameMode.SPECTATOR) p1.setGameMode(GameMode.SURVIVAL);

@@ -162,6 +162,25 @@ public class PlayerListener implements Listener {
         }
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline()) return;
+
+            // Safety: if player spawned inside an arena world (disconnect during duel),
+            // force-teleport them to lobby immediately.
+            String worldName = player.getWorld().getName();
+            String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+            boolean inArenaWorld = worldName.startsWith(instancePrefix)
+                    || worldName.startsWith("pvp_pool_")
+                    || worldName.startsWith("arena_bot_");
+            if (inArenaWorld && !plugin.getDuelManager().isInDuel(player.getUniqueId())
+                    && !plugin.getDuelManager().isInFFA(player.getUniqueId())) {
+                player.setGameMode(GameMode.SURVIVAL);
+                player.teleport(plugin.getLobbySpawn());
+                plugin.getLobbyManager().giveLobbyItems(player);
+                plugin.getScoreboardManager().showLobbyScoreboard(player);
+                player.sendMessage(plugin.prefix() + "§eTe hemos devuelto al lobby (desconexión en arena).");
+                return;
+            }
+
             plugin.getScoreboardManager().showLobbyScoreboard(player);
 
             // Show pending Discord link code if any
@@ -381,21 +400,21 @@ public class PlayerListener implements Listener {
                 // Tier match winner — 6s title (120 ticks stay)
                 if (deadP != null) {
                     deadP.sendTitle("§cHas perdido el match",
-                            "§9" + fLoserScore + "§f-§c" + fWinnerScore, 0, 120, 20);
+                            "§a" + fLoserScore + " §f- §c" + fWinnerScore, 0, 120, 20);
                 }
                 if (winnerP != null) {
                     winnerP.sendTitle("§a¡Ganaste el match!",
-                            "§9" + fWinnerScore + "§f-§c" + fLoserScore, 0, 120, 20);
+                            "§a" + fWinnerScore + " §f- §c" + fLoserScore, 0, 120, 20);
                 }
             } else {
                 // Regular kill — 3.5s title (70 ticks stay)
                 if (deadP != null) {
                     deadP.sendTitle("§cHas muerto",
-                            "§9" + fLoserScore + "§f-§c" + fWinnerScore, 0, 70, 0);
+                            "§a" + fLoserScore + " §f- §c" + fWinnerScore, 0, 70, 0);
                 }
                 if (winnerP != null) {
                     winnerP.sendTitle("§aGanaste!",
-                            "§9" + fWinnerScore + "§f-§c" + fLoserScore, 0, 70, 0);
+                            "§a" + fWinnerScore + " §f- §c" + fLoserScore, 0, 70, 0);
                 }
             }
         }, 22L);
@@ -754,6 +773,14 @@ public class PlayerListener implements Listener {
             if (!ffaTemplate.isAllowBlockBreak()) event.setCancelled(true);
             return;
         }
+        // Safety: block ALL interaction in arena worlds with no active duel
+        // (player stuck in stale arena after disconnect)
+        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        if (!player.isOp() && (blockWorld.startsWith(instancePrefix)
+                || blockWorld.startsWith("pvp_pool_") || blockWorld.startsWith("arena_bot_"))) {
+            event.setCancelled(true);
+            return;
+        }
         // Block spectators breaking blocks in any other context
         Duel playerDuel = plugin.getDuelManager().getDuelByPlayer(player.getUniqueId());
         if (playerDuel != null && playerDuel.isSpectator(player.getUniqueId())) {
@@ -789,6 +816,13 @@ public class PlayerListener implements Listener {
         var botDuel = plugin.getBotManager().getBotDuel(player.getUniqueId());
         if (botDuel != null && botDuel.instanceWorldName.equals(blockWorld)) {
             if (!botDuel.template.isAllowBlockPlace()) event.setCancelled(true);
+            return;
+        }
+        // Safety: block ALL interaction in arena worlds with no active duel
+        String instancePrefix = plugin.getConfig().getString("arenas.instance-prefix", "pvp_match_");
+        if (!player.isOp() && (blockWorld.startsWith(instancePrefix)
+                || blockWorld.startsWith("pvp_pool_") || blockWorld.startsWith("arena_bot_"))) {
+            event.setCancelled(true);
             return;
         }
         // Block spectators placing blocks in any other context
