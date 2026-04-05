@@ -24,6 +24,8 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
     private final Map<UUID, Long> requestTimestamps = new HashMap<>();
     /** Kit selected for pending request: challenged UUID -> kit name */
     private final Map<UUID, String> pendingKits = new HashMap<>();
+    /** Max score for pending request: challenged UUID -> max score */
+    private final Map<UUID, Integer> pendingMaxScores = new HashMap<>();
     
     private static final long REQUEST_TIMEOUT_MS = 60_000; // 60 seconds
 
@@ -98,13 +100,13 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         if (existingChallenger != null && existingChallenger.equals(target.getUniqueId())) {
             // Target already challenged us - auto accept with their kit
             String existingKit = pendingKits.get(challenger.getUniqueId());
+            int existingMaxScore = pendingMaxScores.getOrDefault(challenger.getUniqueId(), 1);
             cleanupRequest(challenger.getUniqueId());
             if (existingKit != null) {
-                startDuelWithKit(target, challenger, existingKit);
+                startDuelWithKit(target, challenger, existingKit, existingMaxScore);
             } else {
-                // Fallback
                 String kit = plugin.getKitManager().getKitNames().stream().findFirst().orElse("default");
-                startDuelWithKit(target, challenger, kit);
+                startDuelWithKit(target, challenger, kit, existingMaxScore);
             }
             return;
         }
@@ -131,30 +133,35 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         final String chName = challenger.getName();
         
         plugin.getKitGUI().openDuelChallengeKitSelection(challenger, (kitName) -> {
-            // Callback when kit is selected
-            pendingKits.put(finalTarget.getUniqueId(), kitName);
-            
-            challenger.sendMessage(plugin.prefix() + "§a¡Reto enviado a §f" + finalTarget.getName() + "§a! §8[§e" + kitName + "§8]");
-            challenger.sendMessage(plugin.prefix() + "§7Esperando respuesta... (60s)");
-            
-            finalTarget.sendMessage("");
-            finalTarget.sendMessage(plugin.prefix() + "§e§l¡RETO DE DUELO!");
-            finalTarget.sendMessage(plugin.prefix() + "§f" + challenger.getName() + " §ete ha retado a un duelo. §8[§bKit: §e" + kitName + "§8]");
-            finalTarget.sendMessage(plugin.prefix() + "§aEscribe §f/duel accept §apara aceptar");
-            finalTarget.sendMessage(plugin.prefix() + "§cEscribe §f/duel deny §cpara rechazar");
-            finalTarget.sendMessage("");
-            
-            // Auto-expire after timeout
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (pendingRequests.containsKey(targetUUID) 
-                        && pendingRequests.get(targetUUID).equals(challengerUUID)) {
-                    cleanupRequest(targetUUID);
-                    Player ch = Bukkit.getPlayer(challengerUUID);
-                    Player tg = Bukkit.getPlayer(targetUUID);
-                    if (ch != null) ch.sendMessage(plugin.prefix() + "§cTu reto a §e" + tgtName + " §cha expirado.");
-                    if (tg != null) tg.sendMessage(plugin.prefix() + "§cEl reto de §e" + chName + " §cha expirado.");
-                }
-            }, REQUEST_TIMEOUT_MS / 50); // Convert to ticks
+            // Kit selected — now open score selection GUI
+            plugin.getKitGUI().openDuelScoreSelection(challenger, targetUUID, kitName, (maxScore) -> {
+                // Score selected — send the challenge
+                pendingKits.put(finalTarget.getUniqueId(), kitName);
+                pendingMaxScores.put(finalTarget.getUniqueId(), maxScore);
+
+                String scoreTag = maxScore > 1 ? " §8[§ePuntos: §f" + maxScore + "§8]" : "";
+                challenger.sendMessage(plugin.prefix() + "§a¡Reto enviado a §f" + finalTarget.getName() + "§a! §8[§e" + kitName + "§8]" + scoreTag);
+                challenger.sendMessage(plugin.prefix() + "§7Esperando respuesta... (60s)");
+
+                finalTarget.sendMessage("");
+                finalTarget.sendMessage(plugin.prefix() + "§e§l¡RETO DE DUELO!");
+                finalTarget.sendMessage(plugin.prefix() + "§f" + challenger.getName() + " §ete ha retado a un duelo. §8[§bKit: §e" + kitName + "§8]" + scoreTag);
+                finalTarget.sendMessage(plugin.prefix() + "§aEscribe §f/duel accept §apara aceptar");
+                finalTarget.sendMessage(plugin.prefix() + "§cEscribe §f/duel deny §cpara rechazar");
+                finalTarget.sendMessage("");
+
+                // Auto-expire after timeout
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (pendingRequests.containsKey(targetUUID)
+                            && pendingRequests.get(targetUUID).equals(challengerUUID)) {
+                        cleanupRequest(targetUUID);
+                        Player ch = Bukkit.getPlayer(challengerUUID);
+                        Player tg = Bukkit.getPlayer(targetUUID);
+                        if (ch != null) ch.sendMessage(plugin.prefix() + "§cTu reto a §e" + tgtName + " §cha expirado.");
+                        if (tg != null) tg.sendMessage(plugin.prefix() + "§cEl reto de §e" + chName + " §cha expirado.");
+                    }
+                }, REQUEST_TIMEOUT_MS / 50);
+            });
         });
     }
 
@@ -180,14 +187,14 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         }
 
         String kitName = pendingKits.get(player.getUniqueId());
+        int maxScore = pendingMaxScores.getOrDefault(player.getUniqueId(), 1);
         cleanupRequest(player.getUniqueId());
         
         if (kitName == null) {
-            // Fallback: shouldn't happen, but use default kit
             kitName = plugin.getKitManager().getKitNames().stream().findFirst().orElse("default");
         }
         
-        startDuelWithKit(challenger, player, kitName);
+        startDuelWithKit(challenger, player, kitName, maxScore);
     }
 
     private void handleDeny(Player player) {
@@ -206,25 +213,30 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void startDuelWithKit(Player challenger, Player target, String kitName) {
-        challenger.sendMessage(plugin.prefix() + "§a¡" + target.getName() + " §aha aceptado tu reto! §8[§e" + kitName + "§8]");
-        target.sendMessage(plugin.prefix() + "§a¡Has aceptado el reto de §f" + challenger.getName() + "§a! §8[§e" + kitName + "§8]");
+    private void startDuelWithKit(Player challenger, Player target, String kitName, int maxScore) {
+        String scoreTag = maxScore > 1 ? " §8[§ePuntos: §f" + maxScore + "§8]" : "";
+        challenger.sendMessage(plugin.prefix() + "§a¡" + target.getName() + " §aha aceptado tu reto! §8[§e" + kitName + "§8]" + scoreTag);
+        target.sendMessage(plugin.prefix() + "§a¡Has aceptado el reto de §f" + challenger.getName() + "§a! §8[§e" + kitName + "§8]" + scoreTag);
 
-        // Start the duel directly with the pre-selected kit
-        plugin.getDuelManager().startDuel(challenger.getUniqueId(), target.getUniqueId(), kitName);
+        // Start the duel with custom max score
+        plugin.getDuelManager().startDuel(challenger.getUniqueId(), target.getUniqueId(), kitName, false, maxScore);
     }
 
     private void cleanupRequest(UUID targetUUID) {
         pendingRequests.remove(targetUUID);
         requestTimestamps.remove(targetUUID);
         pendingKits.remove(targetUUID);
+        pendingMaxScores.remove(targetUUID);
     }
 
     private void cleanExpiredRequests() {
         long now = System.currentTimeMillis();
         requestTimestamps.entrySet().removeIf(e -> {
             if (now - e.getValue() > REQUEST_TIMEOUT_MS) {
-                pendingRequests.remove(e.getKey());
+                UUID key = e.getKey();
+                pendingRequests.remove(key);
+                pendingKits.remove(key);
+                pendingMaxScores.remove(key);
                 return true;
             }
             return false;

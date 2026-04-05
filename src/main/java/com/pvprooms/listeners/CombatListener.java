@@ -97,6 +97,16 @@ public class CombatListener implements Listener {
             return;
         }
         
+        // Record for duel precision action bar (only when opponent in range)
+        Duel duel = plugin.getDuelManager().getDuelByPlayer(uuid);
+        if (duel != null && duel.getState() == Duel.State.FIGHTING) {
+            UUID opponentUUID = duel.getOpponent(uuid);
+            Player opponent = org.bukkit.Bukkit.getPlayer(opponentUUID);
+            if (opponent != null && player.getLocation().distanceSquared(opponent.getLocation()) <= 20.25) {
+                plugin.getDuelManager().recordDuelSwing(uuid);
+            }
+        }
+
         // Record this swing as pending
         long now = System.currentTimeMillis();
         Long lastSwing = pendingSwings.put(uuid, now);
@@ -159,6 +169,11 @@ public class CombatListener implements Listener {
         if (!(event.getEntity() instanceof Player victim)) return;
 
         Player attacker = resolveAttacker(event.getDamager());
+
+        // Ping equalization bypass: re-triggered delayed damage — let through immediately
+        if (attacker != null && plugin.getDuelManager().consumeBypassPingDelay(attacker.getUniqueId())) {
+            return;
+        }
 
         // Check if victim is in FFA match first
         if (plugin.getDuelManager().isInFFA(victim.getUniqueId())) {
@@ -236,8 +251,30 @@ public class CombatListener implements Listener {
         if (attacker != null) {
             clearPendingSwing(attacker.getUniqueId());
             plugin.getStatsManager().recordHit(attacker.getUniqueId(), attacker.getName());
+            plugin.getDuelManager().recordDuelHit(attacker.getUniqueId());
         }
-        
+
+        // ── Ping equalization: delay melee damage when attacker has lower ping ──
+        if (attacker != null && event.getDamager() instanceof Player) {
+            int aPing = attacker.getPing();
+            int vPing = victim.getPing();
+            int diff = vPing - aPing; // positive → victim has higher ping
+            if (diff > 30) {
+                int delayTicks = Math.max(1, Math.min(diff / 50, 4)); // 1-4 ticks
+                double baseDamage = event.getDamage();
+                event.setCancelled(true);
+                Player fAttacker = attacker;
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                    if (!victim.isOnline() || victim.isDead()) return;
+                    Duel d = plugin.getDuelManager().getDuelByPlayer(victim.getUniqueId());
+                    if (d == null || d.getState() != Duel.State.FIGHTING) return;
+                    plugin.getDuelManager().addBypassPingDelay(fAttacker.getUniqueId());
+                    victim.damage(baseDamage, fAttacker);
+                }, delayTicks);
+                return;
+            }
+        }
+
         // Damage is valid — update scoreboard for both players after 1 tick
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             Player p1 = plugin.getServer().getPlayer(victimDuel.getPlayer1());

@@ -11,6 +11,7 @@ import com.pvprooms.gui.KitGUI;
 import com.pvprooms.gui.KitSelectHolder;
 import com.pvprooms.gui.DuelKitSelectHolder;
 import com.pvprooms.gui.DuelChallengeKitHolder;
+import com.pvprooms.gui.DuelScoreSelectHolder;
 import com.pvprooms.gui.KitReorderHolder;
 import com.pvprooms.gui.QueueModeGUI;
 import com.pvprooms.gui.QueueModeHolder;
@@ -69,6 +70,7 @@ public class InventoryListener implements Listener {
                 || inv.getHolder() instanceof QueueModeHolder
                 || inv.getHolder() instanceof DuelKitSelectHolder
                 || inv.getHolder() instanceof DuelChallengeKitHolder
+                || inv.getHolder() instanceof DuelScoreSelectHolder
                 || inv.getHolder() instanceof KitReorderHolder) {
             event.setCancelled(true);
         }
@@ -109,6 +111,23 @@ public class InventoryListener implements Listener {
             player.closeInventory();
             // Start the duel with the selected kit
             plugin.getQueueManager().startDuelFromPair(player.getUniqueId(), kitName);
+            return;
+        }
+
+        // ── Duel Score Selection GUI (/duel <player> command) ─────────────────
+        if (event.getInventory().getHolder() instanceof DuelScoreSelectHolder scoreHolder) {
+            event.setCancelled(true);
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || clicked.getType() == Material.AIR) return;
+            // Extract score from display name (e.g. "§e§l7 puntos" → 7)
+            String raw = ChatColor.stripColor(clicked.getItemMeta().getDisplayName()).trim();
+            try {
+                int score = Integer.parseInt(raw.split(" ")[0]);
+                player.closeInventory();
+                if (scoreHolder.getOnScoreSelected() != null) {
+                    scoreHolder.getOnScoreSelected().accept(score);
+                }
+            } catch (NumberFormatException ignored) { }
             return;
         }
 
@@ -378,6 +397,7 @@ public class InventoryListener implements Listener {
         boolean isPluginGui = holder instanceof KitSelectHolder
                 || holder instanceof DuelKitSelectHolder
                 || holder instanceof DuelChallengeKitHolder
+                || holder instanceof DuelScoreSelectHolder
                 || holder instanceof QueueModeHolder
                 || holder instanceof AdminPanelHolder
                 || holder instanceof ArenaConfigHolder

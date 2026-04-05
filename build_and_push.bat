@@ -6,7 +6,8 @@ echo   PvPRoomsPro - Compilar y Subir a GitHub
 echo ---------------------------------------------------
 echo.
 
-set "MVN=C:\Users\alex\.m2\wrapper\dists\apache-maven-3.8.6-bin\1ks0nkde5v1pk9vtc31i9d0lcd\apache-maven-3.8.6\bin\mvn.cmd"
+set "JAVA_HOME=C:\Program Files\Java\jdk-21"
+set "MVN=C:\Users\alex\.m2\wrapper\dists\apache-maven-3.9.6-bin\3311e1d4\apache-maven-3.9.6\bin\mvn.cmd"
 
 if not exist "%MVN%" (
     echo [ERROR] No se encontro Maven en: %MVN%

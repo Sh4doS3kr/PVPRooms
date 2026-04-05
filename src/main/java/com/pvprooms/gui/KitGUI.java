@@ -89,6 +89,24 @@ public class KitGUI {
         player.openInventory(inv);
     }
 
+    /** Opens a score selection GUI for /duel challenge. */
+    public void openDuelScoreSelection(Player player, java.util.UUID targetUUID, String kitName, java.util.function.Consumer<Integer> onScoreSelected) {
+        int[] scores = {1, 3, 5, 7, 10, 15, 20, 25, 30};
+        String title = ChatColor.translateAlternateColorCodes('&', "&8Puntuación máxima");
+        Inventory inv = Bukkit.createInventory(new DuelScoreSelectHolder(targetUUID, kitName, onScoreSelected), 9, title);
+        for (int i = 0; i < scores.length; i++) {
+            int score = scores[i];
+            Material mat = score <= 5 ? Material.LIME_DYE : score <= 15 ? Material.YELLOW_DYE : Material.RED_DYE;
+            ItemStack item = new ItemStack(mat);
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName("§e§l" + score + (score == 1 ? " punto" : " puntos"));
+            meta.setLore(List.of("§7Click para elegir", "", "§fEl primero en llegar a §e" + score + " §fgana"));
+            item.setItemMeta(meta);
+            inv.setItem(i, item);
+        }
+        player.openInventory(inv);
+    }
+
     private void openInternal(Player player, boolean tierMode) {
         Collection<Kit> kits = plugin.getKitManager().getAllKits();
         if (kits.isEmpty()) {

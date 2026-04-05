@@ -44,8 +44,64 @@ public class DuelManager {
     /** Tracks ELO wins for trim key rewards (every 2 wins = 1 key) */
     private final Map<UUID, Integer> eloWinsForKey = new ConcurrentHashMap<>();
 
+    // ── Ping equalization & combat action bar ────────────────────────────
+    private final Map<UUID, Integer> duelSwings = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> duelHits   = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> actionBarTasks = new ConcurrentHashMap<>();
+    private final Set<UUID> bypassPingDelay = ConcurrentHashMap.newKeySet();
+
     public DuelManager(PvPRoomsPro plugin) {
         this.plugin = plugin;
+    }
+
+    // ── Precision tracking (per-duel, resets on duel end) ────────────────
+    public void recordDuelSwing(UUID uuid) { duelSwings.merge(uuid, 1, Integer::sum); }
+    public void recordDuelHit(UUID uuid)   { duelHits.merge(uuid, 1, Integer::sum); }
+    public int  getDuelSwings(UUID uuid)   { return duelSwings.getOrDefault(uuid, 0); }
+    public int  getDuelHits(UUID uuid)     { return duelHits.getOrDefault(uuid, 0); }
+
+    // ── Ping equalization bypass (prevents re-processing delayed damage) ─
+    public void    addBypassPingDelay(UUID uuid)     { bypassPingDelay.add(uuid); }
+    public boolean consumeBypassPingDelay(UUID uuid) { return bypassPingDelay.remove(uuid); }
+
+    // ── Combat action bar ────────────────────────────────────────────────
+    private void startActionBarTask(Duel duel) {
+        if (actionBarTasks.containsKey(duel.getId())) return;
+        int taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (duel.getState() != Duel.State.FIGHTING) return;
+            Player p1 = Bukkit.getPlayer(duel.getPlayer1());
+            Player p2 = Bukkit.getPlayer(duel.getPlayer2());
+            if (p1 == null || p2 == null) return;
+            sendCombatActionBar(p1, p2, duel.getPlayer1());
+            sendCombatActionBar(p2, p1, duel.getPlayer2());
+        }, 10L, 10L).getTaskId();
+        actionBarTasks.put(duel.getId(), taskId);
+    }
+
+    private void sendCombatActionBar(Player player, Player opponent, UUID playerUUID) {
+        int myPing = player.getPing();
+        int opPing = opponent.getPing();
+        int diff = myPing - opPing;
+
+        int swings = getDuelSwings(playerUUID);
+        int hits   = getDuelHits(playerUUID);
+        String precision = swings > 0 ? Math.round((float) hits / swings * 100) + "%" : "---";
+
+        String diffColor = diff > 0 ? "§c" : "§a";
+        String diffSign  = diff > 0 ? "+" : "";
+
+        String msg = "§eDiferencia de ping: " + diffColor + diffSign + diff + "ms"
+                + " §8| §bPrecisión: §f" + precision;
+        player.sendActionBar(net.kyori.adventure.text.Component.text(msg));
+    }
+
+    private void stopActionBarTask(Duel duel) {
+        Integer taskId = actionBarTasks.remove(duel.getId());
+        if (taskId != null) Bukkit.getScheduler().cancelTask(taskId);
+        duelSwings.remove(duel.getPlayer1());
+        duelSwings.remove(duel.getPlayer2());
+        duelHits.remove(duel.getPlayer1());
+        duelHits.remove(duel.getPlayer2());
     }
 
     // ── Duel creation ──────────────────────────────────────────────────────
@@ -56,10 +112,14 @@ public class DuelManager {
      */
     /** Overload without bo3 — keeps ELO duels unchanged. */
     public void startDuel(UUID uuid1, UUID uuid2, String kitName) {
-        startDuel(uuid1, uuid2, kitName, false);
+        startDuel(uuid1, uuid2, kitName, false, 1);
     }
 
     public void startDuel(UUID uuid1, UUID uuid2, String kitName, boolean bo3) {
+        startDuel(uuid1, uuid2, kitName, bo3, bo3 ? 4 : 1);
+    }
+
+    public void startDuel(UUID uuid1, UUID uuid2, String kitName, boolean bo3, int customWinsNeeded) {
         Player p1 = Bukkit.getPlayer(uuid1);
         Player p2 = Bukkit.getPlayer(uuid2);
 
@@ -104,7 +164,7 @@ public class DuelManager {
 
         Duel duel = new Duel(uuid1, uuid2, kitName, instanceWorldName, template);
         duel.setRanked(bo3);
-        duel.setWinsNeeded(bo3 ? 7 : 1); // Tier: first to 7 wins, ELO: single round
+        duel.setWinsNeeded(customWinsNeeded);
         activeDuels.put(duel.getId(), duel);
         playerDuelMap.put(uuid1, duel.getId());
         playerDuelMap.put(uuid2, duel.getId());
@@ -118,7 +178,7 @@ public class DuelManager {
         preparePlayer(p2);
 
         // Notify match found & clear queue scoreboard before teleport
-        String modeTag = bo3 ? " §8[§bBO13§8]" : "";
+        String modeTag = bo3 ? " §8[§bBO7§8]" : (customWinsNeeded > 1 ? " §8[§eBest of " + customWinsNeeded + "§8]" : "");
         p1.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p2.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         p2.sendMessage(plugin.prefix() + "§a¡Partida encontrada! §8› §evs §f" + p1.getName() + " §8[Kit: §e" + kitName + "§8]" + modeTag);
         plugin.getScoreboardManager().clearScoreboard(p1);
@@ -227,6 +287,7 @@ public class DuelManager {
                     plugin.getScoreboardManager().updateDuelScoreboard(p2, duel);
 
                     startDurationTimer(duel);
+                    startActionBarTask(duel);
                     cancel();
                 }
             }
@@ -247,8 +308,8 @@ public class DuelManager {
      * Handles ELO updates, cleanup, and world destruction.
      */
     public void endDuel(Duel duel, UUID winnerUUID, String reason) {
-        // BO3 interception: a single-round death should start the next round
-        if (duel.isBo3()
+        // Multi-round interception: a single-round death should start the next round
+        if (duel.isMultiRound()
                 && "death".equals(reason)
                 && duel.getState() == Duel.State.FIGHTING
                 && winnerUUID != null) {
@@ -263,6 +324,7 @@ public class DuelManager {
         if (duel.getCountdownTask()  != -1) Bukkit.getScheduler().cancelTask(duel.getCountdownTask());
         if (duel.getDurationTask()   != -1) Bukkit.getScheduler().cancelTask(duel.getDurationTask());
         if (duel.getScoreboardTask() != -1) Bukkit.getScheduler().cancelTask(duel.getScoreboardTask());
+        stopActionBarTask(duel);
         // Ensure players are never left frozen
         frozenPlayers.remove(duel.getPlayer1());
         frozenPlayers.remove(duel.getPlayer2());
@@ -282,28 +344,24 @@ public class DuelManager {
         UUID loserUUID = winnerUUID == null ? null
                 : winnerUUID.equals(duel.getPlayer1()) ? duel.getPlayer2() : duel.getPlayer1();
 
-        // Rating update — BO3 (TIER mode) uses TierPoints; normal duels use ELO
+        // Rating update — only TIER mode affects rating/stats; normal duels are FRIENDLY
         if (winnerUUID != null && loserUUID != null) {
-            // Record stats for leaderboards
             Player winner = Bukkit.getPlayer(winnerUUID);
             Player loser  = Bukkit.getPlayer(loserUUID);
             String winnerName = winner != null ? winner.getName() : winnerUUID.toString();
             String loserName  = loser  != null ? loser.getName()  : loserUUID.toString();
-            plugin.getStatsManager().recordWin(winnerUUID, winnerName);
-            plugin.getStatsManager().recordLoss(loserUUID, loserName);
-            plugin.getStatsManager().recordKill(winnerUUID, winnerName);
-            plugin.getStatsManager().recordDeath(loserUUID, loserName);
-            
-            if (duel.isBo3()) {
-                // TIER mode: update tier points (auto up to HT3; elite requires ticket)
+
+            if (duel.isRanked()) {
+                // TIER mode: update tier points + record stats
+                plugin.getStatsManager().recordWin(winnerUUID, winnerName);
+                plugin.getStatsManager().recordLoss(loserUUID, loserName);
+                plugin.getStatsManager().recordKill(winnerUUID, winnerName);
+                plugin.getStatsManager().recordDeath(loserUUID, loserName);
                 plugin.getTierManager().recordResult(winnerUUID, loserUUID, duel.getKitName());
                 announceResultTier(p1, p2, winnerUUID, loserUUID, duel.getKitName());
             } else {
-                // ELO mode: ONLY update ELO, NOT tier points
-                // ELO and Tier are independent systems
-                int[] changes = plugin.getEloManager().processResult(
-                        winnerUUID, winnerName, loserUUID, loserName);
-                announceResult(p1, p2, winnerUUID, loserUUID, duel.getKitName(), changes[0], changes[1]);
+                // FRIENDLY duel: NO ELO changes, NO stats, just fun
+                announceResultFriendly(p1, p2, winnerUUID, loserUUID, duel.getKitName());
             }
         }
 
@@ -325,7 +383,7 @@ public class DuelManager {
         safeRestoreAndTeleport(p2, lobby);
 
         // Give trim key AFTER restore so the snapshot doesn't overwrite it
-        if (winnerUUID != null && !duel.isBo3()) {
+        if (winnerUUID != null && !duel.isRanked()) {
             giveTrimKeyReward(Bukkit.getPlayer(winnerUUID), winnerUUID);
         }
 
@@ -377,7 +435,7 @@ public class DuelManager {
      * Called after a round ends in a ranked (Tier) duel.
      * Increments the winner's round count, then either starts the next round
      * or finalises the match if someone has reached the required wins.
-     * Tier matches: first to 7 wins (BO13)
+     * Tier matches: BO7 (first to 4 wins)
      */
     private void handleBo3Round(Duel duel, UUID roundWinnerUUID) {
         duel.addWin(roundWinnerUUID);
@@ -417,24 +475,14 @@ public class DuelManager {
             if (p2 != null) p2.teleport(duel.getArenaTemplate().getSpawn2(worldNow));
         }
 
-        // Step 2: 0.2s later show the score title (X-X)
-        final int fw1 = w1, fw2 = w2;
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            Player rp1 = Bukkit.getPlayer(duel.getPlayer1());
-            Player rp2 = Bukkit.getPlayer(duel.getPlayer2());
-            String topLine = "§a" + fw1 + " §8▶ §c" + fw2;
-            String subLine = "§f" + winnerName + " §7gana";
-            if (rp1 != null) sendTitle(rp1, topLine, subLine, 80);
-            if (rp2 != null) sendTitle(rp2, topLine, subLine, 80);
-        }, 4L); // 4 ticks ≈ 0.2s
+        // Titles are handled by the death handler in PlayerListener (lightning + title sequence)
 
-        // Check for match winner (first to winsNeeded - default 10 for Tier)
+        // Check for match winner (first to winsNeeded)
         int needed = duel.getWinsNeeded();
         UUID matchWinner = w1 >= needed ? duel.getPlayer1() : (w2 >= needed ? duel.getPlayer2() : null);
         if (matchWinner != null) {
-            // Full match decided — run cleanup after titles are visible
-            Bukkit.getScheduler().runTaskLater(plugin, () ->
-                    endDuel(duel, matchWinner, "bo3_finished"), 40L);
+            // Full match decided — death handler already showed 6s title, run cleanup now
+            endDuel(duel, matchWinner, "bo3_finished");
             return;
         }
 
@@ -758,8 +806,6 @@ public class DuelManager {
             winner.sendMessage(plugin.prefix()
                     + "§7Rango: " + wTier.colour + "§l" + wTier.displayName
                     + "  §8| §7Kit: §f" + kitName);
-            sendTitle(winner, "§a§l¡VICTORIA!", wTier.colour + wTier.displayName
-                    + " §7+" + winGain + " ELO");
         }
         if (loser != null) {
             int newElo = plugin.getEloManager().getElo(loserUUID);
@@ -769,8 +815,23 @@ public class DuelManager {
             loser.sendMessage(plugin.prefix()
                     + "§7Rango: " + lTier.colour + "§l" + lTier.displayName
                     + "  §8| §7Kit: §f" + kitName);
-            sendTitle(loser, "§c§lDERROTA", lTier.colour + lTier.displayName
-                    + " §7-" + lossChange + " ELO");
+        }
+    }
+
+    /** Announces a FRIENDLY duel result — no ELO or tier points shown. */
+    private void announceResultFriendly(Player p1, Player p2, UUID winnerUUID, UUID loserUUID, String kitName) {
+        Player winner = Bukkit.getPlayer(winnerUUID);
+        Player loser  = Bukkit.getPlayer(loserUUID);
+        String winnerName = winner != null ? winner.getName() : "Unknown";
+        String loserName  = loser  != null ? loser.getName()  : "Unknown";
+
+        if (winner != null) {
+            winner.sendMessage(plugin.prefix() + "§a§l¡GANASTE! §avs §e" + loserName + "  §7(Amistoso)");
+            winner.sendMessage(plugin.prefix() + "§7Kit: §f" + kitName + "  §8| §7Sin cambios de ELO");
+        }
+        if (loser != null) {
+            loser.sendMessage(plugin.prefix() + "§c§lPERDISTE §cvs §e" + winnerName + "  §7(Amistoso)");
+            loser.sendMessage(plugin.prefix() + "§7Kit: §f" + kitName + "  §8| §7Sin cambios de ELO");
         }
     }
 
@@ -794,7 +855,6 @@ public class DuelManager {
                     + wTier.colour + wTier.displayName
                     + "  §8› §7" + pts + " pts");
             winner.sendMessage(plugin.prefix() + "§7Insignia: " + wTitle.formatted());
-            sendTitle(winner, "§a§l¡VICTORIA!", wTier.colour + wTier.displayName, 80);
         }
         if (loser != null) {
             int pts = plugin.getTierManager().getPoints(loserUUID, kitName);
@@ -804,7 +864,6 @@ public class DuelManager {
                     + lTier.colour + lTier.displayName
                     + "  §8› §7" + pts + " pts");
             loser.sendMessage(plugin.prefix() + "§7Insignia: " + lTitle.formatted());
-            sendTitle(loser, "§c§lDERROTA", lTier.colour + lTier.displayName, 80);
         }
     }
 

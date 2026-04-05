@@ -336,34 +336,76 @@ public class PlayerListener implements Listener {
         event.setKeepInventory(true);
         event.setKeepLevel(true);
 
-        // Cosmetic lightning at death location
-        Location deathLoc = dead.getLocation().clone();
-        dead.getWorld().strikeLightningEffect(deathLoc);
-
         // Determine winner
         UUID winnerUUID = duel.getOpponent(uuid);
+        Location deathLoc = dead.getLocation().clone();
+
+        // Calculate scores for title display
+        int winnerScore, loserScore;
+        boolean isMatchWin = false;
+        if (duel.isMultiRound()) {
+            winnerScore = duel.getWins(winnerUUID) + 1;
+            loserScore = duel.getWins(uuid);
+            isMatchWin = winnerScore >= duel.getWinsNeeded();
+        } else {
+            winnerScore = 1;
+            loserScore = 0;
+        }
+        final int fWinnerScore = winnerScore;
+        final int fLoserScore = loserScore;
+        final boolean fIsMatchWin = isMatchWin;
 
         // Save death location — onPlayerRespawn will place them here
         deathSpectatorLoc.put(uuid, deathLoc);
 
-        // Respawn dead player on next tick (death screen must clear first)
+        // Tick 20 (~1s): Force respawn — allows vanilla death animation to show briefly
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (dead.isDead()) dead.spigot().respawn();
-        }, 1L);
+        }, 20L);
 
-        // 2 ticks later: put in spectator mode so they float and watch the kill
+        // Tick 22 (~1.1s): Spectator mode + Lightning + Titles
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (dead.isOnline() && deathSpectatorLoc.containsKey(uuid)) {
                 dead.setGameMode(org.bukkit.GameMode.SPECTATOR);
                 dead.teleport(deathLoc.clone().add(0, 1.5, 0));
             }
-        }, 2L);
 
-        // End duel after 1.5s so winner can see the kill before being teleported out
+            // Cosmetic lightning at death location
+            World w = deathLoc.getWorld();
+            if (w != null) w.strikeLightningEffect(deathLoc);
+
+            Player deadP = org.bukkit.Bukkit.getPlayer(uuid);
+            Player winnerP = org.bukkit.Bukkit.getPlayer(winnerUUID);
+
+            if (fIsMatchWin) {
+                // Tier match winner — 6s title (120 ticks stay)
+                if (deadP != null) {
+                    deadP.sendTitle("§cHas perdido el match",
+                            "§9" + fLoserScore + "§f-§c" + fWinnerScore, 0, 120, 20);
+                }
+                if (winnerP != null) {
+                    winnerP.sendTitle("§a¡Ganaste el match!",
+                            "§9" + fWinnerScore + "§f-§c" + fLoserScore, 0, 120, 20);
+                }
+            } else {
+                // Regular kill — 3.5s title (70 ticks stay)
+                if (deadP != null) {
+                    deadP.sendTitle("§cHas muerto",
+                            "§9" + fLoserScore + "§f-§c" + fWinnerScore, 0, 70, 0);
+                }
+                if (winnerP != null) {
+                    winnerP.sendTitle("§aGanaste!",
+                            "§9" + fWinnerScore + "§f-§c" + fLoserScore, 0, 70, 0);
+                }
+            }
+        }, 22L);
+
+        // End duel after title duration: 3.5s (70t) or 6s (120t) after tick 22
+        long endDelay = fIsMatchWin ? 142L : 92L; // 22 + 120 or 22 + 70
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             deathSpectatorLoc.remove(uuid);
             plugin.getDuelManager().endDuel(duel, winnerUUID, "death");
-        }, 30L);
+        }, endDelay);
     }
 
     // ── Respawn ────────────────────────────────────────────────────────────
