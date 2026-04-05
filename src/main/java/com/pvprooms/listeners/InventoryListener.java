@@ -51,13 +51,15 @@ public class InventoryListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player)) return;
         Inventory inv = event.getInventory();
 
-        // Kit Editor: block any drag that touches slots outside the editor
+        // Kit Editor: block any drag that touches slots outside the editor (non-OP only)
         if (inv.getHolder() instanceof KitEditorHolder) {
-            int editorSize = inv.getSize();
-            for (int slot : event.getRawSlots()) {
-                if (slot >= editorSize) {
-                    event.setCancelled(true);
-                    return;
+            if (!event.getWhoClicked().isOp()) {
+                int editorSize = inv.getSize();
+                for (int slot : event.getRawSlots()) {
+                    if (slot >= editorSize) {
+                        event.setCancelled(true);
+                        return;
+                    }
                 }
             }
             return;
@@ -232,15 +234,17 @@ public class InventoryListener implements Listener {
 
             // Block ANY interaction from the player's own inventory (bottom half).
             // This prevents lobby/spawn items from being moved into the kit editor.
-            if (raw >= editorSize) {
+            // OPs can freely move items from their inventory.
+            if (!player.isOp() && raw >= editorSize) {
                 event.setCancelled(true);
                 return;
             }
 
-            // Block shift-click & hotbar swap — these can move items from player inv
-            if (action == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY
+            // Block shift-click & hotbar swap — these can move items from player inv (non-OP)
+            if (!player.isOp()
+                    && (action == org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY
                     || action == org.bukkit.event.inventory.InventoryAction.HOTBAR_SWAP
-                    || action == org.bukkit.event.inventory.InventoryAction.HOTBAR_MOVE_AND_READD) {
+                    || action == org.bukkit.event.inventory.InventoryAction.HOTBAR_MOVE_AND_READD)) {
                 event.setCancelled(true);
                 return;
             }
