@@ -305,20 +305,32 @@ public class CombatListener implements Listener {
         }
     }
 
-    // ── Fast crystal placement ──────────────────────────────────────────────
+    // ── Ultra-fast crystal placement ───────────────────────────────────────
 
     /**
      * Allows instant End Crystal placement in crystal kit duels.
      * Intercepts right-click on obsidian/bedrock, manually spawns the crystal
      * entity, removes the item, and resets the placement cooldown to zero.
+     *
+     * Improvements for maximum speed:
+     *  - Clears fire above obsidian (left by previous explosions) so re-placement is instant
+     *  - Supports both main hand and offhand crystal placement
+     *  - Zeros cooldown BEFORE and AFTER placement
+     *  - Uses LOWEST priority to intercept before any other handler
+     *  - Tight entity check radius to avoid false collision
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onCrystalPlace(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        if (event.getHand() != EquipmentSlot.HAND) return;
 
         Player player = event.getPlayer();
-        ItemStack held = player.getInventory().getItemInMainHand();
+
+        // Determine which hand holds the crystal
+        EquipmentSlot hand = event.getHand();
+        if (hand == null) return;
+        ItemStack held = hand == EquipmentSlot.HAND
+                ? player.getInventory().getItemInMainHand()
+                : player.getInventory().getItemInOffHand();
         if (held.getType() != Material.END_CRYSTAL) return;
 
         // Only in crystal kit duels/FFA/bot
@@ -329,33 +341,41 @@ public class CombatListener implements Listener {
         Material blockType = clicked.getType();
         if (blockType != Material.OBSIDIAN && blockType != Material.BEDROCK) return;
 
-        // Check space above — need 2 blocks of air for the crystal entity
+        // Clear fire above obsidian left by previous explosions (instant re-place)
         Block above1 = clicked.getRelative(org.bukkit.block.BlockFace.UP);
         Block above2 = above1.getRelative(org.bukkit.block.BlockFace.UP);
-        if (!above1.getType().isAir() && above1.getType() != Material.FIRE) return;
-        if (!above2.getType().isAir() && above2.getType() != Material.FIRE) return;
+        if (above1.getType() == Material.FIRE) above1.setType(Material.AIR, false);
+        if (above2.getType() == Material.FIRE) above2.setType(Material.AIR, false);
 
-        // Check no existing crystal at this location
+        // Check space above — need 2 blocks of air for the crystal entity
+        if (!above1.getType().isAir()) return;
+        if (!above2.getType().isAir()) return;
+
+        // Check no existing crystal at this location (tight radius)
         Location spawnLoc = clicked.getLocation().add(0.5, 1.0, 0.5);
-        boolean crystalExists = clicked.getWorld().getNearbyEntities(spawnLoc, 0.5, 0.5, 0.5).stream()
+        boolean crystalExists = clicked.getWorld().getNearbyEntities(spawnLoc, 0.5, 1.0, 0.5).stream()
                 .anyMatch(e -> e instanceof EnderCrystal);
         if (crystalExists) return;
 
         // Cancel vanilla placement and do it manually (instant)
         event.setCancelled(true);
 
+        // Zero cooldown BEFORE spawning (removes any leftover server-side delay)
+        player.setCooldown(Material.END_CRYSTAL, 0);
+
         // Spawn crystal
         EnderCrystal crystal = (EnderCrystal) clicked.getWorld().spawnEntity(spawnLoc, EntityType.END_CRYSTAL);
         crystal.setShowingBottom(false);
 
-        // Consume one crystal from hand
+        // Consume one crystal from the correct hand
         held.setAmount(held.getAmount() - 1);
 
-        // Reset placement cooldown so next placement is instant
+        // Zero cooldown AFTER placement to ensure next click is instant
         player.setCooldown(Material.END_CRYSTAL, 0);
 
         // Swing arm for visual feedback
-        player.swingMainHand();
+        if (hand == EquipmentSlot.HAND) player.swingMainHand();
+        else player.swingOffHand();
     }
 
     /** Checks if a player is in a crystal kit match (duel, FFA, or bot) */
