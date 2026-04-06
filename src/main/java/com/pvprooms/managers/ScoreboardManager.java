@@ -159,68 +159,70 @@ public class ScoreboardManager {
         Objective obj = getOrCreate(player, "pvpduel", "&c&l⚔ &4&lEN DUELO");
 
         int s = 0;
-        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
-        tl(obj, s++, " ", 14);
+        int sc = 15;
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", sc--);
+        tl(obj, s++, " ", sc--);
 
         // Time / Status
         if (duel.getState() == Duel.State.COUNTDOWN) {
-            tl(obj, s++, leg("&e&l⏳ &fPreparando..."), 13);
+            tl(obj, s++, leg("&e&l⏳ &fPreparando..."), sc--);
         } else {
             long elapsed = duel.getElapsedSeconds();
             String time  = String.format("§a%d§7:§a%02d", elapsed / 60, elapsed % 60);
-            tl(obj, s++, leg("&e⏱ &fTiempo: " + time), 13);
+            tl(obj, s++, leg("&e⏱ &fTiempo: " + time), sc--);
         }
 
         // Kit, Mode label (TIER / ELO) & Round
-        tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), 12);
+        tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), sc--);
         if (duel.isMultiRound()) {
             int myW = duel.getWins(player.getUniqueId());
             int opW = duel.getWins(duel.getOpponent(player.getUniqueId()));
             int needed = duel.getWinsNeeded();
             String modeLabel = duel.isRanked() ? "&b[TIER]" : "&e[AMISTOSO]";
-            tl(obj, s++, leg(modeLabel + " &8• &6" + myW + " &8- &evs &c" + opW + " &8(a " + needed + ")"), 11);
+            tl(obj, s++, leg(modeLabel), sc--);
+            tl(obj, s++, leg("&6" + myW + " &8- &evs &c" + opW + " &8(a " + needed + ")"), sc--);
         } else {
-            tl(obj, s++, leg("&a[AMISTOSO]"), 11);
+            tl(obj, s++, leg("&a[AMISTOSO]"), sc--);
         }
         
-        tl(obj, s++, " ", 10);
-        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 9);
-        tl(obj, s++, " ", 8);
+        tl(obj, s++, " ", sc--);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", sc--);
+        tl(obj, s++, " ", sc--);
 
         // Opponent info
-        tl(obj, s++, leg("&c☠ &fvs &c&l" + opponentName), 7);
+        tl(obj, s++, leg("&c☠ &fvs &c&l" + opponentName), sc--);
         if (opponent != null) {
             int opPing = opponent.getPing();
             String pingCol = opPing < 50 ? "§a" : opPing < 100 ? "§e" : opPing < 150 ? "§6" : "§c";
             
             if (duel.isRanked()) {
                 Tier opKitTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
-                tl(obj, s++, leg("  &7Tier: " + opKitTier.colour + opKitTier.displayName + " &8• " + pingCol + opPing + "ms"), 6);
+                tl(obj, s++, leg("  &7Tier: " + opKitTier.colour + opKitTier.displayName + " &8• " + pingCol + opPing + "ms"), sc--);
             } else {
                 int opElo = plugin.getEloManager().getElo(opponentUUID);
                 Tier opTier = plugin.getTierManager().getTier(opponentUUID, duel.getKitName());
-                tl(obj, s++, leg("  &7" + opTier.colour + opTier.displayName + " &8• &6" + opElo + " &8• " + pingCol + opPing + "ms"), 6);
+                tl(obj, s++, leg("  &7" + opTier.colour + opTier.displayName + " &8• &6" + opElo + " &8• " + pingCol + opPing + "ms"), sc--);
             }
         }
 
-        tl(obj, s++, " ", 5);
+        tl(obj, s++, " ", sc--);
 
         // My stats
         if (duel.isRanked()) {
             Tier myKitTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
             int  myPts     = plugin.getTierManager().getPoints(player.getUniqueId(), duel.getKitName());
-            tl(obj, s++, leg("&a★ &fTu tier: " + myKitTier.colour + myKitTier.displayName), 4);
-            tl(obj, s++, leg("  &7Puntos: &6" + Math.max(0, myPts)), 3);
+            tl(obj, s++, leg("&a★ &fTu tier: " + myKitTier.colour + myKitTier.displayName), sc--);
+            tl(obj, s++, leg("  &7Puntos: &6" + Math.max(0, myPts)), sc--);
         } else {
             int  myElo  = plugin.getEloManager().getElo(player.getUniqueId());
             Tier myTier = plugin.getTierManager().getTier(player.getUniqueId(), duel.getKitName());
-            tl(obj, s++, leg("&a★ &f" + myTier.colour + myTier.displayName + " &8• &6" + myElo + " ELO"), 4);
+            tl(obj, s++, leg("&a★ &f" + myTier.colour + myTier.displayName + " &8• &6" + myElo + " ELO"), sc--);
         }
 
-        tl(obj, s++, " ", 2);
-        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 1);
-        tl(obj, s++, pingLine(player), 0);
-        tl(obj, s,   regionLine(), -1);
+        tl(obj, s++, " ", sc--);
+        tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", sc--);
+        tl(obj, s++, pingLine(player), sc--);
+        tl(obj, s,   regionLine(), sc);
     }
 
     // ── Lobby scoreboard ───────────────────────────────────────────────────
