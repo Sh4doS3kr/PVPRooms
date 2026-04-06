@@ -27,6 +27,7 @@ public class BotManager {
     private final PvPRoomsPro plugin;
     private final Map<UUID, BotDuel> activeBotDuels = new HashMap<>();
     private final Map<UUID, NPC> playerBots = new HashMap<>();
+    private final Set<String> recentBotNames = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private boolean citizensEnabled = false;
     private AdaptiveAI adaptiveAI;
 
@@ -194,6 +195,7 @@ public class BotManager {
             
             // Store bot reference
             playerBots.put(uuid, bot);
+            trackBotName(botName);
             botDuel.setBotNpcId(bot.getId());
             
             // Give bot the kit equipment
@@ -526,6 +528,21 @@ public class BotManager {
      */
     public Collection<NPC> getAllActiveBots() {
         return playerBots.values();
+    }
+
+    /**
+     * Get names of recently active bots (includes dead bots for death message suppression).
+     */
+    public Set<String> getRecentBotNames() {
+        return recentBotNames;
+    }
+
+    /**
+     * Register a bot name so death messages can be suppressed even after bot removal.
+     */
+    public void trackBotName(String name) {
+        recentBotNames.add(name);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> recentBotNames.remove(name), 40L);
     }
 
     /**

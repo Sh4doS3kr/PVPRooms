@@ -145,6 +145,13 @@ public class BotListener implements Listener {
                 return;
             }
         }
+        // Also check recently dead bot names (bot may already be removed from playerBots)
+        for (String name : plugin.getBotManager().getRecentBotNames()) {
+            if (msg.contains(name)) {
+                event.setCancelled(true);
+                return;
+            }
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
