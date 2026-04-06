@@ -151,14 +151,20 @@ public class CombatListener implements Listener {
             }
         }
         
-        // ── Bot Duel: Bot attacking player ──
+        // ── Bot Duel: Bot attacking player (direct hit OR projectile) ──
         if (event.getEntity() instanceof Player victim && CitizensAPI.getNPCRegistry() != null) {
-            NPC attackerNpc = CitizensAPI.getNPCRegistry().getNPC(event.getDamager());
+            // Resolve the NPC — either direct entity or projectile shooter
+            Entity damagerEntity = event.getDamager();
+            NPC attackerNpc = CitizensAPI.getNPCRegistry().getNPC(damagerEntity);
+            if (attackerNpc == null && damagerEntity instanceof Projectile proj
+                    && proj.getShooter() instanceof Entity shooterEntity) {
+                attackerNpc = CitizensAPI.getNPCRegistry().getNPC(shooterEntity);
+            }
             if (attackerNpc != null) {
                 if (plugin.getBotManager() != null && plugin.getBotManager().isInBotDuel(victim.getUniqueId())) {
                     NPC playerBot = plugin.getBotManager().getPlayerBot(victim.getUniqueId());
                     if (playerBot != null && playerBot.getId() == attackerNpc.getId()) {
-                        // Bot attacking player - ALLOW damage
+                        // Bot attacking player (melee or arrow/crossbow) - ALLOW damage
                         event.setCancelled(false);
                         return;
                     }

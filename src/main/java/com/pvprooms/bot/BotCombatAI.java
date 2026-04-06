@@ -1330,15 +1330,21 @@ public class BotCombatAI {
         // If target is blocking with shield — ALWAYS crit to maximize shield disable chance
         if (target.isBlocking()) axeCritChance = Math.max(axeCritChance, 0.95);
         
-        if (bot.isOnGround() && random.nextDouble() < axeCritChance && now - lastJump > 600) {
-            bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
+        boolean doCrit = random.nextDouble() < axeCritChance;
+        
+        // Jump for visual crit effect — don't rely on isOnGround() (unreliable for Citizens NPCs)
+        if (doCrit && now - lastJump > 600) {
+            try {
+                bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
+            } catch (Exception ignored) {}
             lastJump = now;
+            // Delay attack to falling phase for visual crit
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (isValid()) performAttack(bot, true);
-            }, 3L);
+                if (isValid()) performAttack(getBotPlayer(), true);
+            }, 4L);
         } else {
-            boolean isFalling = !bot.isOnGround() && bot.getVelocity().getY() < -0.08;
-            performAttack(bot, isFalling);
+            // Still apply crit damage even without jump if doCrit is true
+            performAttack(bot, doCrit);
         }
         
         lastAttackTime = now;

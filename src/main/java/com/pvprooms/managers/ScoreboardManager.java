@@ -180,7 +180,7 @@ public class ScoreboardManager {
             String modeLabel = duel.isRanked() ? "&b[TIER]" : "&e[AMISTOSO]";
             tl(obj, s++, leg(modeLabel + " &8• &6" + myW + " &8- &evs &c" + opW + " &8(a " + needed + ")"), 11);
         } else {
-            tl(obj, s++, leg("&a[AMISTOSO] &8\u2022 &7Sin cambios de ELO"), 11);
+            tl(obj, s++, leg("&a[AMISTOSO]"), 11);
         }
         
         tl(obj, s++, " ", 10);
