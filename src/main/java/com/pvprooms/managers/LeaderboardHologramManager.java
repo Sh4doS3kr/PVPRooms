@@ -26,7 +26,7 @@ public class LeaderboardHologramManager implements Listener {
     public enum HoloType {
         TOP_GENERAL, TOP_KIT, TOP_ELO, TOP_WINS, TOP_STREAK, TOP_KDR,
         STATS_ONLINE, STATS_DUELS, STATS_QUEUE, STATS_TODAY, STATS_WEEK,
-        INFO_WELCOME, INFO_RULES, INFO_RANKS, INFO_KITS, INFO_COMMANDS, INFO_REWARDS, INFO_ELO, INFO_SEASONS,
+        INFO_WELCOME, INFO_RULES, INFO_RANKS, INFO_KITS, INFO_COMMANDS, INFO_REWARDS, INFO_ELO, INFO_SEASONS, INFO_WEB,
         EVENT_NEXT, EVENT_ACTIVE, EVENT_WINNERS,
         CUSTOM
     }
@@ -397,8 +397,7 @@ public class LeaderboardHologramManager implements Listener {
                 lines.add("&c◆ LT2 &8→ &4◆ HT2");
                 lines.add("&d◆ LT1 &8→ &c&l◆ HT1");
                 lines.add(" ");
-                lines.add("&7Verificación via ticket:");
-                lines.add("&b&ntiers.mlmc.lat/tickets.html");
+                lines.add("&b&ndiscord.mlmc.lat");
             }
             
             case INFO_KITS -> {
@@ -425,6 +424,12 @@ public class LeaderboardHologramManager implements Listener {
                 lines.add("&7Inicial: &f1000 ELO");
                 lines.add("&7Ganas: &a+15 a +30");
                 lines.add("&7Pierdes: &c-10 a -25");
+            }
+            
+            case INFO_WEB -> {
+                lines.add("&6&l★ &e&lPÁGINA WEB &6&l★");
+                lines.add(" ");
+                lines.add("&b&ntiers.mlmc.lat");
             }
             
             default -> {

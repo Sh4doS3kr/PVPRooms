@@ -758,12 +758,13 @@ document.getElementById('folderTabs').addEventListener('click', e=>{
 /* ── Render table ──────────────────────────────────────────────── */
 function renderTable(players){
   const q = (document.getElementById('searchInput').value||'').toLowerCase().trim();
-  const list = q ? players.filter(p=>p.nombre.toLowerCase().includes(q)) : players;
+  const tagged = players.map((p,i)=>({...p,_rank:i+1}));
+  const list = q ? tagged.filter(p=>p.nombre.toLowerCase().includes(q)) : tagged;
   const body = document.getElementById('tableBody');
   if(!list.length){ body.innerHTML='<div class="empty-state">No se encontraron jugadores.</div>'; return; }
 
   body.innerHTML = list.map((p,i)=>{
-    const rank=i+1;
+    const rank=p._rank;
     const rkHtml = rank===1?`<span class="rk-medal rk-1"><img src="${mcImg('gold_ingot')}" class="rk-icon"></span>`:rank===2?`<span class="rk-medal rk-2"><img src="${mcImg('iron_ingot')}" class="rk-icon"></span>`:rank===3?`<span class="rk-medal rk-3"><img src="${mcImg('copper_ingot')}" class="rk-icon"></span>`:`<span class="rk-num">${rank}</span>`;
     const titleC = tc(p.titulo);
     const playerCC = (p.pais||p.countryCode||'').toLowerCase();
