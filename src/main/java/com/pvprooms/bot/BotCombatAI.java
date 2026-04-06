@@ -3290,8 +3290,7 @@ public class BotCombatAI {
         bot.getWorld().playSound(bot.getLocation(),
                 org.bukkit.Sound.ENTITY_SPLASH_POTION_BREAK, 0.8f, 1.1f);
         bot.getWorld().spawnParticle(org.bukkit.Particle.INSTANT_EFFECT,
-                bot.getLocation().add(0, 1, 0), 20, 0.4, 0.4, 0.4, 0.05,
-                org.bukkit.Color.AQUA);
+                bot.getLocation().add(0, 1, 0), 20, 0.4, 0.4, 0.4, 0.05);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (isValid()) bot.getInventory().setHeldItemSlot(originalSlot);
