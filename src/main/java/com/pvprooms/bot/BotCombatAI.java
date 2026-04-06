@@ -1307,23 +1307,32 @@ public class BotCombatAI {
         
         long now = System.currentTimeMillis();
         
-        // Axe attacks are slower but deal more damage and can disable shields
-        // Check if target is blocking - ALWAYS crit with axe to break shield
-        boolean targetBlocking = target.isBlocking();
+        // W-tap or D-tap for extra knockback — axe PvP relies on spacing
+        if (!target.isBlocking()) {
+            if (shouldWTap()) {
+                performWTap(bot);
+            } else if (shouldDTap()) {
+                performDTap(bot);
+            }
+        }
         
-        // Jump for crit with axe — higher difficulties always crit with axe
+        // Axe PvP is ALL about critical hits — much higher crit rates than sword
+        // Pros crit almost every single axe hit because the slow cooldown gives time to jump
         double axeCritChance = switch(difficulty) {
-            case EASY -> 0.20;
-            case MEDIUM -> 0.40;
-            case HARD -> 0.65;   // Crits most axe hits
-            case HACKER -> 0.90; // Almost always crits with axe
-            case ADAPTIVE -> critChance;
-            case DUMMY -> 0.0;
+            case EASY -> 0.40;
+            case MEDIUM -> 0.65;
+            case HARD -> 0.85;   // Crits almost every hit
+            case HACKER -> 0.98; // Virtually always crits
+            case ADAPTIVE -> Math.min(critChance + 0.25, 0.95);
+            case DUMMY -> 0.05;
         };
         
-        if (bot.isOnGround() && random.nextDouble() < axeCritChance && System.currentTimeMillis() - lastJump > 1000) {
+        // If target is blocking with shield — ALWAYS crit to maximize shield disable chance
+        if (target.isBlocking()) axeCritChance = Math.max(axeCritChance, 0.95);
+        
+        if (bot.isOnGround() && random.nextDouble() < axeCritChance && now - lastJump > 600) {
             bot.setVelocity(bot.getVelocity().add(new Vector(0, 0.42, 0)));
-            lastJump = System.currentTimeMillis();
+            lastJump = now;
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (isValid()) performAttack(bot, true);
             }, 3L);
@@ -1901,11 +1910,23 @@ public class BotCombatAI {
             target.getWorld().spawnParticle(Particle.CRIT, target.getLocation().add(0, 1, 0), 10);
         }
         
+        // Vanilla shield disable: axe hit on blocking player → 5s (100 tick) shield cooldown
+        boolean wasBlocking = target.isBlocking();
+        ItemStack weapon = bot.getInventory().getItemInMainHand();
+        boolean holdingAxe = weapon != null && isAxe(weapon.getType());
+        if (wasBlocking && holdingAxe) {
+            // Disable shield for 5 seconds (vanilla mechanic)
+            target.setCooldown(Material.SHIELD, 100);
+            // Force stop blocking by applying the cooldown — Bukkit handles the rest
+            target.getWorld().playSound(target.getLocation(),
+                    Sound.ITEM_SHIELD_BREAK, 1.0f, 0.8f + (float)(Math.random() * 0.4));
+        }
+        
         // Apply damage
         target.damage(damage, bot);
         
         // Apply knockback only if target is NOT blocking with shield
-        if (!target.isBlocking()) {
+        if (!wasBlocking) {
             applyKnockback(bot, target);
         }
         
@@ -3470,7 +3491,20 @@ public class BotCombatAI {
             }
         }
 
-        // 5. Default: SWORD (best for combos and consistent DPS)
+        // 5. Axe kits: prefer AXE as primary weapon (axe PvP = crits + shield break)
+        if (kitName != null && kitName.toLowerCase().contains("axe")) {
+            int axeSlot = findAxe(inv);
+            if (axeSlot != -1) {
+                axeSlot = hotbarSlot(inv, axeSlot);
+                if (axeSlot != -1) {
+                    inv.setHeldItemSlot(axeSlot);
+                    currentWeapon = WeaponType.AXE;
+                    return;
+                }
+            }
+        }
+
+        // 6. Default: SWORD (best for combos and consistent DPS)
         for (int i = 0; i < 9; i++) {
             ItemStack item = inv.getItem(i);
             if (item != null && isSword(item.getType())) {
