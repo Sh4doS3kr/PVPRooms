@@ -182,7 +182,7 @@ public class ScoreboardManager {
             tl(obj, s++, leg(modeLabel), sc--);
             tl(obj, s++, leg("&6" + myW + " &8- &evs &c" + opW + " &8(a " + needed + ")"), sc--);
         } else {
-            tl(obj, s++, leg("&a[AMISTOSO]"), sc--);
+            tl(obj, s++, leg(duel.isRanked() ? "&b[ELO]" : "&a[AMISTOSO]"), sc--);
         }
         
         tl(obj, s++, " ", sc--);
