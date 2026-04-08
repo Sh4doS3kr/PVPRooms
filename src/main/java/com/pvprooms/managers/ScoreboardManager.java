@@ -178,11 +178,11 @@ public class ScoreboardManager {
             int myW = duel.getWins(player.getUniqueId());
             int opW = duel.getWins(duel.getOpponent(player.getUniqueId()));
             int needed = duel.getWinsNeeded();
-            String modeLabel = duel.isRanked() ? "&b[TIER]" : "&e[AMISTOSO]";
+            String modeLabel = duel.isRanked() ? "&b[TIER]" : (duel.isEloMode() ? "&b[ELO]" : "&e[AMISTOSO]");
             tl(obj, s++, leg(modeLabel), sc--);
             tl(obj, s++, leg("&6" + myW + " &8- &evs &c" + opW + " &8(a " + needed + ")"), sc--);
         } else {
-            tl(obj, s++, leg(duel.isRanked() ? "&b[ELO]" : "&a[AMISTOSO]"), sc--);
+            tl(obj, s++, leg(duel.isEloMode() ? "&b[ELO]" : "&a[AMISTOSO]"), sc--);
         }
         
         tl(obj, s++, " ", sc--);
@@ -354,7 +354,7 @@ public class ScoreboardManager {
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 15);
         tl(obj, s++, " ", 14);
         tl(obj, s++, leg("&b⚔ &fKit: &b" + duel.getKitName()), 13);
-        String modeStr = duel.isRanked() ? "&6Tier (BO7)" : (duel.isMultiRound() ? "&eDuel (a " + duel.getWinsNeeded() + ")" : "&aAmistoso");
+        String modeStr = duel.isRanked() ? "&6Tier (BO7)" : (duel.isMultiRound() ? "&eDuel (a " + duel.getWinsNeeded() + ")" : (duel.isEloMode() ? "&bELO" : "&aAmistoso"));
         tl(obj, s++, leg("&e⏱ &fModo: " + modeStr), 12);
         tl(obj, s++, " ", 11);
         tl(obj, s++, "§8§m━━━━━━━━━━━━━━━━━━━", 10);

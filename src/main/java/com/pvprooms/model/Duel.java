@@ -39,6 +39,7 @@ public class Duel {
 
     // ── Multi-round match fields ──────────────────────────────────────────
     private boolean ranked       = false;  // true = Tier mode, false = ELO (single round)
+    private boolean eloMode       = false;  // true = ELO queue duel (affects ELO), false = friendly
     private int     winsNeeded   = 1;      // Wins needed to win match (4 for Tier BO7, 1 for ELO)
     private int     wins1        = 0;      // wins for player1
     private int     wins2        = 0;      // wins for player2
@@ -116,6 +117,9 @@ public class Duel {
 
     public boolean isRanked()                    { return ranked; }
     public void    setRanked(boolean ranked)     { this.ranked = ranked; }
+
+    public boolean isEloMode()                   { return eloMode; }
+    public void    setEloMode(boolean elo)       { this.eloMode = elo; }
     
     public int  getWinsNeeded()                  { return winsNeeded; }
     public void setWinsNeeded(int winsNeeded)    { this.winsNeeded = winsNeeded; }

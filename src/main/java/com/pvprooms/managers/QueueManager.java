@@ -198,7 +198,7 @@ public class QueueManager {
                 playerKitMap.remove(uuid2);
                 playerTierMode.remove(uuid1);
                 playerTierMode.remove(uuid2);
-                plugin.getDuelManager().startDuel(uuid1, uuid2, kitName);
+                plugin.getDuelManager().startDuelElo(uuid1, uuid2, kitName);
             }
         }
 

@@ -110,16 +110,25 @@ public class DuelManager {
      * Initiates a duel between two players using a given kit.
      * Called by QueueManager once two players are matched.
      */
-    /** Overload without bo3 — keeps ELO duels unchanged. */
+    /** Overload without bo3 — friendly duels (no ELO, no tier). */
     public void startDuel(UUID uuid1, UUID uuid2, String kitName) {
-        startDuel(uuid1, uuid2, kitName, false, 1);
+        startDuel(uuid1, uuid2, kitName, false, 1, false);
+    }
+
+    /** ELO queue duel — affects ELO rating. */
+    public void startDuelElo(UUID uuid1, UUID uuid2, String kitName) {
+        startDuel(uuid1, uuid2, kitName, false, 1, true);
     }
 
     public void startDuel(UUID uuid1, UUID uuid2, String kitName, boolean bo3) {
-        startDuel(uuid1, uuid2, kitName, bo3, bo3 ? 4 : 1);
+        startDuel(uuid1, uuid2, kitName, bo3, bo3 ? 4 : 1, false);
     }
 
     public void startDuel(UUID uuid1, UUID uuid2, String kitName, boolean bo3, int customWinsNeeded) {
+        startDuel(uuid1, uuid2, kitName, bo3, customWinsNeeded, false);
+    }
+
+    public void startDuel(UUID uuid1, UUID uuid2, String kitName, boolean bo3, int customWinsNeeded, boolean eloMode) {
         Player p1 = Bukkit.getPlayer(uuid1);
         Player p2 = Bukkit.getPlayer(uuid2);
 
@@ -165,6 +174,7 @@ public class DuelManager {
         Duel duel = new Duel(uuid1, uuid2, kitName, instanceWorldName, template);
         duel.setRanked(bo3);
         duel.setWinsNeeded(customWinsNeeded);
+        duel.setEloMode(eloMode);
         activeDuels.put(duel.getId(), duel);
         playerDuelMap.put(uuid1, duel.getId());
         playerDuelMap.put(uuid2, duel.getId());
@@ -344,7 +354,7 @@ public class DuelManager {
         UUID loserUUID = winnerUUID == null ? null
                 : winnerUUID.equals(duel.getPlayer1()) ? duel.getPlayer2() : duel.getPlayer1();
 
-        // Rating update — only TIER mode affects rating/stats; normal duels are FRIENDLY
+        // Rating update
         if (winnerUUID != null && loserUUID != null) {
             Player winner = Bukkit.getPlayer(winnerUUID);
             Player loser  = Bukkit.getPlayer(loserUUID);
@@ -359,6 +369,14 @@ public class DuelManager {
                 plugin.getStatsManager().recordDeath(loserUUID, loserName);
                 plugin.getTierManager().recordResult(winnerUUID, loserUUID, duel.getKitName());
                 announceResultTier(p1, p2, winnerUUID, loserUUID, duel.getKitName());
+            } else if (duel.isEloMode()) {
+                // ELO queue: update ELO + record stats
+                plugin.getStatsManager().recordWin(winnerUUID, winnerName);
+                plugin.getStatsManager().recordLoss(loserUUID, loserName);
+                plugin.getStatsManager().recordKill(winnerUUID, winnerName);
+                plugin.getStatsManager().recordDeath(loserUUID, loserName);
+                int[] eloChanges = plugin.getEloManager().processResult(winnerUUID, winnerName, loserUUID, loserName);
+                announceResult(p1, p2, winnerUUID, loserUUID, duel.getKitName(), eloChanges[0], eloChanges[1]);
             } else {
                 // FRIENDLY duel: NO ELO changes, NO stats, just fun
                 announceResultFriendly(p1, p2, winnerUUID, loserUUID, duel.getKitName());
