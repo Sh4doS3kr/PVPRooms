@@ -1,6 +1,7 @@
 package com.pvprooms.managers;
 
 import com.pvprooms.PvPRoomsPro;
+import com.pvprooms.model.TrimCrate;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -8,8 +9,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,24 +34,39 @@ public class LobbyManager {
      * Give lobby items to a player.
      */
     public void giveLobbyItems(Player player) {
-        player.getInventory().clear();
+        // Preserve crate keys and crates before clearing
+        PlayerInventory inv = player.getInventory();
+        List<ItemStack> preserved = new ArrayList<>();
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && (TrimCrate.isKey(item) || TrimCrate.isCrate(item))) {
+                preserved.add(item.clone());
+            }
+        }
+
+        inv.clear();
 
         // Slot 0: Queue (Diamond Sword)
-        player.getInventory().setItem(0, createQueueItem());
+        inv.setItem(0, createQueueItem());
 
         // Slot 1: Quick Match (Golden Sword)
-        player.getInventory().setItem(1, createQuickMatchItem());
+        inv.setItem(1, createQuickMatchItem());
 
         // Slot 4: Party Manager (Cake)
-        player.getInventory().setItem(4, createPartyItem());
+        inv.setItem(4, createPartyItem());
 
         // Slot 7: Profile (Player Head)
-        player.getInventory().setItem(7, createProfileItem(player));
+        inv.setItem(7, createProfileItem(player));
 
         // Slot 8: Settings (Redstone)
-        player.getInventory().setItem(8, createSettingsItem());
+        inv.setItem(8, createSettingsItem());
 
-        player.getInventory().setHeldItemSlot(2);
+        // Restore preserved keys and crates
+        for (ItemStack item : preserved) {
+            inv.addItem(item);
+        }
+
+        inv.setHeldItemSlot(2);
     }
 
     /**
