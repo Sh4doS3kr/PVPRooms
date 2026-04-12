@@ -39,7 +39,7 @@ public class LobbyManager {
         List<ItemStack> preserved = new ArrayList<>();
         for (int i = 0; i < inv.getSize(); i++) {
             ItemStack item = inv.getItem(i);
-            if (item != null && (TrimCrate.isKey(item) || TrimCrate.isCrate(item))) {
+            if (item != null && (item.getType() == org.bukkit.Material.TRIPWIRE_HOOK || TrimCrate.isCrate(item))) {
                 preserved.add(item.clone());
             }
         }

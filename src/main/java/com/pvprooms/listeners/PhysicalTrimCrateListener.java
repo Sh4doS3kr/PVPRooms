@@ -226,14 +226,15 @@ public class PhysicalTrimCrateListener implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
         
-        // Check if player has active animation
+        // If player closes during roulette animation → skip and deliver result
         if (TrimRouletteGUI.hasActiveAnimation(player.getUniqueId())) {
-            // Re-open the inventory on next tick
-            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (player.isOnline() && TrimRouletteGUI.hasActiveAnimation(player.getUniqueId())) {
-                    player.openInventory(event.getInventory());
-                }
-            }, 1);
+            TrimRouletteGUI.TrimRouletteHolder holder = TrimRouletteGUI.getActiveHolder(player.getUniqueId());
+            if (holder != null) {
+                plugin.getTrimRouletteGUI().skipAnimation(player, holder);
+            } else {
+                // Safety: clear stuck animation flag
+                TrimRouletteGUI.endAnimation(player.getUniqueId());
+            }
         }
     }
     

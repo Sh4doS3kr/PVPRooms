@@ -52,8 +52,9 @@ public class TrimRouletteGUI {
 
         player.openInventory(inv);
         
-        // Mark animation as active (prevent closing)
+        // Mark animation as active and register holder for skip support
         startAnimation(player.getUniqueId());
+        registerHolder(player.getUniqueId(), holder);
 
         // Schedule the spin animation
         startSpinAnimation(player, holder, piece, crateType, legendary);
@@ -85,6 +86,7 @@ public class TrimRouletteGUI {
         
         // Generate final trim FIRST
         Trim finalTrim = plugin.getTrimManager().randomTrimForPiece(piece, legendary);
+        holder.setFinalTrim(finalTrim);
         
         // Build spin list with 40+ trims, final trim will be at the end so it lands in center
         List<Trim> spinTrims = new ArrayList<>();
@@ -118,7 +120,8 @@ public class TrimRouletteGUI {
             final int scheduleTick = currentTick;
             
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (!player.getOpenInventory().getTopInventory().equals(holder.getInventory())) return;
+                if (holder.isSkipped() || holder.isAnimationComplete()) return;
+                if (!player.isOnline()) return;
 
                 // Update spinning items - show 7 items centered on current scroll position
                 Inventory inv = holder.getInventory();
@@ -144,7 +147,8 @@ public class TrimRouletteGUI {
         // Final result after animation completes
         final int finalTotalTicks = totalTicks;
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!player.getOpenInventory().getTopInventory().equals(holder.getInventory())) return;
+            if (holder.isSkipped() || holder.isAnimationComplete()) return;
+            if (!player.isOnline()) return;
             
             // Unlock the FULL trim for the player (pattern + material)
             plugin.getTrimManager().unlockFullTrim(player.getUniqueId(), piece, finalTrim);
@@ -181,6 +185,40 @@ public class TrimRouletteGUI {
         }, finalTotalTicks + 15);
     }
     
+    /**
+     * Skips the animation and immediately delivers the final result.
+     * Called when the player presses ESC during the roulette.
+     */
+    public void skipAnimation(Player player, TrimRouletteHolder holder) {
+        if (holder.isAnimationComplete() || holder.isSkipped()) return;
+        holder.setSkipped(true);
+        holder.setAnimationComplete(true);
+        endAnimation(player.getUniqueId());
+
+        Trim finalTrim = holder.getFinalTrim();
+        if (finalTrim == null) return;
+
+        ArmorPiece piece = holder.getPiece();
+
+        // Unlock the trim
+        plugin.getTrimManager().unlockFullTrim(player.getUniqueId(), piece, finalTrim);
+
+        // Apply trim if player has armor equipped
+        plugin.getTrimManager().applyTrimInstantly(player, piece, finalTrim);
+
+        // Play winning sounds
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+
+        // Send message
+        String col = plugin.getTrimManager().patternColour(finalTrim.getPattern());
+        String mc = plugin.getTrimManager().materialColour(finalTrim.getMaterial());
+        player.sendMessage("");
+        player.sendMessage("§5§l✦ §d§l¡TRIM DESBLOQUEADO! §5§l✦");
+        player.sendMessage("§7Obtuviste: " + col + "§l" + finalTrim.getPattern() + " §7de " + mc + "§l" + finalTrim.getMaterial());
+        player.sendMessage("§7Para tu: §f" + piece.getDisplayName());
+        player.sendMessage("");
+    }
+
     /** Creates a netherite armor item with the actual trim applied */
     private ItemStack createTrimmedArmorItem(Trim trim, ArmorPiece piece, boolean highlighted) {
         // Get netherite armor material for this piece
@@ -482,8 +520,9 @@ public class TrimRouletteGUI {
     // HOLDER CLASS - Tracks animation state
     // ═══════════════════════════════════════════════════════════════════════════════
     
-    // Track players with active animations (can't close inventory)
+    // Track players with active animations
     private static final Set<UUID> activeAnimations = new HashSet<>();
+    private static final Map<UUID, TrimRouletteHolder> activeHolders = new HashMap<>();
     
     public static boolean hasActiveAnimation(UUID playerId) {
         return activeAnimations.contains(playerId);
@@ -495,6 +534,15 @@ public class TrimRouletteGUI {
     
     public static void endAnimation(UUID playerId) {
         activeAnimations.remove(playerId);
+        activeHolders.remove(playerId);
+    }
+
+    public static TrimRouletteHolder getActiveHolder(UUID playerId) {
+        return activeHolders.get(playerId);
+    }
+
+    public static void registerHolder(UUID playerId, TrimRouletteHolder holder) {
+        activeHolders.put(playerId, holder);
     }
 
     public static class TrimRouletteHolder implements InventoryHolder {
@@ -504,6 +552,8 @@ public class TrimRouletteGUI {
         private final boolean legendary;
         private Inventory inventory;
         private boolean animationComplete = false;
+        private boolean skipped = false;
+        private Trim finalTrim;
 
         public TrimRouletteHolder(UUID playerId, ArmorPiece piece, String crateType, boolean legendary) {
             this.playerId = playerId;
@@ -518,6 +568,10 @@ public class TrimRouletteGUI {
         public boolean isLegendary() { return legendary; }
         public boolean isAnimationComplete() { return animationComplete; }
         public void setAnimationComplete(boolean complete) { this.animationComplete = complete; }
+        public boolean isSkipped() { return skipped; }
+        public void setSkipped(boolean skipped) { this.skipped = skipped; }
+        public Trim getFinalTrim() { return finalTrim; }
+        public void setFinalTrim(Trim trim) { this.finalTrim = trim; }
 
         @Override
         public Inventory getInventory() { return inventory; }
